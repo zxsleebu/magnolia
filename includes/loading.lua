@@ -4,6 +4,8 @@ local v2 = require("libs.vectors")()
 local col = require("libs.colors")
 local cbs = require("libs.callbacks")
 local nixware = require("includes.nixware")
+local once = require("libs.once").new()
+local logger = require("includes.logger").new()
 local anims = require("libs.anims").new({
     bg_alpha = 0,
     slider_y_offset = 55,
@@ -14,11 +16,11 @@ local anims = require("libs.anims").new({
     progress = 0,
     transparency = 255,
     percent_align = 0,
+    test_progress = 0,
 })
 local loading_screen = {}
 local magnolia_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 80, 0)
 local percentage_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 14, render.font_flags.MonoHinting)
-local set_delay = false
 local can_be_closed = false
 local remove_slider = false
 loading_screen.draw = function()
@@ -27,6 +29,9 @@ loading_screen.draw = function()
     local slider_sizes = v2(300, 25)
     local main_alpha = 1
     if can_be_closed then
+        once(function()
+            logger:clean()
+        end, "clean_logger")
         main_alpha = anims.transparency(0) / 255
     end
     do
@@ -51,7 +56,17 @@ loading_screen.draw = function()
         end
 
         if anims.slider_y_offset.done then
-            local progress = nixware.__scan.percent
+            if nixware.__scan.percent == 1 then
+                once(function()
+                    logger:add({{"nixware allocbase found", col.white}})
+                end, "nixware_scan_done")
+            end
+            local progress = nixware.__scan.percent / 2 + anims.test_progress(50, 3) / 100
+            if progress == 1 then
+                once(function()
+                    logger:add({{"have", col.white}, {" fun!", col.magnolia}})
+                end, "progress_done")
+            end
             local percentage = anims.progress(progress * 100)
             local percent_align = anims.percent_align(percentage > 50 and 100 or 0)
             local alpha = anims.slider_alpha()
@@ -72,28 +87,29 @@ loading_screen.draw = function()
                 render.text(text, percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN + render.flags.OUTLINE)
             end
 
-            if progress == 1 and not set_delay and not remove_slider then
-                set_delay = true
-                delay.add(function()
-                    remove_slider = true
-                    set_delay = false
-                end, 750)
+            if progress == 1 and not remove_slider then
+                once(function()
+                    delay.add(function()
+                        remove_slider = true
+                    end, 750)
+                end, "remove_slider")
             end
 
             if remove_slider then
                 anims.slider_border_alpha(0)
                 anims.slider_alpha(0)
                 anims.text_y_offset(0)
-                if not set_delay and not can_be_closed then
-                    set_delay = true
-                    delay.add(function()
-                        can_be_closed = true
-                        set_delay = false
-                    end, 1000)
+                if not can_be_closed then
+                    once(function()
+                        delay.add(function()
+                            can_be_closed = true
+                        end, 1000)
+                    end, "can_be_closed")
                 end
             end
         end
     end
+    logger:draw(ss / 2 + v2(0, 50 + slider_sizes.y))
 end
 cbs.add("paint", loading_screen.draw)
 

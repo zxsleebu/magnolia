@@ -144,7 +144,7 @@ local font_cache = {}
 ---@param flags? number
 ---@return __font_t
 render.font = function(name, size, flags)
-    local key = name .. size .. flags
+    local key = name .. size .. (flags or 0)
     if font_cache[key] then return font_cache[key] end
     local font = renderer.setup_font(name, size, flags or 0)
     font_cache[key] = {
@@ -219,6 +219,19 @@ render.text = function(text, font, pos, color, flags)
         end
     end
     renderer.text(text, font.font, pos, font.size, color)
+end
+render.multi_color_text = function(strings, font, pos, flags)
+    if bit.band(flags or 0, render.flags.X_ALIGN) == render.flags.X_ALIGN then
+        local str = ""
+        for i = 1, #strings do str = str .. strings[i][1] end
+        pos.x = pos.x - render.text_size(font, str).x / 2
+        flags = bit.band(flags, bit.bnot(render.flags.X_ALIGN))
+    end
+    for i = 1, #strings do
+        local text, color = strings[i][1], strings[i][2]
+        render.text(text, font, pos, color, flags)
+        pos.x = pos.x + render.text_size(font, text).x
+    end
 end
 
 return render
