@@ -7,7 +7,7 @@
 ---|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t }
 local col = setmetatable({}, {
     __index = {
-        __call = function(s, r, g, b)
+        __call = function(s, r, g, b, a)
             return color_t.new(r, g, b, a or 255)
         end,
         red = color_t.new(255, 127, 127, 255),

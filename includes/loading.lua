@@ -109,6 +109,7 @@ loading_screen.draw = function()
             end
         end
     end
+    ---@diagnostic disable-next-line: param-type-mismatch
     logger:draw(ss / 2 + v2(0, 50 + slider_sizes.y))
 end
 cbs.add("paint", loading_screen.draw)
