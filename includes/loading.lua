@@ -1,0 +1,90 @@
+local render = require("libs.render")
+local delay = require("libs.delay")
+local v2 = require("libs.vectors")()
+local col = require("libs.colors")
+local cbs = require("libs.callbacks")
+local nixware = require("includes.nixware")
+local anims = require("libs.anims").new({
+    bg_alpha = 0,
+    slider_y_offset = 55,
+    slider_border_alpha = 0,
+    slider_alpha = 0,
+    text_alpha = 0,
+    text_y_offset = 25,
+    progress = 0,
+    transparency = 255,
+})
+local loading_screen = {}
+local magnolia_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 80, 0)
+local set_delay = false
+local can_be_closed = false
+local remove_slider = false
+loading_screen.draw = function()
+    if anims.transparency() == 0 then return end
+    local ss = engine.get_screen_size()
+    local slider_sizes = v2(300, 25)
+    local main_alpha = 1
+    if can_be_closed then
+        main_alpha = anims.transparency(0) / 255
+    end
+    do
+        local alpha = anims.bg_alpha(255) * main_alpha
+        local c1, c2 = col.black:alpha(50):salpha(alpha), col.black:alpha(200):salpha(alpha)
+        renderer.rect_filled_fade(v2(0, 0), v2(ss.x, ss.y), c1, c1, c2, c2)
+    end
+    if anims.bg_alpha.done then
+        local y = ss.y / 2 + anims.slider_y_offset(35)
+        local from = v2(ss.x / 2 - slider_sizes.x / 2, y):round()
+        local to = v2(ss.x / 2 + slider_sizes.x / 2, y + slider_sizes.y):round()
+
+        local slider_border_alpha = anims.slider_border_alpha()
+        if not remove_slider then
+            slider_border_alpha = anims.slider_border_alpha(255)
+        end
+        slider_border_alpha = slider_border_alpha * main_alpha
+        do
+            local border_color = col.white:alpha(slider_border_alpha)
+            render.rounded_rect(from, to, border_color, 3.1)
+            render.rounded_rect(from - v2(1, 1), to + v2(1, 1), border_color:salpha(75), 4.1)
+        end
+
+        if anims.slider_y_offset.done then
+            local progress = nixware.__scan.percent
+            anims.progress(progress * 100)
+            local alpha = anims.slider_alpha()
+            if not remove_slider then
+                alpha = anims.slider_alpha(255)
+            end
+            local width = math.max(10, slider_sizes.x * anims.progress.value / 100)
+            render.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), col.magnolia:salpha(alpha), 2.1, true)
+            local text_alpha = anims.text_alpha(255) * main_alpha
+
+            render.text("magnolia", magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
+                render.flags.X_ALIGN + render.flags.Y_ALIGN)
+
+            if progress == 1 and not set_delay and not remove_slider then
+                set_delay = true
+                delay.add(function()
+                    remove_slider = true
+                    set_delay = false
+                end, 750)
+            end
+
+            if remove_slider then
+                anims.slider_border_alpha(0)
+                anims.slider_alpha(0)
+                anims.text_y_offset(0)
+                if not set_delay and not can_be_closed then
+                    set_delay = true
+                    delay.add(function()
+                        can_be_closed = true
+                        set_delay = false
+                    end, 1000)
+                end
+            end
+        end
+    end
+end
+cbs.add("paint", loading_screen.draw)
+
+return loading_screen
