@@ -1,4 +1,5 @@
 local v2 = require("libs.vectors")()
+local col = require("libs.colors")
 
 local corner_angles = {
     {180, 270},
@@ -168,6 +169,23 @@ render.flags = {
     SHADOW = 0x4,
     OUTLINE = 0x8,
 }
+
+---@param font __font_t
+---@param text string
+render.text_size = function(font, text)
+    return renderer.get_text_size(font.font, font.size, text)
+end
+local outline_pos = {
+    v2(0, 1),
+    v2(1, 0),
+    v2(0, -1),
+    v2(-1, 0),
+    v2(1, 1),
+    v2(1, -1),
+    v2(-1, 1),
+    v2(-1, -1),
+}
+
 ---@param text string
 ---@param font __font_t
 ---@param pos vec2_t
@@ -184,12 +202,23 @@ render.text = function(text, font, pos, color, flags)
     flags = flags or 0
     --horizontal align
     if bit.band(flags, render.flags.X_ALIGN) == render.flags.X_ALIGN then
-        pos.x = pos.x - renderer.get_text_size(font.font, font.size, text).x / 2
+        pos.x = pos.x - render.text_size(font, text).x / 2
     end
     --vertical align
     if bit.band(flags, render.flags.Y_ALIGN) == render.flags.Y_ALIGN then
-        pos.y = pos.y - renderer.get_text_size(font.font, font.size, text).y / 2
+        pos.y = pos.y - render.text_size(font, text).y / 2
+    end
+
+    if bit.band(flags, render.flags.SHADOW) == render.flags.SHADOW then
+        renderer.text(text, font.font, pos + v2(1, 1), font.size, col.black:alpha(150):salpha(color.a))
+    end
+    if bit.band(flags, render.flags.OUTLINE) == render.flags.OUTLINE then
+        local clr = col.black:alpha(100):salpha(color.a)
+        for _, p in pairs(outline_pos) do
+            renderer.text(text, font.font, pos + p, font.size, clr)
+        end
     end
     renderer.text(text, font.font, pos, font.size, color)
 end
+
 return render
