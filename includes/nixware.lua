@@ -1,5 +1,6 @@
 local error_handler = require("libs.error_handler")()
 local cbs = require("libs.callbacks")
+local threads = require("libs.threads")
 local PSAPI = ffi.load("psapi")
 ffi.cdef[[
     typedef unsigned long DWORD;
@@ -100,9 +101,12 @@ nixware.get_allocbase = error_handler(function()
     end
     local cur = min
     while cur < max do
-        pcall(function()
+        local _, err = pcall(function ()
             coroutine.yield()
-            nixware.__scan.percent = (cur - min) / (max - min)
+            local percent = (cur - min) / (max - min)
+            if percent > nixware.__scan.percent then
+                nixware.__scan.percent = percent
+            end
             C.VirtualQuery(cur, mbi, mbi_size)
 
             if modules[mbi[0].AllocationBase] then
@@ -111,11 +115,12 @@ nixware.get_allocbase = error_handler(function()
                 return
             end
             if mbi[0].State == 0x20 and mbi[0].Protect == 0x20000 then
-                nixware.allocbase = mbi[0].AllocationBase
                 -- print(string.format("Found nixware at 0x%x", nixware.allocbase))
+                nixware.allocbase = mbi[0].AllocationBase
             end
             cur = mbi[0].BaseAddress + mbi[0].RegionSize
         end)
+        if err then error(err) end
         if nixware.allocbase then break end
     end
     nixware.__scan.percent = 1

@@ -1,0 +1,10 @@
+*.pdb
+*.lib
+*.exp
+*.winmd
+*.exe
+*.dll
+*.ilk
+*.obj
+*.o
+*.a

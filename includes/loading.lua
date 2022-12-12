@@ -18,16 +18,19 @@ local anims = require("libs.anims").new({
     percent_align = 0,
     test_progress = 0,
 })
-local loading_screen = {}
+local loading = {}
 local magnolia_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 80, 0)
 local percentage_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 14, render.font_flags.MonoHinting)
 local can_be_closed = false
 local remove_slider = false
-loading_screen.draw = function()
+loading.draw = function()
     if anims.transparency() == 0 then return end
     local ss = engine.get_screen_size()
     local slider_sizes = v2(300, 25)
     local main_alpha = 1
+    once(function()
+        -- ui.set_visible(false)
+    end, "close_menu")
     if can_be_closed then
         once(function()
             logger:clean()
@@ -68,7 +71,6 @@ loading_screen.draw = function()
                 end, "progress_done")
             end
             local percentage = anims.progress(progress * 100)
-            local percent_align = anims.percent_align(percentage > 50 and 100 or 0)
             local alpha = anims.slider_alpha()
             if not remove_slider then
                 alpha = anims.slider_alpha(255)
@@ -78,12 +80,12 @@ loading_screen.draw = function()
             local text_alpha = anims.text_alpha(255) * main_alpha
 
             render.text("magnolia", magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
-                render.flags.X_ALIGN + render.flags.Y_ALIGN)
+                render.flags.X_ALIGN + render.flags.Y_ALIGN + render.flags.BIG_SHADOW)
 
             do
                 local text = percentage .. "%"
                 local text_size = render.text_size(percentage_font, text)
-                local x = math.round(from.x + width - (text_size.x + 5) * (percent_align / 100))
+                local x = math.clamp(math.round(from.x + width - (text_size.x + 5)), from.x, to.x - text_size.x)
                 render.text(text, percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN + render.flags.OUTLINE)
             end
 
@@ -112,6 +114,6 @@ loading_screen.draw = function()
     ---@diagnostic disable-next-line: param-type-mismatch
     logger:draw(ss / 2 + v2(0, 50 + slider_sizes.y))
 end
-cbs.add("paint", loading_screen.draw)
+cbs.add("paint", loading.draw)
 
-return loading_screen
+return loading

@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "iostream": "cpp",
+        "xstring": "cpp",
+        "xtree": "cpp",
+        "ostream": "cpp",
+        "map": "cpp",
+        "xlocale": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "enabledIfIncludesResolve"
+}

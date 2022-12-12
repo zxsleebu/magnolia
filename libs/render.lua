@@ -168,6 +168,8 @@ render.flags = {
     Y_ALIGN = 0x2,
     SHADOW = 0x4,
     OUTLINE = 0x8,
+    MORE_SHADOW = 0x10,
+    BIG_SHADOW = 0x20,
 }
 
 ---@param font __font_t
@@ -209,8 +211,14 @@ render.text = function(text, font, pos, color, flags)
         pos.y = pos.y - render.text_size(font, text).y / 2
     end
 
-    if bit.band(flags, render.flags.SHADOW) == render.flags.SHADOW then
-        renderer.text(text, font.font, pos + v2(1, 1), font.size, col.black:alpha(150):salpha(color.a))
+    local shadow = bit.band(flags, render.flags.SHADOW) == render.flags.SHADOW
+    local more_shadow = bit.band(flags, render.flags.MORE_SHADOW) == render.flags.MORE_SHADOW
+    local big_shadow = bit.band(flags, render.flags.BIG_SHADOW) == render.flags.BIG_SHADOW
+    if shadow or more_shadow or big_shadow then
+        local offset = 1
+        if more_shadow then offset = 2 end
+        if big_shadow then offset = 3 end
+        renderer.text(text, font.font, pos + v2(offset, offset), font.size, col.black:alpha(150):salpha(color.a))
     end
     if bit.band(flags, render.flags.OUTLINE) == render.flags.OUTLINE then
         local clr = col.black:alpha(100):salpha(color.a)

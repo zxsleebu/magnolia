@@ -14,9 +14,10 @@ local report = function(err, name)
     lib_engine.print_color("\n", col.white)
 end
 
----@param fn fun()
+---@generic T
+---@param fn fun(...: T)
 ---@param name? string
----@return fun(...)
+---@return fun(...: T)
 local handle = function(fn, name)
     return function(...)
         local ok, err = pcall(fn, ...)
