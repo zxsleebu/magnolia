@@ -59,12 +59,12 @@ loading.draw = function()
         end
 
         if anims.slider_y_offset.done then
-            if nixware.__scan.percent == 1 then
+            if nixware.allocbase ~= 0 then
                 once(function()
                     logger:add({{"nixware allocbase found", col.white}})
                 end, "nixware_scan_done")
             end
-            local progress = nixware.__scan.percent / 2 + anims.test_progress(50, 3) / 100
+            local progress = anims.test_progress(50 + (nixware.allocbase ~= 0 and 50 or 0), 3) / 100
             if progress == 1 then
                 once(function()
                     logger:add({{"have", col.white}, {" fun!", col.magnolia}})
