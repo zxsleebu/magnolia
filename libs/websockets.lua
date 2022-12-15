@@ -1,7 +1,4 @@
-jit.off()
-collectgarbage("stop")
 local ffi = require("ffi")
-local sockets = client and ffi.load("lua/libs/sockets") or ffi.load("libs/sockets")
 local cbs = require("libs.callbacks")
 ffi.cdef[[
     typedef void(*callback)(void*, int, char*, int);
@@ -10,53 +7,77 @@ ffi.cdef[[
     bool Send(void* hWebSocket, const char* data, int length);
 ]]
 
+local ws = {
+    sockets = nil
+}
+
 local websocket = {
     ---@class __websocket_t
     ---@field ws ffi.ctype*
     __index = {
-        ---@param self __websocket_t
+        ---@param s __websocket_t
         ---@param data string
-        send = function(self, data)
-            return sockets.Send(self.ws, data, #data)
+        send = function(s, data)
+            return ws.sockets.Send(s.ws, data, #data)
         end,
-        ---@param self __websocket_t
-        close = function(self)
-            return sockets.Close(self.ws)
+        ---@param s __websocket_t
+        close = function(s)
+            return ws.sockets.Close(s.ws)
+        end,
+        execute = function(s)
+            for i = 1, #(s.callbacks or {}) do
+                local fn = s.callbacks[i]
+                if fn then
+                    table.remove(s.callbacks, i)
+                    local status, result = pcall(fn)
+                    if not status then
+                        error(result, 0)
+                    end
+                end
+            end
         end
     }
 }
 local websockets = {}
-local ws = {
-    ---comment
-    ---@param host string
-    ---@param port number
-    ---@param path string
-    ---@param callback fun(s: __websocket_t, code: number, data: ffi.ctype*, length: number)
-    ---@return __websocket_t
-    connect = function(host, port, path, callback)
-        local t = {}
-        setmetatable(t, websocket)
-        local fn = function(handle, code, data, length)
-            t.ws = handle
-            pcall(callback, t, code, ffi.string(data, length))
+
+---@param host string
+---@param port number
+---@param path string
+---@param callback fun(s: __websocket_t, code: number, data: string)
+---@param multithreaded boolean|nil
+---@return __websocket_t|nil
+ws.connect = function(host, port, path, callback, multithreaded)
+    jit.off()
+    local t = {}
+    if not multithreaded then
+        t.callbacks = {}
+    end
+    setmetatable(t, websocket)
+    local fn = function(handle, code, data, length)
+        jit.off()
+        t.ws = handle
+        local str = length > 0 and ffi.string(data, length) or ""
+        if not multithreaded then
+            --create a new thread for each callback to prevent crashes
+            t.callbacks[#t.callbacks+1] = function()
+                callback(t, code, str)
+            end
+        else
+            pcall(callback, t, code, str)
         end
-        t.ws = sockets.Connect(host, port, path or "", fn)
-        websockets[#websockets+1] = t
-        return t
-    end,
-    stop = function()
-        for i = 1, #websockets do
+    end
+    local result = ws.sockets.Connect(host, port, path or "", fn)
+    if result == nil then return end
+    t.ws = result
+    websockets[#websockets+1] = t
+    return t
+end
+ws.stop = function()
+    for i = 1, #websockets do
+        if websockets[i] then
             websockets[i]:close()
         end
     end
-}
+end
 cbs.add("unload", ws.stop)
-local s = ws.connect("localhost", 3000, "/", function(s, code, data)
-    if code == 0 then
-        s:send("Hello from Lua!")
-    end
-    if code == 1 then
-        print("RECEIVED: " .. data)
-    end
-end)
-jit.off()
+return ws

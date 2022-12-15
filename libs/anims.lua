@@ -16,28 +16,23 @@ local anim_mt = {
 }
 
 local anims = {}
-local anims_mt = {
-    __index = function(s, k)
-        local list = rawget(s, "list")
-        local value = list[k]
-        if value == nil then
-            list[k] = setmetatable({}, anim_mt)
-            value = list[k]
-        end
-        return value
-    end,
-    __newindex = function(s, k, v)
-        local list = rawget(s, "list")
-        local value = list[k]
-        if value == nil then
-            list[k] = setmetatable({}, anim_mt)
-            value = list[k]
-        end
-        list[k].value = v
-        list[k].done = true
-        return value
-    end,
-}
+local anims_mt = { }
+anims_mt.__index = function(s, k)
+    local list = rawget(s, "list")
+    local value = list[k]
+    if value == nil then
+        list[k] = setmetatable({}, anim_mt)
+        value = list[k]
+    end
+    return value
+end
+anims_mt.__newindex = function(s, k, v)
+    local list = rawget(s, "list")
+    local value = anims_mt.__index(s, k)
+    list[k].value = v
+    list[k].done = true
+    return value
+end
 ---@return { [string]: __anim_mt }
 ---@param values? { [string]: number }
 anims.new = function(values)

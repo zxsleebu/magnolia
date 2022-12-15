@@ -4,8 +4,10 @@ local v2 = require("libs.vectors")()
 local col = require("libs.colors")
 local cbs = require("libs.callbacks")
 local nixware = require("includes.nixware")
+local security = require("includes.security")
 local once = require("libs.once").new()
-local logger = require("includes.logger").new()
+local logger = require("includes.logger").new({ infinite = true, console = true })
+local errors = require("libs.error_handler")
 local anims = require("libs.anims").new({
     bg_alpha = 0,
     slider_y_offset = 55,
@@ -23,7 +25,24 @@ local magnolia_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 80, 0)
 local percentage_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 14, render.font_flags.MonoHinting)
 local can_be_closed = false
 local remove_slider = false
+local close_delay = 1000
+loading.do_security = false
+loading.stopped = false
 loading.draw = function()
+    if loading.do_security then
+        local _, err = pcall(security.init, logger)
+        if err or security.error then
+            once(function()
+                engine.execute_client_cmd("showconsole")
+                logger.flags.console = false
+                logger:add({{"error. ", col.red}, {"see console for info"}})
+                logger.flags.console = true
+                remove_slider = true
+                close_delay = 3000
+                loading.stopped = true
+            end, "error")
+        end
+    end
     if anims.transparency() == 0 then return end
     local ss = engine.get_screen_size()
     local slider_sizes = v2(300, 25)
@@ -64,13 +83,17 @@ loading.draw = function()
                     logger:add({{"nixware allocbase found", col.white}})
                 end, "nixware_scan_done")
             end
-            local progress = anims.test_progress(50 + (nixware.allocbase ~= 0 and 50 or 0), 3) / 100
-            if progress == 1 then
+            local progress = security.progress
+            once(function()
+                logger:add({{"magnolia", col.magnolia}, {" by ", col.white}, {"lia", col.magnolia}})
+            end, "magnolia_start_log")
+            if progress == 100 then
                 once(function()
                     logger:add({{"have", col.white}, {" fun!", col.magnolia}})
+                    print("")
                 end, "progress_done")
             end
-            local percentage = anims.progress(progress * 100)
+            local percentage = anims.progress(progress)
             local alpha = anims.slider_alpha()
             if not remove_slider then
                 alpha = anims.slider_alpha(255)
@@ -79,17 +102,21 @@ loading.draw = function()
             render.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), col.magnolia:salpha(alpha), 2.1, true)
             local text_alpha = anims.text_alpha(255) * main_alpha
 
+            if alpha == 255 then
+                loading.do_security = true
+            end
+
             render.text("magnolia", magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
                 render.flags.X_ALIGN + render.flags.Y_ALIGN + render.flags.BIG_SHADOW)
 
             do
                 local text = percentage .. "%"
                 local text_size = render.text_size(percentage_font, text)
-                local x = math.clamp(math.round(from.x + width - (text_size.x + 5)), from.x, to.x - text_size.x)
+                local x = math.clamp(math.round(from.x + width - (text_size.x + 5)), from.x + 10, to.x - text_size.x)
                 render.text(text, percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN + render.flags.OUTLINE)
             end
 
-            if progress == 1 and not remove_slider then
+            if progress == 100 and not remove_slider then
                 once(function()
                     delay.add(function()
                         remove_slider = true
@@ -105,7 +132,7 @@ loading.draw = function()
                     once(function()
                         delay.add(function()
                             can_be_closed = true
-                        end, 1000)
+                        end, close_delay)
                     end, "can_be_closed")
                 end
             end

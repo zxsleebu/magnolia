@@ -1,11 +1,8 @@
 local ffi = require('ffi')
 local kernel32 = ffi.load('kernel32')
 local cbs = require("libs.callbacks")
+require("libs.types")
 ffi.cdef[[
-    typedef unsigned long DWORD;
-    typedef unsigned long ULONG_PTR;
-    typedef ULONG_PTR SIZE_T;
-    typedef void* HANDLE;
     typedef DWORD(__stdcall* PTHREAD_START_ROUTINE)(void* lpThreadParameter);
     HANDLE CreateThread(
         void* lpThreadAttributes,
@@ -15,7 +12,6 @@ ffi.cdef[[
         DWORD dwCreationFlags,
         DWORD* lpThreadId
     );
-    typedef int BOOL;
     BOOL CloseHandle(HANDLE hObject);
     BOOL TerminateThread(HANDLE hThread, DWORD dwExitCode);
     void Sleep(DWORD dwMilliseconds);
@@ -60,6 +56,7 @@ thread.new = function(fn)
         return 0
     end
     table.insert(threads, t)
+    t:start()
     return t
 end
 thread.stop = function()

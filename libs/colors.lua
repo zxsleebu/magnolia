@@ -7,16 +7,16 @@
 ---|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t }
 local col = setmetatable({}, {
     __index = {
-        __call = function(s, r, g, b, a)
-            return color_t.new(r, g, b, a or 255)
-        end,
         red = color_t.new(255, 127, 127, 255),
         green = color_t.new(127, 255, 127, 255),
         blue = color_t.new(127, 127, 255, 255),
         white = color_t.new(255, 255, 255, 255),
         black = color_t.new(0, 0, 0, 255),
         magnolia = color_t.new(242, 232, 215, 255),
-    }
+    },
+    __call = function(s, r, g, b, a)
+        return color_t.new(r, g, b, a or 255)
+    end,
 })
 
 local lerp = function(a, b, t)

@@ -10,7 +10,13 @@ end
 ---@param t number|nil
 ---@return number
 math.anim = function (a, b, t)
-    return a + (b - a) * (globalvars.get_frame_time() * (t or 14))
+    local anim = a + (b - a) * (globalvars.get_frame_time() * (t or 14))
+    if a < b then
+        anim = math.min(anim, b)
+    else
+        anim = math.max(anim, b)
+    end
+    return anim
 end
 ---@param a number
 ---@return number

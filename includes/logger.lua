@@ -2,6 +2,7 @@ local render = require("libs.render")
 local v2 = require("libs.vectors")()
 local col = require("libs.colors")
 local anims = require("libs.anims")
+local engine = require("includes.engine")
 
 local log_t = {
     __index = {
@@ -10,19 +11,34 @@ local log_t = {
         end,
     }
 }
+---@alias __logger_flags_t { infinite?: boolean, console?: boolean }|nil
 local logger_font = render.font("C:/Windows/Fonts/trebuc.ttf", 14, 0)
 local logger_t = {
+    ---@class logger_t
     __index = {
         ---@param text string|{ [number]: {[1]: string, [2]: color_t} }
         ---@param time? number
-        add = function(s, text, time)
+        ---@param flags __logger_flags_t
+        add = function(s, text, time, flags)
+            flags = flags or {}
             local t = {}
             t.anims = anims.new({
                 alpha = 0,
                 y_offset = 0,
             })
             t.text = text
+            for i = 1, #t.text do
+                if not t.text[i][2] then
+                    t.text[i][2] = col.white
+                end
+            end
             t.time = globalvars.get_real_time() + (time or 4000) / 1000
+            if s.flags.infinite and not time then
+                t.time = -1
+            end
+            if s.flags.console or flags.console then
+                engine.log(text)
+            end
             if time == -1 then
                 t.time = -1
             end
@@ -56,11 +72,12 @@ local logger_t = {
     }
 }
 local logger = {
+    ---@param flags __logger_flags_t
     new = function (flags)
         local t = {
             list = {},
+            flags = flags or {}
         }
-        flags = flags or {}
         return setmetatable(t, logger_t)
     end
 }

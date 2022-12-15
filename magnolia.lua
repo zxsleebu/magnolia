@@ -1,16 +1,15 @@
 jit.off()
 jit.flush()
-local nixware = require("includes.nixware")
+collectgarbage("stop")
 local cbs = require("libs.callbacks")
 require("includes.loading")
-local error_handler = require("libs.error_handler")()
-nixware.init()
-require("libs.websockets")
+local errors = require("libs.error_handler")
+-- require("libs.websockets")
 
 for callback_name, callback_fns in pairs(cbs.list) do
     client.register_callback(callback_name, function()
         for i = 1, #callback_fns do
-            error_handler(callback_fns[i])()
+            errors.handle(callback_fns[i])()
         end
     end)
 end
