@@ -15,6 +15,7 @@ local log_t = {
 local logger_font = render.font("C:/Windows/Fonts/trebuc.ttf", 14, 0)
 local logger_t = {
     ---@class logger_t
+    ---@field flags __logger_flags_t
     __index = {
         ---@param text string|{ [number]: {[1]: string, [2]: color_t} }
         ---@param time? number

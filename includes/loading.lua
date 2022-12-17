@@ -7,7 +7,6 @@ local nixware = require("includes.nixware")
 local security = require("includes.security")
 local once = require("libs.once").new()
 local logger = require("includes.logger").new({ infinite = true, console = true })
-local errors = require("libs.error_handler")
 local anims = require("libs.anims").new({
     bg_alpha = 0,
     slider_y_offset = 55,
@@ -33,10 +32,12 @@ loading.draw = function()
         local _, err = pcall(security.init, logger)
         if err or security.error then
             once(function()
-                engine.execute_client_cmd("showconsole")
-                logger.flags.console = false
-                logger:add({{"error. ", col.red}, {"see console for info"}})
-                logger.flags.console = true
+                if not security.loaded then
+                    engine.execute_client_cmd("showconsole")
+                    logger.flags.console = false
+                    logger:add({{"error. ", col.red}, {"see console for info"}})
+                    logger.flags.console = true
+                end
                 remove_slider = true
                 close_delay = 3000
                 loading.stopped = true

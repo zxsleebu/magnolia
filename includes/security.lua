@@ -13,6 +13,7 @@ security.url = "http://" .. security.domain .. "/server/"
 security.key = ""
 security.progress = 0
 security.logger = false ---@type logger_t
+security.loaded = false
 security.is_file_exists = function (path)
     local file = io.open(path, "r")
     if file then file:close() return true end
@@ -71,9 +72,24 @@ security.handlers.client.auth = function(s)
     })))
 end
 security.handlers.server.auth = function(s, data)
-    if data.result then
+    if data.result == "success" then
         security.authorized = true
     end
+    security.loaded = true
+    security.logger.flags.console = false
+    if data.result == "banned" then
+        security.logger:add({{"error: ", col.red}, {"banned"}})
+        error("banned", 0)
+    end
+    if data.result == "hwid" then
+        security.logger:add({{"hwid error. ", col.red}, {"hwid request sent"}})
+        error("hwid", 0)
+    end
+    if data.result == "not_found" then
+        security.logger:add({{"buy magnolia!", col.magnolia}})
+        error("user not found", 0)
+    end
+    security.logger.flags.console = true
 end
 security.handshake_success = false
 security.handlers.server.handshake = function(s, data)
@@ -107,7 +123,7 @@ security.handle_data = function(s, data)
         return security.handlers.client.handshake(s, data)
     end
     if data == "handshake failed" then
-        security.logger:add({{"handshake failed"}})
+        security.logger:add({{"handshake failed", col.red}})
     end
     local decoded = json.decode(security.decrypt(data))
     if decoded then
