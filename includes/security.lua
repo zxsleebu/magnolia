@@ -67,7 +67,7 @@ security.handlers.client.auth = function(s)
     local info = security.get_info()
     s:send(security.encrypt(json.encode({
         type = "auth",
-        info = info
+        data = info
     })))
 end
 security.handlers.server.auth = function(s, data)
@@ -97,7 +97,7 @@ security.handlers.client.handshake = function(s, data)
     handshake = security.decrypt(handshake:sub(1, -2))
     s:send(security.encrypt(json.encode({
         type = "handshake",
-        handshake = handshake
+        data = handshake
     })))
 end
 
