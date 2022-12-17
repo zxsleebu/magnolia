@@ -3,7 +3,7 @@ local delay = require("libs.delay")
 local v2 = require("libs.vectors")()
 local col = require("libs.colors")
 local cbs = require("libs.callbacks")
-local nixware = require("includes.nixware")
+-- local nixware = require("includes.nixware")
 local security = require("includes.security")
 local once = require("libs.once").new()
 local logger = require("includes.logger").new({ infinite = true, console = true })
@@ -79,11 +79,11 @@ loading.draw = function()
         end
 
         if anims.slider_y_offset.done then
-            if nixware.allocbase ~= 0 then
-                once(function()
-                    logger:add({{"nixware allocbase found", col.white}})
-                end, "nixware_scan_done")
-            end
+            -- if nixware.allocbase ~= 0 then
+            --     once(function()
+            --         logger:add({{"nixware allocbase found", col.white}})
+            --     end, "nixware_scan_done")
+            -- end
             local progress = security.progress
             once(function()
                 logger:add({{"magnolia", col.magnolia}, {" by ", col.white}, {"lia", col.magnolia}})

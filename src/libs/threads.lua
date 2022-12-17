@@ -1,4 +1,3 @@
-local ffi = require('ffi')
 local kernel32 = ffi.load('kernel32')
 local cbs = require("libs.callbacks")
 require("libs.types")

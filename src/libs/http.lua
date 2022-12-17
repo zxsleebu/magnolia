@@ -1,6 +1,6 @@
-local ffi = require("ffi")
 local urlmon = ffi.load("urlmon")
 local wininet = ffi.load("wininet")
+require("libs.types")
 ffi.cdef[[
     DWORD __stdcall URLDownloadToFileA(void*, const char*, const char*, int, int);        
     bool DeleteUrlCacheEntryA(const char*);

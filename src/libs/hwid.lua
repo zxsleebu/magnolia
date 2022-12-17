@@ -1,4 +1,3 @@
-local ffi = require("ffi")
 require("libs.types")
 ffi.cdef[[
     typedef struct {

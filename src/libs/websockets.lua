@@ -1,4 +1,3 @@
-local ffi = require("ffi")
 local cbs = require("libs.callbacks")
 ffi.cdef[[
     typedef void(*callback)(void*, int, char*, int);
