@@ -6,4 +6,4 @@ if not exist %VSTOOLS% (
 )
 call %VSTOOLS%
 
-cl /LD /O2 /Og /MD /EHsc /Fe: ./build/sockets.dll main.cpp
+cl /LD /O2 /MD /EHsc /Fe: ./build/sockets.dll main.cpp

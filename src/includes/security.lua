@@ -14,6 +14,7 @@ security.key = ""
 security.progress = 0
 security.logger = false ---@type logger_t
 security.loaded = false
+security.websocket = false ---@type __websocket_t
 security.is_file_exists = function (path)
     local file = io.open(path, "r")
     if file then file:close() return true end
@@ -71,7 +72,7 @@ security.handlers.client.auth = function(s)
         data = info
     })))
 end
-security.handlers.server.auth = function(s, data)
+security.handlers.server.auth = function(_, data)
     if data.result == "success" then
         security.authorized = true
     end
@@ -111,10 +112,12 @@ security.handlers.client.handshake = function(s, data)
         handshake = handshake .. split[i] .. "G"
     end
     handshake = security.decrypt(handshake:sub(1, -2))
-    s:send(security.encrypt(json.encode({
+    local encoded = json.encode({
         type = "handshake",
         data = handshake
-    })))
+    })
+    local encrypted = security.encrypt(encoded)
+    s:send(encrypted)
 end
 
 ---@param s __websocket_t
@@ -161,23 +164,23 @@ do
             local sockets = ws.sockets
             ws = require("libs.websockets")
             ws.sockets = sockets
-            local connection = ws.connect(security.domain, 8080, "/", function(s, code, data)
-                if code == 0 then
-                    connected = true
-                    security.logger:add({{"connection established"}})
-                    return
-                end
-                if code == 1 then
-                    security.handle_data(s, data)
-                end
-            end)
+            local connection = ws.connect(security.domain, 8080, "/")
             if not connection then
                 error("couldn't connect to server", 0)
             end
             security.websocket = connection
             cbs.add("paint", function ()
                 local status, err = pcall(function()
-                    security.websocket:execute()
+                    security.websocket:execute(function(s, code, data)
+                        if code == 0 then
+                            connected = true
+                            security.logger:add({{"connection established"}})
+                            return
+                        end
+                        if code == 1 then
+                            security.handle_data(s, data)
+                        end
+                    end)
                 end)
                 if not status then
                     security.error = err

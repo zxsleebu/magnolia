@@ -2,6 +2,7 @@
 #include <winhttp.h>
 #include <map>
 #include <iostream>
+#include <vector>
 #pragma comment(lib, "winhttp.lib")
 #define export extern "C" __declspec(dllexport)
 #define WIN32_LEAN_AND_MEAN
@@ -51,12 +52,17 @@ enum class StatusCodes{
     DATA,
     CLOSED,
 };
-typedef void(*lua_callback)(HINTERNET hWebSocket, StatusCodes code, char* data, int length);
+const int BUFFER_SIZE = 1024;
+struct CallbackData{
+    StatusCodes code;
+    char data[BUFFER_SIZE];
+    int length;
+};
 struct ThreadContext{
     HINTERNET hWebSocket;
-    lua_callback callback;
     HANDLE thread;
     bool running = true;
+    vector<CallbackData> data;
 };
 map<HINTERNET, ThreadContext*> requests;
 export bool Close(HINTERNET hWebSocket){
@@ -74,39 +80,53 @@ export bool Close(HINTERNET hWebSocket){
     return true;
 }
 
-const int BUFFER_SIZE = 1024;
+void AddData(ThreadContext* context, StatusCodes code, char* buffer, int length){
+    CallbackData data;
+    data.code = code;
+    data.length = length;
+    memcpy(data.data, buffer, length);
+    context->data.push_back(data);
+}
 void FetchData(ThreadContext *context){
     // Receive data.
     DWORD dwBytesRead = 0;
     char* buffer = new char[BUFFER_SIZE];
     WINHTTP_WEB_SOCKET_BUFFER_TYPE bufferType;
+    HINTERNET socket = context->hWebSocket;
     while (context->running){
-        // Call callback.
-        DWORD result = WinHttpWebSocketReceive(context->hWebSocket, buffer, BUFFER_SIZE, &dwBytesRead, &bufferType);
+        DWORD result = WinHttpWebSocketReceive(socket, buffer, BUFFER_SIZE, &dwBytesRead, &bufferType);
         if(result == ERROR_SUCCESS && dwBytesRead > 0)
-            context->callback(context->hWebSocket, StatusCodes::DATA, buffer, dwBytesRead);
+            AddData(context, StatusCodes::DATA, buffer, dwBytesRead);
         if(result == ERROR_WINHTTP_INCORRECT_HANDLE_TYPE
         || result == ERROR_WINHTTP_INCORRECT_HANDLE_STATE
         || result == ERROR_INVALID_OPERATION
         || result == ERROR_WINHTTP_OPERATION_CANCELLED){
-            context->callback(NULL, StatusCodes::CLOSED, NULL, 0);
+            AddData(context, StatusCodes::CLOSED, NULL, 0);
             Close(context->hWebSocket);
             return;
         }
     }
 }
 
-export HINTERNET Connect(const char* host, int port, const char* path, lua_callback callback){
-    // Create a WinHTTP session.
+export CallbackData* GetData(HINTERNET hWebSocket){
+    if (requests.find(hWebSocket) == requests.end()) return NULL;
+    auto context = requests[hWebSocket];
+    if(context->data.size() == 0) return NULL;
+    auto data = new CallbackData(context->data[0]);
+    context->data.erase(context->data.begin());
+    return data;
+}
 
+export HINTERNET Connect(const char* host, int port, const char* path){
+    // Create a WinHTTP session.
     HINTERNET hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS, 0);
     if (hSession == NULL) return PrintError("Failed to create session");
 
-    // Create an HTTP request handle.
-
+    // Create a WinHTTP connection.
     HINTERNET hConnect = WinHttpConnect(hSession, to_wstring(host), port, 0);
     if (hConnect == NULL) return PrintError("Failed to create connection");
 
+    // Create a WinHTTP request.
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", to_wstring(path), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
     if (hRequest == NULL) return PrintError("Failed to create request");
     
@@ -137,11 +157,12 @@ export HINTERNET Connect(const char* host, int port, const char* path, lua_callb
     WinHttpCloseHandle(hConnect);
     WinHttpCloseHandle(hSession);
 
-    callback(hWebSocket, StatusCodes::CONNECTED, NULL, 0);
-
     // Create thread to receive data.
-    auto context = new ThreadContext{ hWebSocket, callback };
+    auto context = new ThreadContext{ hWebSocket };
     HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FetchData, context, 0, NULL);
+
+    // Add connected data.
+    AddData(context, StatusCodes::CONNECTED, NULL, 0);
 
     // Add to map.
     context->thread = hThread;

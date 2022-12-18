@@ -1,10 +1,18 @@
 local cbs = require("libs.callbacks")
+require("libs.types")
 ffi.cdef[[
-    typedef void(*callback)(void*, int, char*, int);
-    bool Close(void* hWebSocket);
-    void* Connect(const char* host, int port, const char* path, callback callback);
-    bool Send(void* hWebSocket, const char* data, int length);
+    bool Close(void*);
+    void* Connect(const char*, int, const char*);
+    bool Send(void*, const char*, int);
+    typedef struct {
+        int code;
+        char data[1024];
+        int length;
+    } CallbackData;
+    CallbackData* GetData(void*);
+    BOOL VirtualFree(void*, SIZE_T, DWORD);
 ]]
+local callback_data_size = ffi.sizeof("CallbackData")
 
 local ws = {
     sockets = nil
@@ -23,17 +31,17 @@ local websocket = {
         close = function(s)
             return ws.sockets.Close(s.ws)
         end,
-        execute = function(s)
-            for i = 1, #(s.callbacks or {}) do
-                local fn = s.callbacks[i]
-                if fn then
-                    table.remove(s.callbacks, i)
-                    local status, result = pcall(fn)
-                    if not status then
-                        error(result, 0)
-                    end
-                end
+        ---@param callback fun(s: __websocket_t, code: number, data: string)
+        execute = function(s, callback)
+            local callback_data = ws.sockets.GetData(s.ws)
+            if callback_data == nil then return end
+            local code = callback_data.code
+            local data = ""
+            if callback_data.length > 0 then
+                data = ffi.string(callback_data.data, callback_data.length)
             end
+            pcall(callback, s, code, data)
+            ffi.C.VirtualFree(callback_data, callback_data_size, 0x8000)
         end
     }
 }
@@ -42,30 +50,11 @@ local websockets = {}
 ---@param host string
 ---@param port number
 ---@param path string
----@param callback fun(s: __websocket_t, code: number, data: string)
----@param multithreaded boolean|nil
 ---@return __websocket_t|nil
-ws.connect = function(host, port, path, callback, multithreaded)
-    jit.off()
+ws.connect = function(host, port, path)
     local t = {}
-    if not multithreaded then
-        t.callbacks = {}
-    end
     setmetatable(t, websocket)
-    local fn = function(handle, code, data, length)
-        jit.off()
-        t.ws = handle
-        local str = length > 0 and ffi.string(data, length) or ""
-        if not multithreaded then
-            --create a new thread for each callback to prevent crashes
-            t.callbacks[#t.callbacks+1] = function()
-                callback(t, code, str)
-            end
-        else
-            pcall(callback, t, code, str)
-        end
-    end
-    local result = ws.sockets.Connect(host, port, path or "", fn)
+    local result = ws.sockets.Connect(host, port, path or "")
     if result == nil then return end
     t.ws = result
     websockets[#websockets+1] = t

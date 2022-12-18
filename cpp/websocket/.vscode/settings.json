@@ -5,7 +5,8 @@
         "xtree": "cpp",
         "ostream": "cpp",
         "map": "cpp",
-        "xlocale": "cpp"
+        "xlocale": "cpp",
+        "xutility": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabledIfIncludesResolve"
 }

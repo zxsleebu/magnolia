@@ -2,18 +2,11 @@ local kernel32 = ffi.load('kernel32')
 local cbs = require("libs.callbacks")
 require("libs.types")
 ffi.cdef[[
-    typedef DWORD(__stdcall* PTHREAD_START_ROUTINE)(void* lpThreadParameter);
-    HANDLE CreateThread(
-        void* lpThreadAttributes,
-        SIZE_T dwStackSize,
-        PTHREAD_START_ROUTINE lpStartAddress,
-        void* lpParameter,
-        DWORD dwCreationFlags,
-        DWORD* lpThreadId
-    );
-    BOOL CloseHandle(HANDLE hObject);
-    BOOL TerminateThread(HANDLE hThread, DWORD dwExitCode);
-    void Sleep(DWORD dwMilliseconds);
+    typedef DWORD(__stdcall* PTHREAD_START_ROUTINE)(void*);
+    HANDLE CreateThread(void*, SIZE_T, PTHREAD_START_ROUTINE, void*, DWORD, DWORD*);
+    BOOL CloseHandle(HANDLE);
+    BOOL TerminateThread(HANDLE, DWORD);
+    void Sleep(DWORD);
 ]]
 local thread_t = {
     ---@class thread_t
@@ -31,7 +24,7 @@ local thread_t = {
             kernel32.CloseHandle(s.handle)
             return s
         end,
-        sleep = function(s, ms)
+        sleep = function(_, ms)
             kernel32.Sleep(ms)
         end
     },
@@ -50,7 +43,7 @@ thread.new = function(fn)
         id = id,
         running = false,
     }, thread_t)
-    t.fn = function(thread_parameter)
+    t.fn = function(_)
         pcall(fn, t)
         return 0
     end

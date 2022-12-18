@@ -18,11 +18,9 @@ utf8.char = function(val)
     return table.concat(cbts)
 end
 utf8.byte = function(char)
-    local b = string.byte
     local c = 0
-    local bm = { [0] = 0, 0x7F, 0x7FF, 0xFFFF, 0x1FFFFF }
-    local bytes = { b(char, 1, -1) }
-    for i, v in ipairs(bytes) do
+    local bytes = { string.byte(char, 1, -1) }
+    for _, v in ipairs(bytes) do
         if v > 127 then
             c = (c * 64) + (v % 64)
         else
@@ -32,7 +30,14 @@ utf8.byte = function(char)
     end
     return c
 end
+local unescape_bytes = function(str)
+    return str:gsub("\\([0-9A-F]+)", function(a)
+        return utf8.char(tonumber(a, 16))
+    end)
+end
+local pattern = "[%z\\1-\\127\\194-\\244][\\128-\\191]*"
+local unescaped_pattern = unescape_bytes(pattern)
 utf8.map = function(str, fn)
-    return str:gsub("[%z\1-\127\194-\244][\128-\191]*", fn)
+    return str:gsub(unescaped_pattern, fn)
 end
 return utf8
