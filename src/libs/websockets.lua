@@ -54,9 +54,8 @@ local websockets = {}
 ws.connect = function(host, port, path)
     local t = {}
     setmetatable(t, websocket)
-    local result = ws.sockets.Connect(host, port, path or "")
-    if result == nil then return end
-    t.ws = result
+    t.ws = ws.sockets.Connect(host, port, path or "")
+    if t.ws == nil then return end
     websockets[#websockets+1] = t
     return t
 end

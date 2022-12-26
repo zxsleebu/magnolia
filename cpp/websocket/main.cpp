@@ -51,6 +51,7 @@ enum class StatusCodes{
     CONNECTED,
     DATA,
     CLOSED,
+    FAILED
 };
 const int BUFFER_SIZE = 1024;
 struct CallbackData{
@@ -63,20 +64,22 @@ struct ThreadContext{
     HANDLE thread;
     bool running = true;
     vector<CallbackData> data;
+    HANDLE handle;
 };
 map<HINTERNET, ThreadContext*> requests;
-export bool Close(HINTERNET hWebSocket){
+export bool Close(HANDLE handle){
     // If handle is not found, return.
-    if (requests.find(hWebSocket) == requests.end()) return false;
+    if (requests.find(handle) == requests.end()) return false;
     // Terminate thread.
-    auto thread = requests[hWebSocket]->thread;
-    requests[hWebSocket]->running = false;
+    auto context = requests[handle];
+    context->running = false;
     // TerminateThread(thread, 0);
-    CloseHandle(thread);
-    requests.erase(hWebSocket);
+    CloseHandle(context->thread);
     // Close handles.
-    WinHttpWebSocketClose(hWebSocket, 1000, NULL, 0);
-    WinHttpCloseHandle(hWebSocket);
+    WinHttpWebSocketClose(context->hWebSocket, 1000, NULL, 0);
+    WinHttpCloseHandle(context->hWebSocket);
+
+    requests.erase(handle);
     return true;
 }
 
@@ -102,42 +105,48 @@ void FetchData(ThreadContext *context){
         || result == ERROR_INVALID_OPERATION
         || result == ERROR_WINHTTP_OPERATION_CANCELLED){
             AddData(context, StatusCodes::CLOSED, NULL, 0);
-            Close(context->hWebSocket);
+            Close(context->handle);
             return;
         }
     }
 }
 
-export CallbackData* GetData(HINTERNET hWebSocket){
-    if (requests.find(hWebSocket) == requests.end()) return NULL;
-    auto context = requests[hWebSocket];
+export CallbackData* GetData(HANDLE handle){
+    if (requests.find(handle) == requests.end()) return NULL;
+    auto context = requests[handle];
     if(context->data.size() == 0) return NULL;
     auto data = new CallbackData(context->data[0]);
     context->data.erase(context->data.begin());
     return data;
 }
 
-export HINTERNET Connect(const char* host, int port, const char* path){
+HINTERNET ConnectToServer(const char* host, int port, const char* path, ThreadContext* context){
     // Create a WinHTTP session.
     HINTERNET hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS, 0);
-    if (hSession == NULL) return PrintError("Failed to create session");
+    if (hSession == NULL)
+        return PrintError("Failed to create session");
 
     // Create a WinHTTP connection.
     HINTERNET hConnect = WinHttpConnect(hSession, to_wstring(host), port, 0);
-    if (hConnect == NULL) return PrintError("Failed to create connection");
+    if (hConnect == NULL)
+        return PrintError("Failed to create connection");
 
     // Create a WinHTTP request.
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", to_wstring(path), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
-    if (hRequest == NULL) return PrintError("Failed to create request");
+    if (hRequest == NULL)
+        return PrintError("Failed to create request");
     
     // Add upgrade header.
-    if(!WinHttpSetOption(hRequest, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, NULL, 0)) return PrintError("Failed to set upgrade header");
+    if(!WinHttpSetOption(hRequest, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, NULL, 0))
+        return PrintError("Failed to set upgrade header");
 
     // Send a request.
-    if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, -1, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) return PrintError("Failed to send request");
+    if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, -1, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
+        return PrintError("Failed to send request");
 
     // End the request.
-    if (!WinHttpReceiveResponse(hRequest, NULL)) return PrintError("Failed to receive response");
+    if (!WinHttpReceiveResponse(hRequest, NULL))
+        return PrintError("Failed to receive response");
 
     // Get status code.
     DWORD dwStatusCode = 0;
@@ -146,19 +155,21 @@ export HINTERNET Connect(const char* host, int port, const char* path){
         return PrintError("Failed to get status code");
 
     //If status code is not 101, return.
-    if (dwStatusCode != 101) return PrintError("Status code is not 101");
+    if (dwStatusCode != 101)
+        return PrintError("Status code is not 101");
     
     // Upgrade to web socket.
     HINTERNET hWebSocket = WinHttpWebSocketCompleteUpgrade(hRequest, NULL);
-    if (hWebSocket == NULL) return PrintError("Failed to upgrade to web socket");
+    if (hWebSocket == NULL)
+        return PrintError("Failed to upgrade to web socket");
 
     // Close handles.
     WinHttpCloseHandle(hRequest);
     WinHttpCloseHandle(hConnect);
     WinHttpCloseHandle(hSession);
 
-    // Create thread to receive data.
-    auto context = new ThreadContext{ hWebSocket };
+    context->hWebSocket = hWebSocket;
+
     HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FetchData, context, 0, NULL);
 
     // Add connected data.
@@ -166,13 +177,44 @@ export HINTERNET Connect(const char* host, int port, const char* path){
 
     // Add to map.
     context->thread = hThread;
-    requests[hWebSocket] = context;
 
     return hWebSocket;
 }
-export bool Send(HINTERNET hWebSocket, char* data, int length){
+
+struct ConnectionThreadContext{
+    const char* host;
+    int port;
+    const char* path;
+    HANDLE handle;
+};
+void ConnectionThread(ConnectionThreadContext* info){
+    // Create thread to receive data.
+    auto context = new ThreadContext{ };
+    context->handle = info->handle;
+    requests[context->handle] = context;
+
+    HINTERNET hWebSocket = ConnectToServer(info->host, info->port, info->path, context);
+    
+    if(hWebSocket == NULL){
+        AddData(context, StatusCodes::FAILED, NULL, 0);
+        return;
+    };
+}
+
+export HANDLE Connect(const char* host, int port, const char* path){
+    //Generate random handle.
+    HANDLE handle = (HANDLE)rand();
+    // Create thread to connect.
+    auto context = new ConnectionThreadContext{ host, port, path, handle };
+    CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ConnectionThread, context, 0, NULL);
+
+    return handle;
+}
+export bool Send(HANDLE handle, char* data, int length){
+    if (requests.find(handle) == requests.end()) return false;
+    auto context = requests[handle];
     // Send data.
-    if(WinHttpWebSocketSend(hWebSocket, WINHTTP_WEB_SOCKET_BINARY_MESSAGE_BUFFER_TYPE, data, length) != ERROR_SUCCESS){
+    if(WinHttpWebSocketSend(context->hWebSocket, WINHTTP_WEB_SOCKET_BINARY_MESSAGE_BUFFER_TYPE, data, length) != ERROR_SUCCESS){
         PrintError("Failed to send data");
         return false;
     }

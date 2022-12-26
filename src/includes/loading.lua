@@ -49,7 +49,7 @@ loading.draw = function()
     local slider_sizes = v2(300, 25)
     local main_alpha = 1
     once(function()
-        -- ui.set_visible(false)
+        ui.set_visible(false)
     end, "close_menu")
     if can_be_closed then
         once(function()

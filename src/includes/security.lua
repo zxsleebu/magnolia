@@ -8,14 +8,22 @@ local once = require("libs.once").new()
 local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
 local security = {}
+security.release = false
 security.domain = "localhost"
+if security.release then
+    security.domain = "magnolia.lua.best"
+end
 security.url = "http://" .. security.domain .. "/server/"
+security.socket_url = security.domain
+if security.release then
+    security.socket_url = "ws." .. security.domain
+end
 security.key = ""
 security.progress = 0
 security.logger = false ---@type logger_t
 security.loaded = false
 security.websocket = false ---@type __websocket_t
-security.is_file_exists = function (path)
+security.is_file_exists = function(path)
     local file = io.open(path, "r")
     if file then file:close() return true end
     return false
@@ -44,7 +52,7 @@ security.encrypt = function(str)
         return string.format("%X", bit.bxor(utf8.byte(char) or 0, key:byte(c % #key + 1))) .. "G"
     end):sub(1, -2)
 end
-security.get_info = function ()
+security.get_info = function()
     local file = io.open("C:/nixware/data.bin", "rb")
     if not file then return error("can't get nixware hwid") end
     local data = file:read("*all")
@@ -79,15 +87,15 @@ security.handlers.server.auth = function(_, data)
     security.loaded = true
     security.logger.flags.console = false
     if data.result == "banned" then
-        security.logger:add({{"error: ", col.red}, {"banned"}})
+        security.logger:add({ { "error: ", col.red }, { "banned" } })
         error("banned", 0)
     end
     if data.result == "hwid" then
-        security.logger:add({{"hwid error. ", col.red}, {"hwid request sent"}})
+        security.logger:add({ { "hwid error. ", col.red }, { "hwid request sent" } })
         error("hwid", 0)
     end
     if data.result == "not_found" then
-        security.logger:add({{"buy magnolia!", col.magnolia}})
+        security.logger:add({ { "buy magnolia!", col.magnolia } })
         error("user not found", 0)
     end
     security.logger.flags.console = true
@@ -102,7 +110,7 @@ end
 security.handlers.client.handshake = function(s, data)
     local split = {}
     for str in string.gmatch(data, "([^G]+)") do
-        split[#split+1] = str
+        split[#split + 1] = str
     end
     for i = 1, #split, 2 do
         security.key = security.key .. string.char(tonumber(split[i], 16))
@@ -126,7 +134,7 @@ security.handle_data = function(s, data)
         return security.handlers.client.handshake(s, data)
     end
     if data == "handshake failed" then
-        security.logger:add({{"handshake failed", col.red}})
+        security.logger:add({ { "handshake failed", col.red } })
     end
     local decoded = json.decode(security.decrypt(data))
     if decoded then
@@ -140,7 +148,7 @@ security.handle_data = function(s, data)
 end
 do
     local got_sockets = false
-    security.get_sockets = function ()
+    security.get_sockets = function()
         once(function()
             local socket_path = http.download(security.url .. "resources/sockets.dll")
             if not socket_path or not security.is_file_exists(socket_path) then
@@ -149,7 +157,7 @@ do
             local sockets = ffi.load(socket_path)
             ws.sockets = sockets
             os.remove(socket_path)
-            security.logger:add({{"retrieved sockets"}})
+            security.logger:add({ { "retrieved sockets" } })
             got_sockets = true
         end, "download_sockets")
         return got_sockets
@@ -164,17 +172,17 @@ do
             local sockets = ws.sockets
             ws = require("libs.websockets")
             ws.sockets = sockets
-            local connection = ws.connect(security.domain, 8080, "/")
+            local connection = ws.connect(security.socket_url, security.release and 80 or 3000, "/")
             if not connection then
                 error("couldn't connect to server", 0)
             end
             security.websocket = connection
-            cbs.add("paint", function ()
+            cbs.add("paint", function()
                 local status, err = pcall(function()
                     security.websocket:execute(function(s, code, data)
                         if code == 0 then
                             connected = true
-                            security.logger:add({{"connection established"}})
+                            security.logger:add({ { "connection established" } })
                             return
                         end
                         if code == 1 then
@@ -193,13 +201,13 @@ do
 end
 security.wait_for_handshake = function()
     if security.handshake_success then
-        security.logger:add({{"handshake success"}})
+        -- security.logger:add({{"handshake succeeded"}})
         return true
     end
 end
 security.wait_for_auth = function()
     if security.authorized then
-        security.logger:add({{"authorized"}})
+        security.logger:add({ { "authorized" } })
         return true
     end
 end
@@ -217,7 +225,39 @@ do
         step("wait_for_auth")
     }
 end
-security.init = function (logger)
+local is_fn_hooked = function(f)
+    return pcall(string.dump, f)
+end
+local is_str_dmp_hooked = function()
+    return tostring(string.dump):find("builtin") == nil
+end
+local are_objs_changed = function(obj)
+    for _, o in pairs(obj) do
+        for _, f in pairs(o) do
+            if type(f) == "function" and is_fn_hooked(f) then
+                -- print(o_name .. "." .. f_name .. " is hooked")
+                return true
+            end
+        end
+    end
+end
+security.ban = function()
+
+end
+security.check_functions = function()
+    if is_str_dmp_hooked() then return false end
+    if are_objs_changed({
+        client, globalvars, debug, engine, io, ffi, os,
+        {
+            tostring,
+            string.find,
+            require, pcall,
+            loadstring
+        }
+    }) then return end
+    return true
+end
+security.init = function(logger)
     if security.error then return end
     security.logger = logger
     local count = #security.steps
