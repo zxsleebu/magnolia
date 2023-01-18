@@ -31,16 +31,16 @@ local websocket = {
         close = function(s)
             return ws.sockets.Close(s.ws)
         end,
-        ---@param callback fun(s: __websocket_t, code: number, data: string)
+        ---@param callback fun(s: __websocket_t, code: number, data: string, length: number)
         execute = function(s, callback)
             local callback_data = ws.sockets.GetData(s.ws)
             if callback_data == nil then return end
             local code = callback_data.code
             local data = ""
             if callback_data.length > 0 then
-                data = ffi.string(callback_data.data, callback_data.length)
+                data = ffi.string(callback_data.data, math.min(callback_data.length, 1024))
             end
-            pcall(callback, s, code, data)
+            pcall(callback, s, code, data, callback_data.length)
             ffi.C.VirtualFree(callback_data, callback_data_size, 0x8000)
         end
     }

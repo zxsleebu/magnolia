@@ -2,7 +2,7 @@ local render = require("libs.render")
 local v2 = require("libs.vectors")()
 local col = require("libs.colors")
 local anims = require("libs.anims")
-local engine = require("includes.engine")
+local lib_engine = require("includes.engine")
 
 local log_t = {
     __index = {
@@ -38,7 +38,7 @@ local logger_t = {
                 t.time = -1
             end
             if s.flags.console or flags.console then
-                engine.log(text)
+                lib_engine.log(text)
             end
             if time == -1 then
                 t.time = -1
@@ -49,6 +49,15 @@ local logger_t = {
         clean = function(s)
             for i = 1, #s.list do
                 s.list[i]:remove()
+            end
+        end,
+        is_animating = function (s)
+            for i = 1, #s.list do
+                local log = s.list[i]
+                local alpha = log.anims.alpha()
+                if alpha ~= 255 and alpha ~= 0 then
+                    return true
+                end
             end
         end,
         ---@param pos vec2_t

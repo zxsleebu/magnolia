@@ -56,6 +56,7 @@ end
 ---@param r number
 ---@param filled? boolean
 render.rounded_rect = function (from, to, clr, r, filled)
+    r = r + 0.1
     local vertices = {}
     local pos = {
         v2(from.x + r, from.y + r),
@@ -170,6 +171,7 @@ render.flags = {
     OUTLINE = 0x8,
     MORE_SHADOW = 0x10,
     BIG_SHADOW = 0x20,
+    RIGHT_ALIGN = 0x40,
 }
 
 ---@param font __font_t
@@ -194,6 +196,7 @@ local outline_pos = {
 ---@param color color_t
 ---@param flags? number
 render.text = function(text, font, pos, color, flags)
+    local new_pos = v2(pos.x, pos.y)
     if type(flags) == "table" then
         local int_flags = 0
         for _, flag in pairs(flags) do
@@ -204,11 +207,15 @@ render.text = function(text, font, pos, color, flags)
     flags = flags or 0
     --horizontal align
     if bit.band(flags, render.flags.X_ALIGN) == render.flags.X_ALIGN then
-        pos.x = pos.x - render.text_size(font, text).x / 2
+        new_pos.x = new_pos.x - render.text_size(font, text).x / 2
     end
     --vertical align
     if bit.band(flags, render.flags.Y_ALIGN) == render.flags.Y_ALIGN then
-        pos.y = pos.y - render.text_size(font, text).y / 2
+        new_pos.y = new_pos.y - render.text_size(font, text).y / 2
+    end
+    --right align
+    if bit.band(flags, render.flags.RIGHT_ALIGN) == render.flags.RIGHT_ALIGN then
+        new_pos.x = new_pos.x - render.text_size(font, text).x
     end
 
     local shadow = bit.band(flags, render.flags.SHADOW) == render.flags.SHADOW
@@ -218,15 +225,15 @@ render.text = function(text, font, pos, color, flags)
         local offset = 1
         if more_shadow then offset = 2 end
         if big_shadow then offset = 3 end
-        renderer.text(text, font.font, pos + v2(offset, offset), font.size, col.black:alpha(150):salpha(color.a))
+        renderer.text(text, font.font, new_pos + v2(offset, offset), font.size, col.black:alpha(150):salpha(color.a))
     end
     if bit.band(flags, render.flags.OUTLINE) == render.flags.OUTLINE then
         local clr = col.black:alpha(100):salpha(color.a)
         for _, p in pairs(outline_pos) do
-            renderer.text(text, font.font, pos + p, font.size, clr)
+            renderer.text(text, font.font, new_pos + p, font.size, clr)
         end
     end
-    renderer.text(text, font.font, pos, font.size, color)
+    renderer.text(text, font.font, new_pos, font.size, color)
 end
 render.multi_color_text = function(strings, font, pos, flags)
     if bit.band(flags or 0, render.flags.X_ALIGN) == render.flags.X_ALIGN then

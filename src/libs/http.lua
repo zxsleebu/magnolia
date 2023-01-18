@@ -1,3 +1,4 @@
+local ffi = require("libs.protected_ffi")
 local urlmon = ffi.load("urlmon")
 local wininet = ffi.load("wininet")
 require("libs.types")
@@ -6,6 +7,8 @@ ffi.cdef[[
     bool DeleteUrlCacheEntryA(const char*);
 ]]
 local http = {}
+---@param url string
+---@param path? string
 http.download = function(url, path)
     local succeed = pcall(wininet.DeleteUrlCacheEntryA, url)
     if succeed == 0 then return false end

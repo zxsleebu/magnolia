@@ -31,6 +31,7 @@ anims_mt.__newindex = function(s, k, v)
     local value = anims_mt.__index(s, k)
     list[k].value = v
     list[k].done = true
+    list[k].anims = s
     return value
 end
 ---@return { [string]: __anim_mt }

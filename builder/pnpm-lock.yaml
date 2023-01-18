@@ -6,7 +6,7 @@ specifiers:
 
 dependencies:
   luabundle: 1.6.0
-  luactor: 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+x-oauth-basic@github.com/zxsleebu/luactor/04dcdd58399d67ea6450c57af52e99f937437239
+  luactor: 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+x-oauth-basic@github.com/zxsleebu/luactor/78763ed6c6f4a4308e89dd9befa7a5b1364fc30b
 
 packages:
 
@@ -72,8 +72,8 @@ packages:
     resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
     dev: false
 
-  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+x-oauth-basic@github.com/zxsleebu/luactor/04dcdd58399d67ea6450c57af52e99f937437239:
-    resolution: {commit: 04dcdd58399d67ea6450c57af52e99f937437239, repo: https://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:x-oauth-basic@github.com/zxsleebu/luactor.git, type: git}
+  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+x-oauth-basic@github.com/zxsleebu/luactor/78763ed6c6f4a4308e89dd9befa7a5b1364fc30b:
+    resolution: {commit: 78763ed6c6f4a4308e89dd9befa7a5b1364fc30b, repo: https://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:x-oauth-basic@github.com/zxsleebu/luactor.git, type: git}
     name: luactor
     version: 1.0.1
     dependencies:

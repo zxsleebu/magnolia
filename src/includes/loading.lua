@@ -6,6 +6,7 @@ local cbs = require("libs.callbacks")
 -- local nixware = require("includes.nixware")
 local security = require("includes.security")
 local once = require("libs.once").new()
+local gui = require("includes.gui")
 local logger = require("includes.logger").new({ infinite = true, console = true })
 local anims = require("libs.anims").new({
     bg_alpha = 0,
@@ -45,11 +46,14 @@ loading.draw = function()
         end
     end
     if anims.transparency() == 0 then return end
+
+    if security.debug then return end
+
     local ss = engine.get_screen_size()
     local slider_sizes = v2(300, 25)
     local main_alpha = 1
     once(function()
-        ui.set_visible(false)
+        -- ui.set_visible(false)
     end, "close_menu")
     if can_be_closed then
         once(function()
@@ -59,6 +63,7 @@ loading.draw = function()
     end
     do
         local alpha = anims.bg_alpha(255) * main_alpha
+
         local c1, c2 = col.black:alpha(50):salpha(alpha), col.black:alpha(200):salpha(alpha)
         renderer.rect_filled_fade(v2(0, 0), v2(ss.x, ss.y), c1, c1, c2, c2)
     end
@@ -79,11 +84,6 @@ loading.draw = function()
         end
 
         if anims.slider_y_offset.done then
-            -- if nixware.allocbase ~= 0 then
-            --     once(function()
-            --         logger:add({{"nixware allocbase found", col.white}})
-            --     end, "nixware_scan_done")
-            -- end
             local progress = security.progress
             once(function()
                 logger:add({{"magnolia", col.magnolia}, {" by ", col.white}, {"lia", col.magnolia}})
@@ -93,6 +93,9 @@ loading.draw = function()
                     logger:add({{"have", col.white}, {" fun!", col.magnolia}})
                     print("")
                 end, "progress_done")
+                once(function()
+                    gui.init()
+                end, "gui_init")
             end
             local percentage = anims.progress(progress)
             local alpha = anims.slider_alpha()
@@ -132,6 +135,7 @@ loading.draw = function()
                 if not can_be_closed then
                     once(function()
                         delay.add(function()
+                            gui.can_be_visible = true
                             can_be_closed = true
                         end, close_delay)
                     end, "can_be_closed")

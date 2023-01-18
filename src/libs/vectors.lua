@@ -24,55 +24,55 @@ local v2 = vec2_t.new
 ---@type fun(x: number, y: number, z: number): vec3_t
 local v3 = vec3_t.new
 
-vec2_t.__add = function(a, b)
-    return v2(a.x + b.x, a.y + b.y)
-end
-vec2_t.__sub = function(a, b)
-    return v2(a.x - b.x, a.y - b.y)
-end
-vec2_t.__mul = function(a, b)
-    return type(b) == "number" and v2(a.x * b, a.y * b) or v2(a.x * b.x, a.y * b.y)
-end
-vec2_t.__div = function(a, b)
-    return type(b) == "number" and v2(a.x / b, a.y / b) or v2(a.x / b.x, a.y / b.y)
-end
+-- vec2_t.__add = function(a, b)
+--     return v2(a.x + b.x, a.y + b.y)
+-- end
+-- vec2_t.__sub = function(a, b)
+--     return v2(a.x - b.x, a.y - b.y)
+-- end
+-- vec2_t.__mul = function(a, b)
+--     return type(b) == "number" and v2(a.x * b, a.y * b) or v2(a.x * b.x, a.y * b.y)
+-- end
+-- vec2_t.__div = function(a, b)
+--     return type(b) == "number" and v2(a.x / b, a.y / b) or v2(a.x / b.x, a.y / b.y)
+-- end
 vec2_t.__unm = function(a)
     return v2(-a.x, -a.y)
 end
 vec2_t.__tostring = function(a)
     return "vec2_t("..a.x..", "..a.y..")"
 end
-vec2_t.__eq = function(a, b)
-    return a.x == b.x and a.y == b.y
-end
+-- vec2_t.__eq = function(a, b)
+--     return a.x == b.x and a.y == b.y
+-- end
 vec2_t.clamp = function(s, min, max)
     return v2(math.clamp(s.x, min.x, max.x), math.clamp(s.y, min.y, max.y))
 end
-vec2_t.round = function(s, min, max)
+vec2_t.round = function(s)
     return v2(math.round(s.x), math.round(s.y))
 end
 
-vec3_t.__add = function(a, b)
-    return v3(a.x + b.x, a.y + b.y, a.z + b.z)
-end
-vec3_t.__sub = function(a, b)
-    return v3(a.x - b.x, a.y - b.y, a.z - b.z)
-end
-vec3_t.__mul = function(a, b)
-    return type(b) == "number" and v3(a.x * b, a.y * b, a.z * b) or v3(a.x * b.x, a.y * b.y, a.z * b.z)
-end
-vec3_t.__div = function(a, b)
-    return type(b) == "number" and v3(a.x / b, a.y / b, a.z / b) or v3(a.x / b.x, a.y / b.y, a.z / b.z)
-end
+-- vec3_t.__add = function(a, b)
+--     return v3(a.x + b.x, a.y + b.y, a.z + b.z)
+-- end
+-- vec3_t.__sub = function(a, b)
+--     return v3(a.x - b.x, a.y - b.y, a.z - b.z)
+-- end
+-- vec3_t.__mul = function(a, b)
+--     return type(b) == "number" and v3(a.x * b, a.y * b, a.z * b) or v3(a.x * b.x, a.y * b.y, a.z * b.z)
+-- end
+-- vec3_t.__div = function(a, b)
+--     return type(b) == "number" and v3(a.x / b, a.y / b, a.z / b) or v3(a.x / b.x, a.y / b.y, a.z / b.z)
+-- end
 vec3_t.__unm = function(a)
     return v3(-a.x, -a.y, -a.z)
 end
 vec3_t.__tostring = function(a)
     return "vec3_t("..a.x..", "..a.y..", "..a.z..")"
 end
-vec3_t.__eq = function(a, b)
-    return a.x == b.x and a.y == b.y and a.z == b.z
-end
+-- vec3_t.__eq = function(a, b)
+--     return a.x == b.x and a.y == b.y and a.z == b.z
+-- end
 vec3_t.__len = function (a)
     return (a.x ^ 2 + a.y ^ 2 + a.z ^ 2) ^ 0.5
 end

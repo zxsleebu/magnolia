@@ -26,8 +26,12 @@ lib_engine.log = function (text)
         {"magnolia", col.magnolia},
         {" ] ", brackets_color},
     }
-    for i = 1, #text do
-        t[#t+1] = text[i]
+    if type(text) == "string" then
+        t[#t+1] = {text}
+    else
+        for i = 1, #text do
+            t[#t+1] = text[i]
+        end
     end
     t[#t+1] = {"\n"}
     lib_engine.print(t)

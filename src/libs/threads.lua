@@ -1,3 +1,4 @@
+local ffi = require("libs.protected_ffi")
 local kernel32 = ffi.load('kernel32')
 local cbs = require("libs.callbacks")
 require("libs.types")
@@ -19,6 +20,7 @@ local thread_t = {
         end,
         stop = function(s)
             if not s.running then return s end
+            s.fn:free()
             s.running = false
             kernel32.TerminateThread(s.handle, 0)
             kernel32.CloseHandle(s.handle)
@@ -43,10 +45,11 @@ thread.new = function(fn)
         id = id,
         running = false,
     }, thread_t)
-    t.fn = function(_)
+    t.fn = ffi.cast("PTHREAD_START_ROUTINE", function(_)
         pcall(fn, t)
+        t:stop()
         return 0
-    end
+    end)
     table.insert(threads, t)
     t:start()
     return t
