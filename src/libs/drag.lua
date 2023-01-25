@@ -7,6 +7,15 @@ ffi.load('user32')
 ffi.cdef[[
     typedef void* HANDLE;
     HANDLE LoadCursorA(HANDLE, const char*);
+    typedef struct { long x; long y; } POINT;
+    typedef struct {
+        DWORD cbSize;
+        DWORD flags;
+        void* hCursor;
+        POINT ptScreenPos;
+    } CURSORINFO;
+    bool GetCursorInfo(CURSORINFO*);
+    void* GetForegroundWindow();
 ]]
 local arrow_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32512))
 local move_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32646))
@@ -57,13 +66,25 @@ drag.new = function(key, default_pos)
     drag.__elements[key].pos.x:set_visible(false) drag.__elements[key].pos.y:set_visible(false)
     return setmetatable(drag.__elements[key], drag.mt)
 end
+local window_handle = ffi.C.GetForegroundWindow()
+local is_cursor_visible = function()
+    local cursor = ffi.new("CURSORINFO")
+    cursor.cbSize = ffi.sizeof("CURSORINFO")
+    ffi.C.GetCursorInfo(cursor)
+    return cursor.flags ~= 0
+end
+local is_window_active = function()
+    local focused = ffi.C.GetForegroundWindow() == window_handle
+    local inter = ui.is_visible() or not is_cursor_visible()
+    return focused and inter
+end
 ---@param size vec2_t
 ---@param center? boolean
 drag.hover_fn = function(size, center)
     return function(pos)
         local rect = ui.get_menu_rect()
         return drag.is_hovered(center and v2(pos.x - size.x / 2, pos.y) or pos, size)
-            and not (drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y)) and ui.is_visible())
+            and not (drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y)) and ui.is_visible()) and is_window_active()
     end
 end
 drag.mt = {

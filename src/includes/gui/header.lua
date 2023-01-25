@@ -27,7 +27,7 @@ header.user = function (pos)
     local alpha = header.anims.avatar_alpha()
     local circle_pos = avatar_pos + avatar_size / 2
     local circle_color = col.white:alpha(255 - alpha)
-    renderer.circle(circle_pos, avatar_size.x / 2, 15, true, circle_color:alpha(20))
+    renderer.circle(circle_pos, avatar_size.x / 2, 15, true, circle_color:salpha(20))
     render.text("?", fonts.header, circle_pos + v2(0.4, 0), circle_color, render.flags.X_ALIGN + render.flags.Y_ALIGN)
     if header.avatar_texture then
         alpha = header.anims.avatar_alpha(255)
