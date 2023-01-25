@@ -12,7 +12,7 @@ local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
 local lib_engine = require("includes.engine")
 local security = {}
-security.debug = false
+-- security.debug = true
 security.release_server = true
 security.domain = "localhost"
 if security.release_server then
@@ -170,17 +170,15 @@ do
     local got_sockets = false
     security.get_sockets = function()
         once(function()
-            threads.new(function ()
-                local socket_path = http.download(security.url .. "resources/sockets.dll")
-                if not socket_path or not security.is_file_exists(socket_path) then
-                    error("couldn't get sockets", 0)
-                end
-                local sockets = ffi.load(socket_path)
-                ws.sockets = sockets
-                os.remove(socket_path)
-                security.logger:add({ { "retrieved sockets" } })
-                got_sockets = true
-            end)
+            -- threads.new(function ()
+                http.download(security.url .. "resources/sockets.dll", nil, function (path)
+                    local sockets = ffi.load(path)
+                    ws.sockets = sockets
+                    os.remove(path)
+                    security.logger:add({ { "retrieved sockets" } })
+                    got_sockets = true
+                end)
+            -- end)
         end, "download_sockets")
         return got_sockets
     end
@@ -236,9 +234,6 @@ security.wait_for_auth = function()
         return true
     end
 end
-security.done = function ()
-    return true
-end
 do
     local step = function(name)
         return {
@@ -251,7 +246,6 @@ do
         step("connect"),
         step("wait_for_handshake"),
         step("wait_for_auth"),
-        step("done")
     }
 end
 local is_fn_hooked = function(f)

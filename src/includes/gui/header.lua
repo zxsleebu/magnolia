@@ -4,6 +4,7 @@ local render = require("libs.render")
 local gui = require("includes.gui")
 local http = require("libs.http")
 local fonts = require("includes.gui.fonts")
+local anims = require("libs.anims")
 local header = {
     ---@param pos vec2_t
     tabs = function (pos)
@@ -13,6 +14,9 @@ local header = {
             pos = pos + v2(size.x + 10, 0)
         end
     end,
+    anims = anims.new({
+        avatar_alpha = 0,
+    }),
     avatar_texture = nil,
 }
 ---@param pos vec2_t
@@ -20,15 +24,21 @@ header.user = function (pos)
     local avatar_size = v2(20, 20)
     local avatar_pos = pos - v2(avatar_size.x, avatar_size.y / 2)
     local color = col.white:alpha(gui.anims.main_alpha())
+    local alpha = header.anims.avatar_alpha()
+    local circle_pos = avatar_pos + avatar_size / 2
+    local circle_color = col.white:alpha(255 - alpha)
+    renderer.circle(circle_pos, avatar_size.x / 2, 15, true, circle_color:alpha(20))
+    render.text("?", fonts.header, circle_pos + v2(0.4, 0), circle_color, render.flags.X_ALIGN + render.flags.Y_ALIGN)
     if header.avatar_texture then
-        renderer.texture(header.avatar_texture, avatar_pos, avatar_pos + avatar_size, color)
+        alpha = header.anims.avatar_alpha(255)
+        renderer.texture(header.avatar_texture, avatar_pos, avatar_pos + avatar_size, color:salpha(alpha))
     end
     render.text(client.get_username(), fonts.header, pos - v2(avatar_size.x + 8, 0), color, render.flags.RIGHT_ALIGN + render.flags.Y_ALIGN)
 end
 header.get_avatar = function ()
-    local path = http.download("https://pleasant-build-r39zc.cloud.serverless.com/avatar_round/s/" .. client.get_username())
-    if not path then return end
-    header.avatar_texture = renderer.setup_texture(path)
+    http.download("https://pleasant-build-r39zc.cloud.serverless.com/avatar_round/s/" .. client.get_username(), nil, function(path)
+        header.avatar_texture = renderer.setup_texture(path)
+    end)
 end
 
 header.get_avatar()

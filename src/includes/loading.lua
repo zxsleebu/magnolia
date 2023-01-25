@@ -7,6 +7,7 @@ local cbs = require("libs.callbacks")
 local security = require("includes.security")
 local once = require("libs.once").new()
 local gui = require("includes.gui")
+local easings = require("libs.easings")
 local logger = require("includes.logger").new({ infinite = true, console = true })
 local anims = require("libs.anims").new({
     bg_alpha = 0,
@@ -20,15 +21,24 @@ local anims = require("libs.anims").new({
     percent_align = 0,
     test_progress = 0,
 })
+local logo_font_size_addition = 0
 local loading = {}
 local magnolia_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 80, 0)
 local percentage_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 14, render.font_flags.MonoHinting)
+local large_logo_font = render.font("nix/magnolia/icon.ttf", 250)
 local can_be_closed = false
 local remove_slider = false
 local close_delay = 1000
+loading.skipped_lag = false
 loading.do_security = false
 loading.stopped = false
 loading.draw = function()
+    once(function()
+        delay.add(function ()
+            loading.skipped_lag = true
+        end, 100)
+    end, "skip_lag")
+    if not loading.skipped_lag then return end
     if loading.do_security then
         local _, err = pcall(security.init, logger)
         if err or security.error then
@@ -47,7 +57,13 @@ loading.draw = function()
     end
     if anims.transparency() == 0 then return end
 
-    if security.debug then return end
+    if security.debug then
+        once(function ()
+            gui.init()
+            gui.can_be_visible = true
+        end, "debug_init")
+        return
+    end
 
     local ss = engine.get_screen_size()
     local slider_sizes = v2(300, 25)
@@ -85,31 +101,39 @@ loading.draw = function()
 
         if anims.slider_y_offset.done then
             local progress = security.progress
+            if progress == 100 then
+                gui.init()
+            end
             once(function()
                 logger:add({{"magnolia", col.magnolia}, {" by ", col.white}, {"lia", col.magnolia}})
             end, "magnolia_start_log")
-            if progress == 100 then
+            local percentage = anims.progress(progress)
+            if percentage == 100 then
                 once(function()
                     logger:add({{"have", col.white}, {" fun!", col.magnolia}})
                     print("")
                 end, "progress_done")
-                once(function()
-                    gui.init()
-                end, "gui_init")
             end
-            local percentage = anims.progress(progress)
             local alpha = anims.slider_alpha()
             if not remove_slider then
                 alpha = anims.slider_alpha(255)
             end
             local width = math.max(10, slider_sizes.x * anims.progress.value / 100)
-            render.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), col.magnolia:salpha(alpha), 2.1, true)
+            if percentage > 0 then
+                render.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), col.magnolia:salpha(alpha), 2.1, true)
+            end
             local text_alpha = anims.text_alpha(255) * main_alpha
 
             if alpha == 255 then
-                loading.do_security = true
+                once(function()
+                    loading.do_security = true
+                    logger:clean()
+                end, "start_security")
             end
 
+            local logo_animation = easings.quart.out(logo_font_size_addition) * 40
+            large_logo_font.size = 260 + math.round(logo_animation)
+            render.text("A", large_logo_font, v2(ss.x / 2, ss.y / 2), col.magnolia:alpha(anims.bg_alpha() * main_alpha / 15), render.flags.X_ALIGN + render.flags.Y_ALIGN)
             render.text("magnolia", magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
                 render.flags.X_ALIGN + render.flags.Y_ALIGN + render.flags.BIG_SHADOW)
 
@@ -120,11 +144,10 @@ loading.draw = function()
                 render.text(text, percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN + render.flags.OUTLINE)
             end
 
-            if progress == 100 and not remove_slider then
+            if percentage == 100 then
+                logo_font_size_addition = math.clamp(logo_font_size_addition + globalvars.get_frame_time() * 1.5, 0, 1)
                 once(function()
-                    delay.add(function()
-                        remove_slider = true
-                    end, 750)
+                    remove_slider = true
                 end, "remove_slider")
             end
 
@@ -135,8 +158,8 @@ loading.draw = function()
                 if not can_be_closed then
                     once(function()
                         delay.add(function()
-                            gui.can_be_visible = true
                             can_be_closed = true
+                            gui.can_be_visible = true
                         end, close_delay)
                     end, "can_be_closed")
                 end

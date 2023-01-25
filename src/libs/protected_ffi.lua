@@ -24,6 +24,7 @@ local ffi = {
     copy = offi.copy,
     fill = offi.fill,
     cdef = offi.cdef,
+    gc = offi.gc,
 }
 ffi.C = setmetatable({}, protected_mt.new(offi.C))
 ffi.load = function(lib)
