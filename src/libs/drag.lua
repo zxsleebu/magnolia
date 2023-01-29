@@ -26,9 +26,11 @@ local cbs = require("libs.callbacks")
 local drag = {
     __elements = {},
     __blocked = false,
-    is_hovered = function(pos, size)
+    ---@param to_pos? vec2_t
+    is_hovered = function(pos, size, to_pos)
         local cursor = renderer.get_cursor_pos()
-        local from, to = pos, pos + size
+        local from = pos
+        local to = to_pos or pos + size
         local distance_from, distance_to = cursor - from, cursor - to
         if distance_from.x > 0 and distance_from.y > 0
             and distance_to.x < 0 and distance_to.y < 0 then
@@ -62,6 +64,7 @@ drag.new = function(key, default_pos)
         old_cursor = renderer.get_cursor_pos() / engine.get_screen_size(),
         dragging = false,
         move_cursor = false,
+        blocked = false,
     }
     drag.__elements[key].pos.x:set_visible(false) drag.__elements[key].pos.y:set_visible(false)
     return setmetatable(drag.__elements[key], drag.mt)
@@ -78,12 +81,19 @@ local is_window_active = function()
     local inter = ui.is_visible() or not is_cursor_visible()
     return focused and inter
 end
+---@param from vec2_t
+---@param to vec2_t
+drag.hover = function(from, to)
+    local rect = ui.get_menu_rect()
+    return drag.is_hovered(from, nil, to)
+        and not (drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y)) and ui.is_visible()) and is_window_active()
+end
 ---@param size vec2_t
----@param center? boolean
-drag.hover_fn = function(size, center)
+---@param center_x? boolean
+drag.hover_fn = function(size, center_x, center_y)
     return function(pos)
         local rect = ui.get_menu_rect()
-        return drag.is_hovered(center and v2(pos.x - size.x / 2, pos.y) or pos, size)
+        return drag.is_hovered(v2(center_x and pos.x - size.x / 2 or pos.x, center_y and pos.y - size.y / 2 or pos.y) or pos, size)
             and not (drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y)) and ui.is_visible()) and is_window_active()
     end
 end
@@ -91,7 +101,8 @@ drag.mt = {
     ---@class draggable_t
     ---@field pos { x: slider_float_t, y: slider_float_t }
     ---@field key string
-    ---@field dragging string
+    ---@field dragging boolean
+    ---@field blocked boolean
     ---@field highlight_alpha number
     ---@field old_cursor vec2_t
     __index = {
@@ -100,7 +111,7 @@ drag.mt = {
         ---@param highlight? fun(pos: vec2_t, alpha: number)
         ---@return vec2_t, fun()
         run = function(s, hover_fn, highlight)
-            local draggable = ui.is_visible()
+            local draggable = ui.is_visible() and not s.blocked
             for _, elem in pairs(drag.__elements) do
                 if draggable and elem.hovered and elem.key ~= s.key then
                     draggable = false

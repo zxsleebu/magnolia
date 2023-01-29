@@ -34,7 +34,8 @@ anims_mt.__newindex = function(s, k, v)
     list[k].anims = s
     return value
 end
----@return { [string]: __anim_mt }
+---@alias __anims_mt { [string]: __anim_mt }
+---@return __anims_mt
 ---@param values? { [string]: number }
 anims.new = function(values)
     local t = { list = {} }

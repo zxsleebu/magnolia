@@ -1,0 +1,5 @@
+local gui = require("includes.gui")
+gui.tab("Aimbot", "B")
+gui.tab("Anti-Aim", "C")
+gui.tab("Visuals", "D")
+gui.tab("Misc", "E")

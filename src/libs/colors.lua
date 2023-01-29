@@ -3,6 +3,8 @@ require("libs.advanced math")
 ---@field fade fun(s: color_t, new_color: color_t, factor: number): color_t
 ---@field alpha fun(s: color_t, new_alpha: number): color_t
 ---@field salpha fun(s: color_t, float_multiplier: number): color_t
+-- -@field alpha_diff fun(s: color_t, alpha: number, diff: number): color_t
+---@field alpha_anim fun(s: color_t, alpha: number, from: number, to: number): color_t
 
 ---@type (fun(r: number, g: number, b: number, a?: number): color_t)
 ---|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t, transparent: color_t }
@@ -59,6 +61,14 @@ color_t.fade = function(a, b, t)
     return color_t.new(lerp(a.r, b.r, t), lerp(a.g, b.g, t), lerp(a.b, b.b, t), lerp(a.a, b.a, t))
 end
 color_t.salpha = function(s, a)
-    return color_t.new(s.r, s.g, s.b, (s.a / 255) * a)
+    return color_t.new(s.r, s.g, s.b, math.clamp((s.a / 255) * a, 0, 255))
+end
+-- ---@param s color_t
+-- color_t.alpha_diff = function(s, a, diff)
+--     return s:salpha(((a / 255) * diff) + (255 - diff))
+-- end
+---@param s color_t
+color_t.alpha_anim = function(s, a, from, to)
+    return s:salpha(((a / 255) * (to - from)) + from)
 end
 return col

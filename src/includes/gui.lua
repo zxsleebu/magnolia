@@ -3,9 +3,9 @@ local v2 = require("libs.vectors")()
 local cbs = require("libs.callbacks")
 local col = require("libs.colors")
 local render = require("libs.render")
-local tabs = require("includes.gui.tab")
 local anims = require("libs.anims")
-local header
+local fonts = require("includes.gui.fonts")
+local header, tabs
 local gui = {
     size = v2(512, 360),
     drag = drag.new("magnolia", v2(0.5, 0.5)),
@@ -16,11 +16,14 @@ local gui = {
     }),
     initialized = false,
     can_be_visible = false,
+    active_tab = 0,
 }
 gui.init = function ()
     if gui.initialized then return end
     header = require("includes.gui.header")
+    tabs = require("includes.gui.tab")
     gui.initialized = true
+    require("includes.gui.elements")
 end
 gui.tab = function(name, icon)
     local tab = tabs.new(name, icon)
@@ -36,20 +39,17 @@ gui.draw = function (pos, alpha)
 
     header.draw(pos, alpha)
 end
-gui.tab("Aimbot", "B")
-gui.tab("Anti-Aim", "C")
-gui.tab("Visuals", "D")
-gui.tab("Misc", "E")
+
 cbs.add("paint", function()
     if not gui.initialized or not gui.can_be_visible then return end
     local main_alpha = gui.anims.main_alpha(ui.is_visible() and 255 or 0)
     if main_alpha == 0 then return end
-    local pos, highlight = gui.drag:run(drag.hover_fn(gui.size), function(pos, alpha)
-        drag.highlight(pos, gui.size, alpha)
+    local pos, highlight = gui.drag:run(drag.hover_fn(gui.size, true, true), function(pos, alpha)
+        drag.highlight(pos - v2(gui.size.x / 2, 0), gui.size, alpha)
     end)
-    pos = pos:round()
+    pos = (pos - gui.size / 2):round()
     gui.draw(pos, main_alpha)
-    highlight()
+    -- highlight()
 end)
 
 return gui

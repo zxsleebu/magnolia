@@ -12,7 +12,7 @@ local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
 local lib_engine = require("includes.engine")
 local security = {}
--- security.debug = true
+security.debug = true
 security.release_server = true
 security.domain = "localhost"
 if security.release_server then

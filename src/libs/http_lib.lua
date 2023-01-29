@@ -1,4 +1,4 @@
-local a = require("ffi")
+local a = require("libs.protected_ffi")
 local b = json
 local function c(...)
     print(tostring(...))

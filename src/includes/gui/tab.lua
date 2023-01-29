@@ -2,10 +2,15 @@ local render = require("libs.render")
 local col = require("libs.colors")
 local v2 = require("libs.vectors")()
 local fonts = require("includes.gui.fonts")
+local drag = require("libs.drag")
+local anims = require("libs.anims")
+local gui = require("includes.gui")
+local input = require("libs.input")
 
 ---@class gui_tab_t
 ---@field name string
 ---@field icon string
+---@field anims __anims_mt
 local tab_t = { }
 local tab_mt = {
     ---@class gui_tab_t
@@ -15,21 +20,58 @@ local tab_mt = {
         ---@param alpha number
         ---@return vec2_t
         draw = function (s, pos, alpha)
-            local color = col.white:alpha(100):salpha(alpha)
-            render.text(s.icon, fonts.tab_icons, pos, color, render.flags.Y_ALIGN)
+            local color = col.white:alpha(alpha):alpha_anim(s.anims.hover(), 60, 255)
+            local icon_color = col.white:alpha(alpha):alpha_anim(s.anims.hover(), 60, 150):fade(col.magnolia:alpha(alpha), s.anims.active_color_blend() / 255)
+            render.text(s.icon, fonts.tab_icons, pos, icon_color, render.flags.Y_ALIGN)
             local text_size = render.text_size(fonts.header, s.name)
-            render.text(s.name, fonts.header, pos + v2(fonts.tab_icons.size + 8, 0), color, render.flags.Y_ALIGN)
-            --return size
-            return v2(text_size.x + fonts.tab_icons.size + 20, fonts.tab_icons.size)
+            local text_pos = pos + v2(fonts.tab_icons.size + 8, 0)
+            render.text(s.name, fonts.header, text_pos, color, render.flags.Y_ALIGN)
+
+            local real_size = v2(text_size.x + fonts.tab_icons.size + 8, fonts.tab_icons.size)
+            local size = real_size + v2(12, 0)
+            local line_width = s.anims.underline_width()
+            if gui.active_tab == s.index then
+                line_width = s.anims.underline_width(text_size.x / 2)
+                s.anims.underline_alpha(255)
+                s.anims.active_color_blend(255)
+            else
+                line_width = s.anims.underline_width(0)
+                s.anims.underline_alpha(0)
+                s.anims.active_color_blend(0)
+            end
+            local hovered = drag.hover(pos - v2(2, real_size.y), pos + v2(real_size.x + 4, real_size.y))
+            if hovered or gui.active_tab == s.index then
+                s.anims.hover(255)
+            else
+                s.anims.hover(0)
+            end
+            if hovered and input.is_key_pressed(1) then
+                gui.active_tab = s.index
+            end
+            line_width = line_width * 2
+            local line_pos = text_pos + v2(text_size.x / 2 - line_width / 2, size.y - 2)
+            local line_color = col.magnolia:alpha(alpha):alpha_anim(s.anims.underline_alpha(), 0, 255)
+            renderer.rect_filled(line_pos, line_pos + v2(line_width, 1), line_color:salpha(100))
+            renderer.rect_filled(line_pos + v2(0, 1), line_pos + v2(line_width, 2), line_color)
+            return size
         end
     }
 }
+tab_t.index = 0
 tab_t.new = function(name, icon)
     local tab = {
         name = name,
         icon = icon,
-        subtabs = { }
+        subtabs = { },
+        anims = anims.new({
+            hover = 0,
+            underline_width = 0,
+            underline_alpha = 255,
+            active_color_blend = 0,
+        }),
+        index = tab_t.index,
     }
+    tab_t.index = tab_t.index + 1
     return setmetatable(tab, tab_mt)
 end
 return tab_t
