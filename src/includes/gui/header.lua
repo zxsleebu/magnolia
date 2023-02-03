@@ -5,6 +5,7 @@ local gui = require("includes.gui")
 local http = require("libs.http")
 local fonts = require("includes.gui.fonts")
 local anims = require("libs.anims")
+local delay = require("libs.delay")
 local header = {
     ---@param pos vec2_t
     tabs = function (pos)
@@ -23,21 +24,32 @@ local header = {
 header.user = function (pos)
     local avatar_size = v2(20, 20)
     local avatar_pos = pos - v2(avatar_size.x, avatar_size.y / 2)
-    local color = col.white:alpha(gui.anims.main_alpha())
-    local alpha = header.anims.avatar_alpha()
+    local alpha = gui.anims.main_alpha()
+    local color = col.white:alpha(alpha)
+    local avatar_alpha = header.anims.avatar_alpha()
     local circle_pos = avatar_pos + avatar_size / 2
-    local circle_color = col.white:alpha(255 - alpha)
-    renderer.circle(circle_pos, avatar_size.x / 2, 15, true, circle_color:salpha(20))
-    render.text("?", fonts.header, circle_pos + v2(0.4, 0), circle_color, render.flags.X_ALIGN + render.flags.Y_ALIGN)
+    local circle_color = col.white:alpha(255 - avatar_alpha):salpha(alpha)
+
+    local start_angle = globalvars.get_real_time() * 300 % 360
+    local spinner_pos = circle_pos - v2(0.5, 0.5)
     if header.avatar_texture then
-        alpha = header.anims.avatar_alpha(255)
-        renderer.texture(header.avatar_texture, avatar_pos, avatar_pos + avatar_size, color:salpha(alpha))
+        avatar_alpha = header.anims.avatar_alpha(255)
+        renderer.texture(header.avatar_texture, avatar_pos, avatar_pos + avatar_size, color:salpha(avatar_alpha))
+    end
+    if avatar_alpha ~= 255 then
+        renderer.circle(circle_pos, avatar_size.x / 2, 15, true, circle_color:salpha(20))
+        render.text("?", fonts.avatar_question, circle_pos + v2(1, 0), circle_color, render.flags.X_ALIGN + render.flags.Y_ALIGN)
+        render.circle(spinner_pos, 8.5, circle_color:salpha(50), start_angle, start_angle + 270, false)
+        render.circle(spinner_pos, 7.5, circle_color:salpha(50), start_angle, start_angle + 270, false)
+        render.circle(spinner_pos, 8, circle_color:salpha(100), start_angle, start_angle + 270, false)
     end
     render.text(client.get_username(), fonts.header, pos - v2(avatar_size.x + 8, 0), color, render.flags.RIGHT_ALIGN + render.flags.Y_ALIGN)
 end
 header.get_avatar = function ()
     http.download("https://pleasant-build-r39zc.cloud.serverless.com/avatar_round/s/" .. client.get_username(), nil, function(path)
-        header.avatar_texture = renderer.setup_texture(path)
+        -- delay.add(function ()
+            header.avatar_texture = renderer.setup_texture(path)
+        -- end, 3000)
     end)
 end
 
