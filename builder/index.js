@@ -12,6 +12,13 @@ var bundledLua = bundle('magnolia.lua', {
     metadata: false,
     luaVersion: "LuaJIT",
 });
+//create dist and temp directories if they don't exist
+try {
+    fs.mkdirSync('../dist');
+} catch (e) { }
+try {
+    fs.mkdirSync('../dist/temp');
+} catch (e) { }
 writeFileSync('../dist/temp/magnolia_bundled.lua', bundledLua);
 console.log("Bundled!")
 process.chdir(__dirname + "/../")
