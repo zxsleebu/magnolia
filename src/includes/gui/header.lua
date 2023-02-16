@@ -1,7 +1,6 @@
 local v2 = require("libs.vectors")()
 local col = require("libs.colors")
 local render = require("libs.render")
-local gui = require("includes.gui")
 local http = require("libs.http")
 local fonts = require("includes.gui.fonts")
 local anims = require("libs.anims")

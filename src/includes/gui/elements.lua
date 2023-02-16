@@ -1,4 +1,3 @@
-local gui = require("includes.gui")
 gui.tab("Aimbot", "B")
 gui.subtab("General")
 gui.subtab("Exploits")
@@ -15,3 +14,4 @@ gui.subtab("Misc")
 
 gui.tab("Misc", "E")
 gui.subtab("General")
+gui.checkbox()

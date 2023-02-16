@@ -4,7 +4,7 @@ local v2 = require("libs.vectors")()
 local fonts = require("includes.gui.fonts")
 local drag = require("libs.drag")
 local anims = require("libs.anims")
-local gui = require("includes.gui")
+-- local gui = require("includes.gui")
 local input = require("libs.input")
 
 ---@class gui_subtab_t
@@ -88,6 +88,12 @@ subtab_t.draw = function (pos, global_alpha)
             end
         end)
     end
+end
+
+gui.subtab = function(name)
+    local subtab = subtab_t.new(name)
+    table.insert(gui.elements[#gui.elements].subtabs, subtab)
+    return subtab
 end
 
 return subtab_t

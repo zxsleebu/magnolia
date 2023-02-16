@@ -4,7 +4,6 @@ local v2 = require("libs.vectors")()
 local fonts = require("includes.gui.fonts")
 local drag = require("libs.drag")
 local anims = require("libs.anims")
-local gui = require("includes.gui")
 local input = require("libs.input")
 local subtabs = require("includes.gui.subtab")
 
@@ -82,5 +81,10 @@ tab_t.new = function(name, icon)
     tab_t.index = tab_t.index + 1
     subtabs.index = 1
     return setmetatable(tab, tab_mt)
+end
+gui.tab = function(name, icon)
+    local tab = tab_t.new(name, icon)
+    table.insert(gui.elements, tab)
+    return tab
 end
 return tab_t

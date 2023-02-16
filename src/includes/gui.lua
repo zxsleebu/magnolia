@@ -1,12 +1,10 @@
 local drag = require("libs.drag")
 local v2 = require("libs.vectors")()
+local anims = require("libs.anims")
+local render = require("libs.render")
 local cbs = require("libs.callbacks")
 local col = require("libs.colors")
-local render = require("libs.render")
-local anims = require("libs.anims")
-require("includes.gui.fonts")
-local header, tabs, subtabs, container
-local gui = {
+gui = {
     size = v2(512, 360),
     drag = drag.new("magnolia", v2(0.5, 0.5)),
     ---@type gui_tab_t[]
@@ -18,25 +16,23 @@ local gui = {
     can_be_visible = false,
     active_tab = 1,
 }
-gui.init = function ()
-    if gui.initialized then return end
-    header = require("includes.gui.header")
-    tabs = require("includes.gui.tab")
-    subtabs = require("includes.gui.subtab")
-    container = require("includes.gui.container")
+
+gui.init = function()
     gui.initialized = true
-    require("includes.gui.elements")
 end
-gui.tab = function(name, icon)
-    local tab = tabs.new(name, icon)
-    table.insert(gui.elements, tab)
-    return tab
+
+gui.checkbox = function(name)
+    ui.add_check_box("test", "hellopapa", false)
 end
-gui.subtab = function(name)
-    local subtab = subtabs.new(name)
-    table.insert(gui.elements[#gui.elements].subtabs, subtab)
-    return subtab
-end
+
+require("includes.gui.fonts")
+local header = require("includes.gui.header")
+require("includes.gui.tab")
+local subtabs = require("includes.gui.subtab")
+local container = require("includes.gui.container")
+
+require("includes.gui.elements")
+
 ---@param pos vec2_t
 gui.draw = function (pos, alpha)
     local background_color = col(18, 17, 16, (alpha / 255) * 250)
