@@ -25,8 +25,8 @@ local checkbox_mt = {
             local size = v2(16, 16)
             local text_padding = 8
             local hovered = drag.is_hovered(pos, size + v2(text_size.x + text_padding + 2, 0)) and input_allowed
-            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding + 1, 1), col.black:alpha(alpha))
-            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding, 0), col.white:alpha(alpha))
+            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding + 1, 0), col.black:alpha(alpha))
+            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding, -1), col.white:alpha(alpha))
             local value = s.el:get_value()
             local hover_anim, active_anim
             if hovered then

@@ -97,7 +97,7 @@ subtab_t.draw = errors.handle(function (pos, global_alpha)
                     local line_pos = p + v2(0, padding / 2)
                     renderer.rect_filled(line_pos, line_pos + v2(width, 1), col.white:alpha(alpha):salpha(30))
                 end
-                subtab:draw(pos + v2(130, 60), alpha * tab_alpha / 255)
+                subtab:draw(pos + v2(130, 97), alpha * tab_alpha / 255)
             end
         end, "subtab_t.draw.loop")()
     end
