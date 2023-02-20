@@ -7,7 +7,7 @@ require("libs.advanced math")
 ---@field alpha_anim fun(s: color_t, alpha: number, from: number, to: number): color_t
 
 ---@type (fun(r: number, g: number, b: number, a?: number): color_t)
----|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t, transparent: color_t }
+---|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t, transparent: color_t, gray: color_t }
 local col = setmetatable({}, {
     __index = {
         red = color_t.new(255, 127, 127, 255),
@@ -16,6 +16,7 @@ local col = setmetatable({}, {
         white = color_t.new(255, 255, 255, 255),
         black = color_t.new(0, 0, 0, 255),
         magnolia = color_t.new(242, 232, 215, 255),
+        gray = color_t.new(15, 15, 15, 255),
         transparent = color_t.new(0, 0, 0, 0),
     },
     __call = function(s, r, g, b, a)

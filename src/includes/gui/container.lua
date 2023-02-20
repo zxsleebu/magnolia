@@ -1,10 +1,14 @@
 local render = require("libs.render")
 local col = require("libs.colors")
 local v2 = require("libs.vectors")()
+local errors = require("libs.error_handler")
+require("includes.gui.checkbox")
 -- local gui = require("includes.gui")
 
+---@class gui_container_t
 local container_t = {}
-container_t.draw = function (pos, alpha)
+---@param pos vec2_t
+container_t.draw = errors.handle(function (pos, alpha)
     local menu_padding = 14
     local width = 100
     local padding = 40
@@ -12,5 +16,19 @@ container_t.draw = function (pos, alpha)
     local background_color = col(23, 22, 20, 200):salpha(alpha)
     render.rounded_rect(from + v2(1, 1), pos + v2(gui.size.x - 1, gui.size.y - 1), background_color, 7.5, true)
     render.rounded_rect(from, pos + v2(gui.size.x - 1, gui.size.y - 1), col.white:alpha(alpha):salpha(30), 7.5, false)
-end
+end, "container_t.draw")
+---@param subtab gui_subtab_t
+container_t.draw_elements = errors.handle(function(subtab, pos, alpha)
+    local input_allowed = gui.active_tab == subtab.tab and subtab.active
+    local y = 0
+    for i = 1, #subtab.elements do
+        local element = subtab.elements[i]
+        local p = pos + v2(0, y) ---@type vec2_t
+        y = y + element.size.y
+        if alpha > 0 then
+            element:draw(p, alpha, input_allowed)
+        end
+    end
+end, "container_t.draw_elements")
+
 return container_t

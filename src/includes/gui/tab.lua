@@ -6,6 +6,7 @@ local drag = require("libs.drag")
 local anims = require("libs.anims")
 local input = require("libs.input")
 local subtabs = require("includes.gui.subtab")
+local errors = require("libs.error_handler")
 
 ---@class gui_tab_t
 ---@field name string
@@ -20,7 +21,7 @@ local tab_mt = {
         ---@param pos vec2_t
         ---@param alpha number
         ---@return vec2_t
-        draw = function (s, pos, alpha)
+        draw = errors.handle(function (s, pos, alpha)
             local text_size = render.text_size(fonts.header, s.name)
             local real_size = v2(text_size.x + fonts.tab_icons.size + 8, fonts.tab_icons.size)
             local size = real_size + v2(12, 0)
@@ -39,6 +40,9 @@ local tab_mt = {
             end
             local hovered = drag.hover(pos - v2(2, real_size.y), pos + v2(real_size.x + 4, real_size.y))
             local hover_anim
+            if hovered then
+                drag.set_cursor(drag.hand_cursor)
+            end
             if hovered or gui.active_tab == s.index then
                 hover_anim = s.anims.hover(255)
             else
@@ -60,7 +64,7 @@ local tab_mt = {
             renderer.rect_filled(line_pos, line_pos + v2(line_width, 1), line_color:salpha(100))
             renderer.rect_filled(line_pos + v2(0, 1), line_pos + v2(line_width, 2), line_color)
             return size
-        end
+        end, "tab_t.draw")
     }
 }
 tab_t.index = 1

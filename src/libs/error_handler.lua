@@ -24,6 +24,7 @@ errors.handle = function(fn, name)
         if not ok then
             errors.report(err, name)
         end
+        return err
     end
 end
 

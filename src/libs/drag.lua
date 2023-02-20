@@ -17,8 +17,6 @@ ffi.cdef[[
     bool GetCursorInfo(CURSORINFO*);
     void* GetForegroundWindow();
 ]]
-local arrow_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32512))
-local move_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32646))
 local SetCursor = modules.get_function("HANDLE(__stdcall*)(HANDLE)", "user32", "SetCursor")
 local ss = engine.get_screen_size()
 local input = require("libs.input")
@@ -51,8 +49,13 @@ local drag = {
         renderer.rect_filled_fade(v2(from.x + size.x / 2, from.y), from + v2(size.x, size.y / 2), trans, trans, trans, shine)
         renderer.rect_filled_fade(v2(from.x, from.y + size.y / 2), from + v2(size.x / 2, size.y), trans, shine, trans, trans)
     end,
+    current_cursor = nil,
 }
-drag.new = function(key, default_pos)
+drag.arrow_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32512))
+drag.move_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32646))
+drag.hand_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32649))
+drag.new = function(key, default_pos, pointer)
+    if pointer == nil then pointer = true end
     drag.__elements[key] = {
         pos = {
             x = ui.add_slider_float(key .. "__x", key .. "_dx", 0, 1, default_pos.x),
@@ -65,6 +68,7 @@ drag.new = function(key, default_pos)
         dragging = false,
         move_cursor = false,
         blocked = false,
+        pointer = pointer
     }
     drag.__elements[key].pos.x:set_visible(false) drag.__elements[key].pos.y:set_visible(false)
     return setmetatable(drag.__elements[key], drag.mt)
@@ -105,6 +109,7 @@ drag.mt = {
     ---@field blocked boolean
     ---@field highlight_alpha number
     ---@field old_cursor vec2_t
+    ---@field pointer boolean
     __index = {
         ---@param s draggable_t
         ---@param hover_fn fun(pos: vec2_t): boolean
@@ -123,7 +128,7 @@ drag.mt = {
 
             local transformed_pos = pos * ss
             if not s.move_cursor then
-                original_setcursor(arrow_cursor)
+                -- original_setcursor(arrow_cursor)
             end
             s.move_cursor = false
             s.hovered = (hover_fn(transformed_pos) or (s.dragging and pressed)) and draggable
@@ -133,7 +138,9 @@ drag.mt = {
                 drag.__blocked = true
             end
             if draggable and s.hovered and not drag.__blocked then
-                original_setcursor(move_cursor)
+                if s.pointer then
+                    drag.set_cursor(drag.move_cursor)
+                end
                 s.move_cursor = true
                 if pressed or s.dragging then
                     s.dragging = true
@@ -160,17 +167,44 @@ drag.mt = {
 }
 
 local hooks = require("libs.hooks")
+-- local hooked_setcursor = function (cursor)
+--     if drag.current_cursor then
+--         return set_cursor(drag.current_cursor)
+--     end
+--     for _, elem in pairs(drag.__elements) do
+--         if elem.move_cursor and elem.pointer then
+--             return set_cursor(drag.move_cursor)
+--         end
+--     end
+--     return set_cursor(cursor)
+-- end
 local hooked_setcursor = function (cursor)
+    drag.original_cursor = cursor
+    if drag.current_cursor then
+        local result = set_cursor(drag.current_cursor)
+        return result
+    end
+    return set_cursor(cursor)
+end
+drag.set_cursor = function(cursor)
+    drag.current_cursor = cursor
+end
+set_cursor = hooks.jmp.new("HANDLE(__stdcall*)(HANDLE)", hooked_setcursor, SetCursor)
+cbs.add("paint", function ()
     for _, elem in pairs(drag.__elements) do
-        if elem.move_cursor then
-            return original_setcursor(move_cursor)
+        if elem.move_cursor and elem.pointer then
+            return set_cursor(drag.move_cursor)
         end
     end
-    return original_setcursor(cursor)
-end
-original_setcursor = hooks.jmp.new("HANDLE(__stdcall*)(HANDLE)", hooked_setcursor, SetCursor)
+    if drag.current_cursor then
+        local result = set_cursor(drag.current_cursor)
+        drag.current_cursor = nil
+        return result
+    end
+    return set_cursor(drag.original_cursor)
+end)
 cbs.add("unload", function ()
-    original_setcursor:stop()
+    set_cursor:stop()
 end)
 
 return drag

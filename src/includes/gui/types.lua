@@ -1,0 +1,1 @@
+---@alias gui_element_t gui_checkbox_t

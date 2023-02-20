@@ -6,7 +6,7 @@ local cbs = require("libs.callbacks")
 local col = require("libs.colors")
 gui = {
     size = v2(512, 360),
-    drag = drag.new("magnolia", v2(0.5, 0.5)),
+    drag = drag.new("magnolia", v2(0.5, 0.5), false),
     ---@type gui_tab_t[]
     elements = {},
     anims = anims.new({
@@ -21,8 +21,23 @@ gui.init = function()
     gui.initialized = true
 end
 
-gui.checkbox = function(name)
-    ui.add_check_box("test", "hellopapa", false)
+gui.get_path = function(name)
+    local tab = gui.elements[#gui.elements]
+    local path = {
+        tab.name,
+        tab.subtabs[#tab.subtabs].name,
+        name
+    }
+    return table.concat(path, "_")
+end
+
+gui.add_element = function (element)
+    local tab = gui.elements[#gui.elements]
+    local subtab = tab.subtabs[#tab.subtabs]
+    -- element.tab = #gui.elements
+    -- element.subtab = #tab.subtabs
+    table.insert(subtab.elements, element)
+    return element
 end
 
 require("includes.gui.fonts")
@@ -41,8 +56,8 @@ gui.draw = function (pos, alpha)
     render.rounded_rect(pos, pos + gui.size, col.black:alpha(200):salpha(alpha), 7.5)
 
     header.draw(pos, alpha)
-    subtabs.draw(pos, alpha)
     container.draw(pos, alpha)
+    subtabs.draw(pos, alpha)
 end
 
 cbs.add("paint", function()

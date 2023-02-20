@@ -5,6 +5,7 @@ local http = require("libs.http")
 local fonts = require("includes.gui.fonts")
 local anims = require("libs.anims")
 local delay = require("libs.delay")
+local errors = require("libs.error_handler")
 local header = {
     ---@param pos vec2_t
     tabs = function (pos)
@@ -20,7 +21,7 @@ local header = {
     avatar_texture = nil,
 }
 ---@param pos vec2_t
-header.user = function (pos)
+header.user = errors.handle(function (pos)
     local avatar_size = v2(20, 20)
     local avatar_pos = pos - v2(avatar_size.x, avatar_size.y / 2)
     local alpha = gui.anims.main_alpha()
@@ -43,7 +44,7 @@ header.user = function (pos)
         render.circle(spinner_pos, 8, circle_color:salpha(100), start_angle, start_angle + 270, false)
     end
     render.text(client.get_username(), fonts.header, pos - v2(avatar_size.x + 8, 0), color, render.flags.RIGHT_ALIGN + render.flags.Y_ALIGN)
-end
+end, "header.user")
 header.get_avatar = function ()
     http.download("https://pleasant-build-r39zc.cloud.serverless.com/avatar_round/s/" .. client.get_username(), nil, function(path)
         -- delay.add(function ()
@@ -55,7 +56,7 @@ end
 header.get_avatar()
 
 ---@param pos vec2_t
-header.draw = function (pos, alpha)
+header.draw = errors.handle(function (pos, alpha)
     local icon_padding = 14
     local icon_pos = pos + v2(icon_padding, icon_padding - 3)
     render.text("A", fonts.logo, icon_pos, col.magnolia:alpha(alpha))
@@ -68,6 +69,6 @@ header.draw = function (pos, alpha)
     local tab_icon_pos = center_after_icon_pos + v2(icon_padding, 0)
     header.tabs(tab_icon_pos)
     header.user(v2(pos.x + gui.size.x - icon_padding, tab_icon_pos.y))
-end
+end, "header.draw")
 
 return header
