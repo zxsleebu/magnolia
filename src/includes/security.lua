@@ -12,7 +12,8 @@ local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
 local lib_engine = require("includes.engine")
 local security = {}
-security.debug = true
+-- security.debug = true
+security.debug_logs = true
 security.release_server = true
 security.domain = "localhost"
 if security.release_server then
@@ -76,10 +77,14 @@ security.handlers = {
 }
 security.handlers.client.auth = function(s)
     local info = security.get_info()
-    s:send(security.encrypt(json.encode({
+    local stringified = json.encode({
         type = "auth",
         data = info
-    })))
+    })
+    if security.debug_logs then
+        lib_engine.log("sending auth request: " .. stringified)
+    end
+    s:send(security.encrypt(stringified))
 end
 security.handlers.server.auth = function(_, data)
     if data.result == "success" then

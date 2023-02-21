@@ -24,7 +24,7 @@ local checkbox_mt = {
             local text_size = render.text_size(fonts.menu, s.name)
             local size = v2(16, 16)
             local text_padding = 8
-            local hovered = drag.is_hovered(pos, size + v2(text_size.x + text_padding + 2, 0)) and input_allowed
+            local hovered = drag.hover(pos, pos + size + v2(text_size.x + text_padding + 2, 0)) and input_allowed
             render.text(s.name, fonts.menu, pos + v2(size.x + text_padding + 1, 0), col.black:alpha(alpha))
             render.text(s.name, fonts.menu, pos + v2(size.x + text_padding, -1), col.white:alpha(alpha))
             local value = s.el:get_value()
@@ -43,8 +43,8 @@ local checkbox_mt = {
             active_anim = s.anims.active(value and 255 or 0)
             renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:fade(col.magnolia, active_anim / 255):alpha(alpha))
             render.smoothed_rect(pos, pos + size, col.gray:fade(col.magnolia, hover_anim / 255):alpha(alpha), false)
-            renderer.line(pos + v2(4, size.y / 2), pos + v2(size.x / 2, size.y / 2 + 3), col.black:alpha(alpha):salpha(active_anim))
-            renderer.line(pos + v2(size.x / 2 - 1, size.y / 2 + 3), pos + v2(size.x - 5, 5), col.black:alpha(alpha):salpha(active_anim))
+            renderer.line(pos + v2(4, size.y / 2), pos + v2(size.x / 2, size.y / 2 + 3), col.gray:alpha(alpha):salpha(active_anim))
+            renderer.line(pos + v2(size.x / 2 - 1, size.y / 2 + 3), pos + v2(size.x - 5, 5), col.gray:alpha(alpha):salpha(active_anim))
         end, "checkbox_t.draw")
     }
 }

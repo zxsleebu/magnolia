@@ -25,6 +25,13 @@ render.polyline = function(pts, color, smoothing, closed)
     end
 end
 ---@param pos vec2_t
+---@param clr color_t
+---@param size? number
+render.dot = function(pos, clr, size)
+    size = size or 1
+    renderer.rect_filled(pos, pos + v2(size, size), clr)
+end
+---@param pos vec2_t
 ---@param radius number
 ---@param clr color_t
 ---@param start_angle number
@@ -172,6 +179,7 @@ render.flags = {
     MORE_SHADOW = 0x10,
     BIG_SHADOW = 0x20,
     RIGHT_ALIGN = 0x40,
+    TEXT_SIZE = 0x80,
 }
 
 ---@param font __font_t
@@ -195,6 +203,7 @@ local outline_pos = {
 ---@param pos vec2_t
 ---@param color color_t
 ---@param flags? number
+---@return vec2_t, vec2_t?
 render.text = function(text, font, pos, color, flags)
     local new_pos = v2(pos.x, pos.y)
     if type(flags) == "table" then
@@ -205,17 +214,25 @@ render.text = function(text, font, pos, color, flags)
         flags = int_flags
     end
     flags = flags or 0
+    local text_size
     --horizontal align
     if bit.band(flags, render.flags.X_ALIGN) == render.flags.X_ALIGN then
-        new_pos.x = new_pos.x - render.text_size(font, text).x / 2
+        text_size = text_size or render.text_size(font, text)
+        new_pos.x = new_pos.x - text_size.x / 2
     end
     --vertical align
     if bit.band(flags, render.flags.Y_ALIGN) == render.flags.Y_ALIGN then
-        new_pos.y = new_pos.y - render.text_size(font, text).y / 2
+        text_size = text_size or render.text_size(font, text)
+        new_pos.y = new_pos.y - text_size.y / 2
     end
     --right align
     if bit.band(flags, render.flags.RIGHT_ALIGN) == render.flags.RIGHT_ALIGN then
-        new_pos.x = new_pos.x - render.text_size(font, text).x
+        text_size = text_size or render.text_size(font, text)
+        new_pos.x = new_pos.x - text_size.x
+    end
+    --textsize
+    if bit.band(flags, render.flags.TEXT_SIZE) == render.flags.TEXT_SIZE then
+        text_size = text_size or render.text_size(font, text)
     end
 
     local shadow = bit.band(flags, render.flags.SHADOW) == render.flags.SHADOW
@@ -234,6 +251,7 @@ render.text = function(text, font, pos, color, flags)
         end
     end
     renderer.text(text, font.font, new_pos, font.size, color)
+    return new_pos, render.text_size(font, text)
 end
 render.multi_color_text = function(strings, font, pos, flags)
     if bit.band(flags or 0, render.flags.X_ALIGN) == render.flags.X_ALIGN then
