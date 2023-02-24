@@ -15,7 +15,7 @@ local col = setmetatable({}, {
         blue = color_t.new(127, 127, 255, 255),
         white = color_t.new(255, 255, 255, 255),
         black = color_t.new(0, 0, 0, 255),
-        magnolia = color_t.new(242, 232, 215, 255),
+        magnolia = color_t.new(242, 227, 201, 255),
         gray = color_t.new(15, 15, 15, 255),
         transparent = color_t.new(0, 0, 0, 0),
     },

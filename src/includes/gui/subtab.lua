@@ -87,11 +87,11 @@ subtab_t.draw = errors.handle(function (pos, global_alpha)
                 else
                     hover = subtab.anims.hover(0)
                 end
-                render.text(subtab.name, fonts.header, p, col.white:alpha(alpha):alpha_anim(hover, 100, 255), render.flags.Y_ALIGN)
+                render.text(subtab.name, fonts.header, p, col.white:fade(col.magnolia, underline_alpha / 255):alpha(alpha):alpha_anim(hover, 100, 255), render.flags.Y_ALIGN)
                 if underline_alpha > 0 then
                     local active_line_color = col.magnolia:alpha(alpha):salpha(underline_alpha)
-                    renderer.rect_filled(active_line_pos, active_line_pos + v2(text_size.x, 1), active_line_color)
-                    renderer.rect_filled(active_line_pos + v2(0, 1), active_line_pos + v2(text_size.x, 2), active_line_color:salpha(100))
+                    -- renderer.rect_filled(active_line_pos, active_line_pos + v2(text_size.x, 1), active_line_color)
+                    -- renderer.rect_filled(active_line_pos + v2(0, 1), active_line_pos + v2(text_size.x, 2), active_line_color:salpha(100))
                 end
                 if not is_last then
                     local line_pos = p + v2(0, padding / 2)

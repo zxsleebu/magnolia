@@ -43,8 +43,11 @@ local checkbox_mt = {
             active_anim = s.anims.active(value and 255 or 0)
             renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:fade(col.magnolia, active_anim / 255):alpha(alpha))
             render.smoothed_rect(pos, pos + size, col.gray:fade(col.magnolia, hover_anim / 255):alpha(alpha), false)
-            renderer.line(pos + v2(4, size.y / 2), pos + v2(size.x / 2, size.y / 2 + 3), col.gray:alpha(alpha):salpha(active_anim))
-            renderer.line(pos + v2(size.x / 2 - 1, size.y / 2 + 3), pos + v2(size.x - 5, 5), col.gray:alpha(alpha):salpha(active_anim))
+            local check_pos = pos - v2(0, 0)
+            renderer.line(check_pos + v2(5, size.y / 2), check_pos + v2(size.x / 2, size.y / 2 + 3), col.gray:alpha(alpha):salpha(active_anim))
+            -- renderer.line(check_pos + v2(5, size.y / 2 + 1), check_pos + v2(size.x / 2, size.y / 2 + 4), col.gray:alpha(alpha):salpha(active_anim))
+            renderer.line(check_pos + v2(size.x / 2 - 1, size.y / 2 + 3), check_pos + v2(size.x - 5, 5), col.gray:alpha(alpha):salpha(active_anim))
+            -- renderer.line(check_pos + v2(size.x / 2, size.y / 2 + 3), check_pos + v2(size.x - 4, 4), col.gray:alpha(alpha):salpha(active_anim))
         end, "checkbox_t.draw")
     }
 }
@@ -59,7 +62,7 @@ checkbox_t.new = function (name, value)
             hover = 0,
             active = 0,
         }),
-        size = v2(16, 24),
+        size = v2(18, 26),
     }, checkbox_mt)
     c.el:set_visible(false)
     return c
