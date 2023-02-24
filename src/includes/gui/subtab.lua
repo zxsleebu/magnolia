@@ -47,7 +47,8 @@ end
 subtab_t.draw = errors.handle(function (pos, global_alpha)
     local menu_padding = 14
     local padding = 40
-    local width = 100
+    local width = 114
+    local top_padding = 70
     for i = 1, #gui.elements do
         local tab = gui.elements[i]
         local alpha = tab.anims.alpha()
@@ -56,12 +57,12 @@ subtab_t.draw = errors.handle(function (pos, global_alpha)
             alpha = alpha * (global_alpha / 255)
             for t = 1, #tab.subtabs do
                 local subtab = tab.subtabs[t]
-                local p = pos + v2(menu_padding, padding * (t - 1) + 64) ---@type vec2_t
+                local p = pos + v2(menu_padding, padding * (t - 1) + top_padding) ---@type vec2_t
                 local is_last = t == #tab.subtabs
                 local text_size = render.text_size(fonts.header, subtab.name)
                 local active_line_pos = p + v2(0, text_size.y / 2 + 2)
                 local box_from = p - v2(5, padding / 2 - 1)
-                local container_pos = p + v2(width + menu_padding, 64 - padding / 2 + 1)
+                local container_pos = p + v2(width + menu_padding, top_padding - padding / 2 + 1)
                 local box_to = p + v2(width, padding / 2)
                 -- renderer.rect_filled(box_from, box_to, col.white:alpha(alpha):salpha(100))
                 local is_hovered = drag.hover(box_from, box_to)
@@ -97,7 +98,7 @@ subtab_t.draw = errors.handle(function (pos, global_alpha)
                     local line_pos = p + v2(0, padding / 2)
                     renderer.rect_filled(line_pos, line_pos + v2(width, 1), col.white:alpha(alpha):salpha(30))
                 end
-                subtab:draw(pos + v2(130, 97), alpha * tab_alpha / 255)
+                subtab:draw(pos + v2(width + menu_padding * 2, 97), alpha * tab_alpha / 255)
             end
         end, "subtab_t.draw.loop")()
     end

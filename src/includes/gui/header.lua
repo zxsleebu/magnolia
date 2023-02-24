@@ -85,6 +85,7 @@ header.draw = errors.handle(function (pos, alpha)
     header.get_avatar()
     local icon_padding = 14
     local icon_pos = pos + v2(icon_padding, icon_padding - 3)
+    render.text("A", fonts.logo_shadow, icon_pos - v2(2, 2), col.magnolia:alpha(alpha):salpha(50))
     render.text("A", fonts.logo, icon_pos, col.magnolia:alpha(alpha))
     local center_after_icon_pos = icon_pos + v2(fonts.logo.size + icon_padding, fonts.logo.size / 2)
     local line_size = 14

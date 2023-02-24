@@ -22,11 +22,11 @@ local checkbox_mt = {
         ---@param pos vec2_t
         draw = errors.handle(function (s, pos, alpha, input_allowed)
             local text_size = render.text_size(fonts.menu, s.name)
-            local size = v2(16, 16)
+            local size = v2(18, 18)
             local text_padding = 8
             local hovered = drag.hover(pos, pos + size + v2(text_size.x + text_padding + 2, 0)) and input_allowed
-            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding + 1, 0), col.black:alpha(alpha))
-            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding, -1), col.white:alpha(alpha))
+            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding + 1, 2), col.black:alpha(alpha))
+            render.text(s.name, fonts.menu, pos + v2(size.x + text_padding, 1), col.white:alpha(alpha))
             local value = s.el:get_value()
             local hover_anim, active_anim
             if hovered then
