@@ -11,8 +11,8 @@ local container_t = {}
 ---@param pos vec2_t
 container_t.draw = errors.handle(function (pos, alpha)
     local menu_padding = 14
-    local width = 100
-    local padding = 40
+    local width = 114
+    local padding = 34
     local from = pos + v2(width + menu_padding, 64 - padding / 2 + 1)
     local background_color = col(23, 22, 20, 200):salpha(alpha)
     render.rounded_rect(from + v2(1, 1), pos + v2(gui.size.x - 1, gui.size.y - 1), background_color, 7.5, true)
