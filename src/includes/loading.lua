@@ -36,7 +36,7 @@ loading.draw = function()
     once(function()
         delay.add(function ()
             loading.skipped_lag = true
-        end, 100)
+        end, 200)
     end, "skip_lag")
     if not loading.skipped_lag then return end
     if loading.do_security then

@@ -5,7 +5,7 @@ local render = require("libs.render")
 local cbs = require("libs.callbacks")
 local col = require("libs.colors")
 gui = {
-    size = v2(560, 390),
+    size = v2(540, 380),
     drag = drag.new("magnolia", v2(0.5, 0.5), false),
     ---@type gui_tab_t[]
     elements = {},
