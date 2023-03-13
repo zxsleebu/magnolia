@@ -20,8 +20,18 @@ container_t.draw = errors.handle(function (pos, alpha)
     for i = 1, #gui.elements do
         local tab = gui.elements[i]
         local tab_alpha = tab.anims.alpha()
-        render.text(tab.icon, fonts.title_icon, from + v2(23, 17), col.magnolia:alpha(tab_alpha):salpha(alpha), render.flags.X_ALIGN)
-        render.text(tab.name, fonts.tab_title, from + v2(40, 18), col.white:alpha(tab_alpha):salpha(alpha))
+        render.text(tab.icon, fonts.title_icon, from + v2(23, 14), col.magnolia:alpha(tab_alpha):salpha(alpha), render.flags.X_ALIGN)
+        local text_pos = from + v2(40, 13)
+        render.text(tab.name, fonts.tab_title, text_pos, col.white:alpha(tab_alpha):salpha(alpha), render.flags.TEXT_SIZE)
+        if tab_alpha > 0 then
+            for s = 1, #tab.subtabs do
+                local subtab = tab.subtabs[s]
+                local subtab_alpha = subtab.anims.alpha()
+                if subtab_alpha > 0 then
+                    render.text(subtab.name:upper(), fonts.subtab_title, text_pos + v2(0, 13), col.white:alpha(subtab_alpha / 2):salpha(alpha):salpha(tab_alpha))
+                end
+            end
+        end
     end
 end, "container_t.draw")
 ---@param subtab gui_subtab_t

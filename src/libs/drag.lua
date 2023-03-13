@@ -30,6 +30,11 @@ local drag = {
         local from = pos
         local to = to_pos or pos + size
         local distance_from, distance_to = cursor - from, cursor - to
+
+        --!HOVER DEBUG
+        -- renderer.rect(from, to, col(255, 255, 255, 127))
+        --!HOVER DEBUG
+
         if distance_from.x > 0 and distance_from.y > 0
             and distance_to.x < 0 and distance_to.y < 0 then
             return true
@@ -85,21 +90,26 @@ local is_window_active = function()
     local inter = ui.is_visible() or not is_cursor_visible()
     return focused and inter
 end
+drag.is_menu_hovered = function()
+    local rect = ui.get_menu_rect()
+    return drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y))
+end
 ---@param from vec2_t
 ---@param to vec2_t
-drag.hover = function(from, to)
-    local rect = ui.get_menu_rect()
+drag.hover_absolute = function(from, to)
     return drag.is_hovered(from, nil, to)
-        and not (drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y)) and ui.is_visible()) and is_window_active()
+        and not (drag.is_menu_hovered() and ui.is_visible()) and is_window_active()
 end
 ---@param size vec2_t
 ---@param center_x? boolean
 drag.hover_fn = function(size, center_x, center_y)
     return function(pos)
-        local rect = ui.get_menu_rect()
         return drag.is_hovered(v2(center_x and pos.x - size.x / 2 or pos.x, center_y and pos.y - size.y / 2 or pos.y) or pos, size)
-            and not (drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y)) and ui.is_visible()) and is_window_active()
+            and not (drag.is_menu_hovered() and ui.is_visible()) and is_window_active()
     end
+end
+drag.block = function()
+    drag.__blocked = true
 end
 drag.mt = {
     ---@class draggable_t
@@ -127,9 +137,6 @@ drag.mt = {
             local cursor = renderer.get_cursor_pos() / ss
 
             local transformed_pos = pos * ss
-            if not s.move_cursor then
-                -- original_setcursor(arrow_cursor)
-            end
             s.move_cursor = false
             s.hovered = (hover_fn(transformed_pos) or (s.dragging and pressed)) and draggable
             s.highlight_alpha = math.anim(s.highlight_alpha, (not pressed and s.hovered) and 255 or 0)

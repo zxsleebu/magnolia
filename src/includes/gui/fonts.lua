@@ -7,6 +7,7 @@ local fonts = {
     menu = render.font("C:/Windows/Fonts/trebuc.ttf", 16, 0),
     avatar_question = render.font("C:/Windows/Fonts/trebucbd.ttf", 14, render.font_flags.Bold),
     title_icon = render.font("nix/magnolia/icon.ttf", 21),
-    tab_title = render.font("C:/Windows/Fonts/trebucbd.ttf", 18, 0),
+    tab_title = render.font("C:/Windows/Fonts/trebucbd.ttf", 16, 0),
+    subtab_title = render.font("C:/Windows/Fonts/trebucbd.ttf", 10, 0),
 }
 return fonts

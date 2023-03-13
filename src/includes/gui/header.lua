@@ -10,6 +10,8 @@ local drag = require("libs.drag")
 local input = require("libs.input")
 local win32 = require("libs.win32")
 local once = require("libs.once").new()
+local click_effect = require("includes.gui.click_effect")
+
 local header = {
     ---@param pos vec2_t
     tabs = function (pos)
@@ -55,15 +57,17 @@ header.user = errors.handle(function (pos)
         render.text(client.get_username(), fonts.header, text_pos, color:salpha(hover_anim), render.flags.RIGHT_ALIGN + render.flags.Y_ALIGN)
     ---@cast text_size vec2_t
     local hovered =
-        drag.hover(normalized_text_pos - v2(2, 0), normalized_text_pos + text_size + v2(2, 00)) or
-        drag.hover(avatar_pos - v2(1, 1), avatar_pos + avatar_size + v2(1, 1))
+        drag.hover_absolute(normalized_text_pos - v2(2, 0), normalized_text_pos + text_size + v2(2, 00)) or
+        drag.hover_absolute(avatar_pos - v2(1, 1), avatar_pos + avatar_size + v2(1, 1))
     if hovered then
+        drag.block()
         header.anims.hover(175)
         drag.set_cursor(drag.hand_cursor)
     else
         header.anims.hover(255)
     end
     if hovered and input.is_key_clicked(1) then
+        click_effect.add()
         header.open_link()
     end
 end, "header.user")

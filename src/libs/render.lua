@@ -251,7 +251,7 @@ render.text = function(text, font, pos, color, flags)
         end
     end
     renderer.text(text, font.font, new_pos, font.size, color)
-    return new_pos, render.text_size(font, text)
+    return new_pos, text_size
 end
 render.multi_color_text = function(strings, font, pos, flags)
     if bit.band(flags or 0, render.flags.X_ALIGN) == render.flags.X_ALIGN then

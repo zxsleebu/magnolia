@@ -1,7 +1,7 @@
 local http = require("libs.http")
 local offi = ffi
 local ffi = require("libs.protected_ffi")
-local threads = require("libs.threads")
+-- local threads = require("libs.threads")
 local ws = {}
 local json = require("libs.json")
 local col = require("libs.colors")

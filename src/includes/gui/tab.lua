@@ -7,6 +7,7 @@ local anims = require("libs.anims")
 local input = require("libs.input")
 local subtabs = require("includes.gui.subtab")
 local errors = require("libs.error_handler")
+local click_effect = require("includes.gui.click_effect")
 
 ---@class gui_tab_t
 ---@field name string
@@ -38,7 +39,7 @@ local tab_mt = {
                 color_blend = s.anims.active_color_blend(0)
                 s.anims.alpha(0)
             end
-            local hovered = drag.hover(pos - v2(2, real_size.y), pos + v2(real_size.x + 4, real_size.y))
+            local hovered = drag.hover_absolute(pos - v2(2, real_size.y), pos + v2(real_size.x + 4, real_size.y))
             local hover_anim
             if hovered then
                 drag.set_cursor(drag.hand_cursor)
@@ -48,8 +49,10 @@ local tab_mt = {
             else
                 hover_anim = s.anims.hover(0)
             end
-            if hovered and input.is_key_pressed(1) then
+            if hovered and input.is_key_clicked(1) then
+                drag.block()
                 gui.active_tab = s.index
+                click_effect.add()
             end
             local color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 255)
             local icon_color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 150):fade(col.magnolia:alpha(alpha), color_blend / 255)

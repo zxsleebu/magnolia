@@ -6,6 +6,7 @@ local drag = require("libs.drag")
 local anims = require("libs.anims")
 local input = require("libs.input")
 local errors = require("libs.error_handler")
+local click_effect = require("includes.gui.click_effect")
 
 ---@class gui_checkbox_t
 ---@field name string
@@ -24,13 +25,15 @@ local checkbox_mt = {
             local text_size = render.text_size(fonts.menu, s.name)
             local size = v2(18, 18)
             local text_padding = 8
-            local hovered = drag.hover(pos, pos + size + v2(text_size.x + text_padding + 2, 0)) and input_allowed
+            local hovered = input_allowed and drag.hover_absolute(pos, pos + size + v2(text_size.x + text_padding + 2, 0))
             render.text(s.name, fonts.menu, pos + v2(size.x + text_padding + 1, 2), col.black:alpha(alpha))
             render.text(s.name, fonts.menu, pos + v2(size.x + text_padding, 1), col.white:alpha(alpha))
             local value = s.el:get_value()
             local hover_anim, active_anim
             if hovered then
                 if input.is_key_clicked(1) then
+                    drag.block()
+                    click_effect.add()
                     value = s.el:set_value(not value)
                 end
                 drag.set_cursor(drag.hand_cursor)
@@ -62,7 +65,7 @@ checkbox_t.new = function (name, value)
             hover = 0,
             active = 0,
         }),
-        size = v2(18, 26),
+        size = v2(18, 24),
     }, checkbox_mt)
     c.el:set_visible(false)
     return c

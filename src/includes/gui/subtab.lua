@@ -8,6 +8,7 @@ local anims = require("libs.anims")
 local input = require("libs.input")
 local container_t = require("includes.gui.container")
 local errors = require("libs.error_handler")
+local click_effect = require("includes.gui.click_effect")
 require("includes.gui.types")
 
 ---@class gui_g_subtab_t
@@ -52,6 +53,7 @@ subtab_t.draw = errors.handle(function (pos, global_alpha)
     for i = 1, #gui.elements do
         local tab = gui.elements[i]
         local alpha = tab.anims.alpha()
+        local active = gui.active_tab == i
         errors.handle(function()
             if alpha == 0 then return end
             alpha = alpha * (global_alpha / 255)
@@ -59,17 +61,19 @@ subtab_t.draw = errors.handle(function (pos, global_alpha)
                 local subtab = tab.subtabs[t]
                 local p = pos + v2(menu_padding, padding * (t - 1) + top_padding) ---@type vec2_t
                 local is_last = t == #tab.subtabs
-                local text_size = render.text_size(fonts.header, subtab.name)
-                local active_line_pos = p + v2(0, text_size.y / 2 + 2)
+                -- local text_size = render.text_size(fonts.header, subtab.name)
+                -- local active_line_pos = p + v2(0, text_size.y / 2 + 2)
                 local box_from = p - v2(5, padding / 2 - 1)
-                local container_pos = p + v2(width + menu_padding, top_padding - padding / 2 + 1)
+                -- local container_pos = p + v2(width + menu_padding, top_padding - padding / 2 + 1)
                 local box_to = p + v2(width, padding / 2)
                 -- renderer.rect_filled(box_from, box_to, col.white:alpha(alpha):salpha(100))
-                local is_hovered = drag.hover(box_from, box_to)
+                local is_hovered = active and drag.hover_absolute(box_from, box_to)
                 if is_hovered then
                     drag.set_cursor(drag.hand_cursor)
                 end
-                if is_hovered and input.is_key_pressed(1) then
+                if is_hovered and input.is_key_clicked(1) then
+                    drag.block()
+                    click_effect.add()
                     for a = 1, #tab.subtabs do
                         tab.subtabs[a].active = false
                     end
@@ -98,7 +102,7 @@ subtab_t.draw = errors.handle(function (pos, global_alpha)
                     local line_pos = p + v2(0, padding / 2)
                     renderer.rect_filled(line_pos, line_pos + v2(width, 1), col.white:alpha(alpha):salpha(30))
                 end
-                subtab:draw(pos + v2(width + menu_padding * 2, 97), alpha * tab_alpha / 255)
+                subtab:draw(pos + v2(width + menu_padding * 2, 95), alpha * tab_alpha / 255)
             end
         end, "subtab_t.draw.loop")()
     end
