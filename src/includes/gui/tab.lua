@@ -21,8 +21,9 @@ local tab_mt = {
         ---@param s gui_tab_t
         ---@param pos vec2_t
         ---@param alpha number
+        ---@param input_allowed boolean
         ---@return vec2_t
-        draw = errors.handle(function (s, pos, alpha)
+        draw = errors.handle(function (s, pos, alpha, input_allowed)
             local text_size = render.text_size(fonts.header, s.name)
             local real_size = v2(text_size.x + fonts.tab_icons.size + 8, fonts.tab_icons.size)
             local size = real_size + v2(12, 0)
@@ -39,7 +40,7 @@ local tab_mt = {
                 color_blend = s.anims.active_color_blend(0)
                 s.anims.alpha(0)
             end
-            local hovered = drag.hover_absolute(pos - v2(2, real_size.y), pos + v2(real_size.x + 4, real_size.y))
+            local hovered = input_allowed and drag.hover_absolute(pos - v2(2, real_size.y), pos + v2(real_size.x + 4, real_size.y))
             local hover_anim
             if hovered then
                 drag.set_cursor(drag.hand_cursor)

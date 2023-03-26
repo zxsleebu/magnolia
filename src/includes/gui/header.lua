@@ -14,10 +14,11 @@ local click_effect = require("includes.gui.click_effect")
 
 local header = {
     ---@param pos vec2_t
-    tabs = function (pos)
+    ---@param input_allowed boolean
+    tabs = function (pos, input_allowed)
         local alpha = gui.anims.main_alpha()
         for _, v in pairs(gui.elements) do
-            local size = v:draw(pos, alpha)
+            local size = v:draw(pos, alpha, input_allowed)
             pos = pos + v2(size.x + 10, 0)
         end
     end,
@@ -28,7 +29,8 @@ local header = {
     avatar_texture = nil,
 }
 ---@param pos vec2_t
-header.user = errors.handle(function (pos)
+---@param input_allowed boolean
+header.user = errors.handle(function (pos, input_allowed)
     local avatar_size = v2(26, 26)
     local avatar_pos = pos - v2(avatar_size.x - 4, avatar_size.y / 2)
     local alpha = gui.anims.main_alpha()
@@ -56,9 +58,9 @@ header.user = errors.handle(function (pos)
     local normalized_text_pos, text_size =
         render.text(client.get_username(), fonts.header, text_pos, color:salpha(hover_anim), render.flags.RIGHT_ALIGN + render.flags.Y_ALIGN)
     ---@cast text_size vec2_t
-    local hovered =
-        drag.hover_absolute(normalized_text_pos - v2(2, 0), normalized_text_pos + text_size + v2(2, 00)) or
-        drag.hover_absolute(avatar_pos - v2(1, 1), avatar_pos + avatar_size + v2(1, 1))
+    local hovered = input_allowed and
+        (drag.hover_absolute(normalized_text_pos - v2(2, 0), v2(avatar_pos.x, normalized_text_pos.y + text_size.y)) or
+        drag.hover_absolute(avatar_pos - v2(1, 1), avatar_pos + avatar_size + v2(1, 1)))
     if hovered then
         drag.block()
         header.anims.hover(175)
@@ -71,7 +73,7 @@ header.user = errors.handle(function (pos)
         header.open_link()
     end
 end, "header.user")
-header.get_avatar = function ()
+header.get_avatar = errors.handle(function ()
     if gui.anims.main_alpha() ~= 255 then return end
     if header.avatar_texture then return end
     once(function ()
@@ -79,13 +81,15 @@ header.get_avatar = function ()
             header.avatar_texture = renderer.setup_texture(path)
         end)
     end, "get_avatar")
-end
+end, "header.get_avatar")
 header.open_link = function()
     win32.open_url("https://nixware.uk.ms/profile/" .. client.get_username())
 end
 
 ---@param pos vec2_t
-header.draw = errors.handle(function (pos, alpha)
+---@param alpha number
+---@param input_allowed boolean
+header.draw = errors.handle(function (pos, alpha, input_allowed)
     header.get_avatar()
     local icon_padding = 14
     local icon_pos = pos + v2(icon_padding, icon_padding - 3)
@@ -98,8 +102,8 @@ header.draw = errors.handle(function (pos, alpha)
 
 
     local tab_icon_pos = center_after_icon_pos + v2(icon_padding, 0)
-    header.tabs(tab_icon_pos)
-    header.user(v2(pos.x + gui.size.x - icon_padding, tab_icon_pos.y))
+    header.tabs(tab_icon_pos, input_allowed)
+    header.user(v2(pos.x + gui.size.x - icon_padding, tab_icon_pos.y), input_allowed)
 end, "header.draw")
 
 return header

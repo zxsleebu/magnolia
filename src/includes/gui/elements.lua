@@ -1,8 +1,12 @@
 gui.tab("Aimbot", "B")
 gui.subtab("General")
 gui.checkbox("Jumpscout")
-gui.checkbox("Hitbox override")
+gui.options(gui.checkbox("Hitbox override"), function ()
+    gui.checkbox("HP condition")
+end)
+gui.column()
 gui.checkbox("HP conditions")
+
 gui.subtab("Exploits")
 gui.checkbox("Ideal tick")
 gui.checkbox("Improve speed")

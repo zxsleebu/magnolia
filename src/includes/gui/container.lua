@@ -4,23 +4,34 @@ local v2 = require("libs.vectors")()
 local errors = require("libs.error_handler")
 require("includes.gui.checkbox")
 local fonts  = require("includes.gui.fonts")
--- local gui = require("includes.gui")
 
 ---@class gui_container_t
 local container_t = {}
+---@param from vec2_t
+---@param to vec2_t
+---@param alpha number
+---@param background_alpha? number
+container_t.draw_background = errors.handle(function(from, to, alpha, background_alpha)
+    local background_color = col(23, 22, 20, background_alpha or 200):salpha(alpha)
+    render.rounded_rect(from + v2(1, 1), to, background_color, 7.5, true)
+    render.rounded_rect(from, to, col.white:alpha(alpha):salpha(30), 7.5, false)
+end)
+
 ---@param pos vec2_t
-container_t.draw = errors.handle(function (pos, alpha)
-    local menu_padding = 14
-    local width = 114
+---@param alpha number
+---@param input_allowed boolean
+container_t.draw = errors.handle(function (pos, alpha, input_allowed)
+    local width = gui.paddings.subtab_list_width
+    local menu_padding = gui.paddings.menu_padding
     local padding = 34
     local from = pos + v2(width + menu_padding, 64 - padding / 2 + 1)
-    local background_color = col(23, 22, 20, 200):salpha(alpha)
-    render.rounded_rect(from + v2(1, 1), pos + v2(gui.size.x - 1, gui.size.y - 1), background_color, 7.5, true)
-    render.rounded_rect(from, pos + v2(gui.size.x - 1, gui.size.y - 1), col.white:alpha(alpha):salpha(30), 7.5, false)
+    local to = pos + v2(gui.size.x - 1, gui.size.y - 1)
+    local container_width = to.x - from.x - menu_padding
+    container_t.draw_background(from, to, alpha)
     for i = 1, #gui.elements do
         local tab = gui.elements[i]
         local tab_alpha = tab.anims.alpha()
-        render.text(tab.icon, fonts.title_icon, from + v2(23, 14), col.magnolia:alpha(tab_alpha):salpha(alpha), render.flags.X_ALIGN)
+        render.text(tab.icon, fonts.title_icon, from + v2(23, menu_padding), col.magnolia:alpha(tab_alpha):salpha(alpha), render.flags.X_ALIGN)
         local text_pos = from + v2(40, 13)
         render.text(tab.name, fonts.tab_title, text_pos, col.white:alpha(tab_alpha):salpha(alpha), render.flags.TEXT_SIZE)
         if tab_alpha > 0 then
@@ -28,22 +39,38 @@ container_t.draw = errors.handle(function (pos, alpha)
                 local subtab = tab.subtabs[s]
                 local subtab_alpha = subtab.anims.alpha()
                 if subtab_alpha > 0 then
+                    container_t.draw_elements(subtab.columns, from + v2(menu_padding, menu_padding * 3 + 6),
+                        container_width,
+                        alpha * tab_alpha / 255 * subtab_alpha / 255,
+                        gui.active_tab == subtab.tab and subtab.active and input_allowed)
                     render.text(subtab.name:upper(), fonts.subtab_title, text_pos + v2(0, 13), col.white:alpha(subtab_alpha / 2):salpha(alpha):salpha(tab_alpha))
                 end
             end
         end
     end
 end, "container_t.draw")
----@param subtab gui_subtab_t
-container_t.draw_elements = errors.handle(function(subtab, pos, alpha)
-    local input_allowed = gui.active_tab == subtab.tab and subtab.active
-    local y = 0
-    for i = 1, #subtab.elements do
-        local element = subtab.elements[i]
-        local p = pos + v2(0, y) ---@type vec2_t
-        y = y + element.size.y
-        if alpha > 0 then
-            element:draw(p, alpha, input_allowed)
+---@param columns gui_column_t[]
+---@param pos vec2_t
+---@param width number
+---@param alpha number
+---@param input_allowed boolean
+container_t.draw_elements = errors.handle(function(columns, pos, width, alpha, input_allowed)
+    local column_width = width / #columns - gui.paddings.menu_padding
+    for i = 1, #columns do
+        local column = columns[i]
+        local add_pos = v2(width / #columns * (i - 1), 0)
+
+        --!DEBUG
+        -- renderer.rect(pos + add_pos, pos + add_pos + v2(column_width, 100), col.black:alpha(alpha))
+        --!DEBUG
+
+        for e = 1, #column.elements do
+            local element = column.elements[e]
+            local p = (pos + add_pos):round() ---@type vec2_t
+            add_pos.y = add_pos.y + element.size.y
+            if alpha > 0 then
+                element:draw(p, alpha, column_width, input_allowed)
+            end
         end
     end
 end, "container_t.draw_elements")

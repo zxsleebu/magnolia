@@ -1,6 +1,7 @@
 -- jit.off()
 -- jit.flush()
 -- collectgarbage("stop")
+require("includes.preload")
 local errors = require("libs.error_handler")
 errors.handle(function()
     require("includes.gui")

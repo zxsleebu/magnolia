@@ -41,23 +41,23 @@ security.download_resource = function(name)
     http.download(security.url .. "resources/" .. name, path)
 end
 
-security.decrypt = function(str)
+security.decrypt = errors.handle(function(str)
     local key = security.key
     local c = 0
     return str:gsub("[G]-([0-9A-F]+)", function(a)
         c = c + 1
         return utf8.char(bit.bxor(tonumber(a, 16), key:byte(c % #key + 1)))
     end)
-end
+end, "security.decrypt")
 
-security.encrypt = function(str)
+security.encrypt = errors.handle(function(str)
     local key = security.key
     local c = 0
     return utf8.map(str, function(char)
         c = c + 1
         return string.format("%X", bit.bxor(utf8.byte(char) or 0, key:byte(c % #key + 1))) .. "G"
     end):sub(1, -2)
-end
+end, "security.encrypt")
 security.get_info = function()
     return {
         username = client.get_username(),

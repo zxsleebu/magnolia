@@ -9,5 +9,6 @@ local fonts = {
     title_icon = render.font("nix/magnolia/icon.ttf", 21),
     tab_title = render.font("C:/Windows/Fonts/trebucbd.ttf", 16, 0),
     subtab_title = render.font("C:/Windows/Fonts/trebucbd.ttf", 10, 0),
+    menu_icons = render.font("nix/magnolia/icon.ttf", 16),
 }
 return fonts

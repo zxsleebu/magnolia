@@ -181,6 +181,7 @@ render.flags = {
     RIGHT_ALIGN = 0x40,
     TEXT_SIZE = 0x80,
 }
+render.flags.CENTER = render.flags.X_ALIGN + render.flags.Y_ALIGN
 
 ---@param font __font_t
 ---@param text string
