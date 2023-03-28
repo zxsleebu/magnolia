@@ -64,11 +64,11 @@ container_t.draw_elements = errors.handle(function(columns, pos, width, alpha, i
         -- renderer.rect(pos + add_pos, pos + add_pos + v2(column_width, 100), col.black:alpha(alpha))
         --!DEBUG
 
-        for e = 1, #column.elements do
-            local element = column.elements[e]
-            local p = (pos + add_pos):round() ---@type vec2_t
-            add_pos.y = add_pos.y + element.size.y
-            if alpha > 0 then
+        if alpha > 0 then
+            for e = 1, #column.elements do
+                local element = column.elements[e]
+                local p = (pos + add_pos):round() ---@type vec2_t
+                add_pos.y = add_pos.y + element.size.y + element.padding
                 element:draw(p, alpha, column_width, input_allowed)
             end
         end

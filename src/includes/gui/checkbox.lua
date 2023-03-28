@@ -16,6 +16,7 @@ local click_effect = require("includes.gui.click_effect")
 ---@field inline gui_options_t
 ---@field el checkbox_t
 ---@field size vec2_t
+---@field padding number
 local checkbox_t = { }
 
 local checkbox_mt = {
@@ -71,6 +72,7 @@ local checkbox_mt = {
                 end
             end
         end, "checkbox_t.draw"),
+        padding = 6,
     }
 }
 checkbox_t.new = errors.handle(function (name, value)
@@ -84,7 +86,7 @@ checkbox_t.new = errors.handle(function (name, value)
             hover = 0,
             active = 0,
         }),
-        size = v2(0, 24),
+        size = v2(0, 18),
     }, checkbox_mt)
     c.el:set_visible(false)
     return c

@@ -1,17 +1,35 @@
 local errors = require("libs.error_handler")
+local v2 = require("libs.vectors")()
 
 ---@class gui_column_t
 ---@field elements gui_element_t[]
 
-local column_mt = {
-    __index = {
-        get_size = function()
+---@class gui_column_t
+local column_t = {}
 
+local column_mt = {
+    ---@class gui_column_t
+    __index = {
+        ---@param s gui_column_t
+        ---@return vec2_t
+        get_size = function(s)
+            local size = v2(0, 0)
+            local last_padding = 0
+            for i = 1, #s.elements do
+                local element = s.elements[i]
+                if element.size.x > size.x then
+                    size.x = element.size.x
+                end
+                last_padding = element.padding
+                size.y = size.y + element.size.y + last_padding
+            end
+            size.y = size.y - last_padding
+            return size
         end
     }
 }
 
-local column_t = {}
+---@return gui_column_t
 column_t.new = function ()
     return setmetatable({
         elements = {}

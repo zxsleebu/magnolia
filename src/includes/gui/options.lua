@@ -43,26 +43,35 @@ local options_mt = {
         ---@param alpha number
         draw = errors.handle(function(s, alpha)
             local open_alpha = s.anims.alpha() * (alpha / 255)
-            local to = s.pos + v2(100, 200)
             if open_alpha > 0 then
-                local hovered = drag.hover_absolute(s.pos, to)
-                if not hovered then
-                    if input.is_key_clicked(1) then
-                        s.open = false
-                    end
-                end
-                container_t.draw_background(s.pos, to, open_alpha, 253)
                 local input_allowed = true
+                local padding = v2(gui.paddings.options_padding, gui.paddings.options_padding)
+                local size = v2(#s.columns * gui.paddings.options_padding, gui.paddings.options_padding) + padding
                 if s.columns then
                     for _, column in pairs(s.columns) do
+                        size = size + column:get_size()
                         for _, element in pairs(column.elements) do
+                            if element.size.x == 0 then
+                                --*HACK: this is a hack to make the options menu wait for the element to calculate its size before drawing it
+                                open_alpha = 0.01
+                            end
                             if element.inline and element.inline.open then
                                 input_allowed = false
                             end
                         end
                     end
                 end
-                container_t.draw_elements(s.columns, s.pos, 300, open_alpha, input_allowed)
+
+                local to = s.pos + size
+                local hovered = drag.hover_absolute(s.pos, to)
+                if not hovered then
+                    if input.is_key_clicked(1) then
+                        s.open = false
+                    end
+                end
+
+                container_t.draw_background(s.pos, to, open_alpha, 253)
+                container_t.draw_elements(s.columns, s.pos + padding, size.x, open_alpha, input_allowed)
             end
         end, "options_mt.draw"),
         size = v2(11, 14),
@@ -99,7 +108,7 @@ options_t.draw = errors.handle(function()
             local subtab_alpha = subtab.anims.alpha() * (tab_alpha / 255)
             for _, column in pairs(subtab.columns) do
                 for _, element in pairs(column.elements) do
-                    if element.inline and element.inline.columns then
+                    if element.inline then
                         element.inline:draw(subtab_alpha)
                     end
                 end

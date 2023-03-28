@@ -22,6 +22,7 @@ gui = {
     paddings = {
         menu_padding = 14,
         subtab_list_width = 114,
+        options_padding = 10,
     }
 }
 
