@@ -39,7 +39,7 @@ container_t.draw = errors.handle(function (pos, alpha, input_allowed)
                 local subtab = tab.subtabs[s]
                 local subtab_alpha = subtab.anims.alpha()
                 if subtab_alpha > 0 then
-                    container_t.draw_elements(subtab.columns, from + v2(menu_padding, menu_padding * 3 + 6),
+                    container_t.draw_columns(subtab.columns, from + v2(menu_padding, menu_padding * 3 + 6),
                         container_width,
                         alpha * tab_alpha / 255 * subtab_alpha / 255,
                         gui.active_tab == subtab.tab and subtab.active and input_allowed)
@@ -49,30 +49,40 @@ container_t.draw = errors.handle(function (pos, alpha, input_allowed)
         end
     end
 end, "container_t.draw")
+
+---@param elements gui_element_t[]
+---@param pos vec2_t
+---@param width number
+---@param alpha number
+---@param input_allowed boolean
+container_t.draw_elements = errors.handle(function(elements, pos, width, alpha, input_allowed)
+    local add_pos = v2(0, 0)
+    if alpha > 0 then
+        for e = 1, #elements do
+            local element = elements[e]
+            local p = (pos + add_pos):round() ---@type vec2_t
+            add_pos.y = add_pos.y + element.size.y + element.padding
+            element:draw(p, alpha, width, input_allowed)
+        end
+    end
+end, "container_t.draw_elements")
+
 ---@param columns gui_column_t[]
 ---@param pos vec2_t
 ---@param width number
 ---@param alpha number
 ---@param input_allowed boolean
-container_t.draw_elements = errors.handle(function(columns, pos, width, alpha, input_allowed)
+container_t.draw_columns = errors.handle(function(columns, pos, width, alpha, input_allowed)
     local column_width = width / #columns - gui.paddings.menu_padding
     for i = 1, #columns do
         local column = columns[i]
         local add_pos = v2(width / #columns * (i - 1), 0)
+        container_t.draw_elements(column.elements, pos + add_pos, column_width, alpha, input_allowed)
 
         --!DEBUG
         -- renderer.rect(pos + add_pos, pos + add_pos + v2(column_width, 100), col.black:alpha(alpha))
         --!DEBUG
-
-        if alpha > 0 then
-            for e = 1, #column.elements do
-                local element = column.elements[e]
-                local p = (pos + add_pos):round() ---@type vec2_t
-                add_pos.y = add_pos.y + element.size.y + element.padding
-                element:draw(p, alpha, column_width, input_allowed)
-            end
-        end
     end
-end, "container_t.draw_elements")
+end, "container_t.draw_columns")
 
 return container_t

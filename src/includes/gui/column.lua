@@ -3,6 +3,7 @@ local v2 = require("libs.vectors")()
 
 ---@class gui_column_t
 ---@field elements gui_element_t[]
+---@field size vec2_t
 
 ---@class gui_column_t
 local column_t = {}
@@ -24,6 +25,7 @@ local column_mt = {
                 size.y = size.y + element.size.y + last_padding
             end
             size.y = size.y - last_padding
+            s.size = size
             return size
         end
     }
@@ -32,7 +34,8 @@ local column_mt = {
 ---@return gui_column_t
 column_t.new = function ()
     return setmetatable({
-        elements = {}
+        elements = {},
+        size = v2(0, 0)
     }, column_mt)
 end
 

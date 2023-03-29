@@ -45,11 +45,14 @@ local options_mt = {
             local open_alpha = s.anims.alpha() * (alpha / 255)
             if open_alpha > 0 then
                 local input_allowed = true
-                local padding = v2(gui.paddings.options_padding, gui.paddings.options_padding)
-                local size = v2(#s.columns * gui.paddings.options_padding, gui.paddings.options_padding) + padding
+                local size = v2((#s.columns + 1) * gui.paddings.options_padding, 0)
                 if s.columns then
                     for _, column in pairs(s.columns) do
-                        size = size + column:get_size()
+                        local col_size = column:get_size()
+                        size.x = size.x + col_size.x
+                        if col_size.y > size.y then
+                            size.y = col_size.y
+                        end
                         for _, element in pairs(column.elements) do
                             if element.size.x == 0 then
                                 --*HACK: this is a hack to make the options menu wait for the element to calculate its size before drawing it
@@ -61,6 +64,7 @@ local options_mt = {
                         end
                     end
                 end
+                size = v2(size.x, gui.paddings.options_padding * 2 + size.y)
 
                 local to = s.pos + size
                 local hovered = drag.hover_absolute(s.pos, to)
@@ -71,7 +75,15 @@ local options_mt = {
                 end
 
                 container_t.draw_background(s.pos, to, open_alpha, 253)
-                container_t.draw_elements(s.columns, s.pos + padding, size.x, open_alpha, input_allowed)
+
+                if s.columns then
+                    local add_pos = v2(gui.paddings.options_padding, gui.paddings.options_padding)
+                    for i = 1, #s.columns do
+                        local column = s.columns[i]
+                        container_t.draw_elements(column.elements, s.pos + add_pos, size.x, open_alpha, input_allowed)
+                        add_pos.x = column.size.x + add_pos.x + gui.paddings.options_padding
+                    end
+                end
             end
         end, "options_mt.draw"),
         size = v2(11, 14),
