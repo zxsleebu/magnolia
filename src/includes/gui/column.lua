@@ -13,7 +13,7 @@ local column_mt = {
     __index = {
         ---@param s gui_column_t
         ---@return vec2_t
-        get_size = function(s)
+        get_size = errors.handle(function(s)
             local size = v2(0, 0)
             local last_padding = 0
             for i = 1, #s.elements do
@@ -28,7 +28,7 @@ local column_mt = {
             size.y = size.y - last_padding
             s.size = size
             return size
-        end
+        end, "column_t.get_size"),
     }
 }
 

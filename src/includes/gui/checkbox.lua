@@ -60,18 +60,13 @@ local checkbox_mt = {
             -- renderer.line(check_pos + v2(size.x / 2, size.y / 2 + 3), check_pos + v2(size.x - 4, 4), col.gray:alpha(alpha):salpha(active_anim))
             if s.inline and s.inline.inline_draw then
                 local i = s.inline
-                local inline_alpha = i.anims.enabled()
-                if value then
-                    inline_alpha = i.anims.enabled(255)
-                else
-                    inline_alpha = i.anims.enabled(0)
-                end
+                local inline_alpha = i.anims.enabled(value and 255 or 0)
                 i:inline_draw(pos + v2(width - i.size.x, size.y / 2), alpha * inline_alpha / 255, input_allowed)
             end
             if s.size.x == 0 then
                 s.size.x = hover_to.x - pos.x
                 if s.inline then
-                    s.size.x = s.size.x + s.inline.size.x + 6
+                    s.size.x = s.size.x + s.inline.size.x + gui.paddings.options_padding
                 end
             end
         end, "checkbox_t.draw"),

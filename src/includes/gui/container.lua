@@ -80,10 +80,10 @@ end, "container_t.draw_elements")
 ---@param alpha number
 ---@param input_allowed boolean
 container_t.draw_columns = errors.handle(function(columns, pos, width, alpha, input_allowed)
-    local column_width = width / #columns - gui.paddings.menu_padding
+    local column_width = math.round(width / #columns - gui.paddings.menu_padding)
     for i = 1, #columns do
         local column = columns[i]
-        local add_pos = v2(width / #columns * (i - 1), 0)
+        local add_pos = v2(width / #columns * (i - 1), 0):round()
         container_t.draw_elements(column.elements, pos + add_pos, column_width, alpha, input_allowed)
 
         --!DEBUG

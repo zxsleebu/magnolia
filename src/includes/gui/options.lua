@@ -23,7 +23,7 @@ local options_mt = {
         ---@param alpha number
         ---@param input_allowed boolean
         inline_draw = errors.handle(function(s, pos, alpha, input_allowed)
-            local text_pos, text_size = render.text("E", fonts.menu_icons, pos, col.white:alpha(alpha):salpha(s.anims.hover()), render.flags.CENTER)
+            local text_pos, text_size = render.text("E", fonts.menu_icons, pos, col.white:alpha(alpha):salpha(s.anims.hover()), render.flags.Y_ALIGN)
             ---@cast text_size vec2_t
             local hovered = input_allowed and drag.hover_absolute(text_pos - v2(0, 1), text_pos + text_size + v2(0, 2))
             s.anims.hover((hovered or s.open) and 255 or 100)
@@ -67,11 +67,9 @@ local options_mt = {
                 size = v2(size.x + 1, gui.paddings.options_padding * 2 + size.y + 1)
 
                 local to = s.pos + size
-                local hovered = drag.hover_absolute(s.pos, to)
-                if not hovered then
-                    if input.is_key_clicked(1) then
-                        s.open = false
-                    end
+                --if unfocused then
+                if input_allowed and not drag.hover_absolute(s.pos, to) and input.is_key_clicked(1) then
+                    s.open = false
                 end
 
                 container_t.draw_background(s.pos, to, open_alpha, 253)
@@ -80,13 +78,18 @@ local options_mt = {
                     local add_pos = v2(gui.paddings.options_padding + 1, gui.paddings.options_padding + 1)
                     for i = 1, #s.columns do
                         local column = s.columns[i]
-                        container_t.draw_elements(column.elements, s.pos + add_pos, size.x, open_alpha, input_allowed)
+                        container_t.draw_elements(column.elements, s.pos + add_pos, math.round(column.size.x), open_alpha, input_allowed)
+
+                        --!DEBUG
+                        -- renderer.rect(s.pos + add_pos, s.pos + add_pos + column.size, col.black:alpha(open_alpha))
+                        --!DEBUG
+
                         add_pos.x = column.size.x + add_pos.x + gui.paddings.options_padding
                     end
                 end
             end
         end, "options_mt.draw"),
-        size = v2(11, 14),
+        size = v2(18, 14),
     }
 }
 
@@ -107,10 +110,22 @@ options_t.new = errors.handle(function (element, options)
         open = false,
     }, options_mt)
     element.inline = self
+    local old_options = gui.current_options
     gui.current_options = self
     options()
-    gui.current_options = nil
+    gui.current_options = old_options
 end, "options_t.new")
+
+options_t.draw_columns = function(columns, alpha)
+    for _, column in pairs(columns) do
+        for _, element in pairs(column.elements) do
+            if element.inline then
+                element.inline:draw(alpha)
+                options_t.draw_columns(element.inline.columns, alpha)
+            end
+        end
+    end
+end
 
 options_t.draw = errors.handle(function()
     local alpha = gui.anims.main_alpha()
@@ -118,13 +133,7 @@ options_t.draw = errors.handle(function()
         local tab_alpha = tab.anims.alpha() * (alpha / 255)
         for _, subtab in pairs(tab.subtabs) do
             local subtab_alpha = subtab.anims.alpha() * (tab_alpha / 255)
-            for _, column in pairs(subtab.columns) do
-                for _, element in pairs(column.elements) do
-                    if element.inline then
-                        element.inline:draw(subtab_alpha)
-                    end
-                end
-            end
+            options_t.draw_columns(subtab.columns, subtab_alpha)
         end
     end
 end, "options_t.draw")
