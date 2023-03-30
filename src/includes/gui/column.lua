@@ -21,8 +21,9 @@ local column_mt = {
                 if element.size.x > size.x then
                     size.x = element.size.x
                 end
+                local alpha = element.anims.alpha() / 255
                 last_padding = element.padding
-                size.y = size.y + element.size.y + last_padding
+                size.y = size.y + (element.size.y + last_padding) * alpha
             end
             size.y = size.y - last_padding
             s.size = size

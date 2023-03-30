@@ -7,6 +7,7 @@ local anims = require("libs.anims")
 local input = require("libs.input")
 local errors = require("libs.error_handler")
 local click_effect = require("includes.gui.click_effect")
+local element_t = require("includes.gui.element")
 
 ---@class gui_checkbox_t
 ---@field name string
@@ -17,6 +18,8 @@ local click_effect = require("includes.gui.click_effect")
 ---@field el checkbox_t
 ---@field size vec2_t
 ---@field padding number
+---@field master_object? { el?: checkbox_t, fn: fun(): boolean }
+---@field master fun(s: gui_checkbox_t, master: gui_checkbox_t|fun(): boolean)
 local checkbox_t = { }
 
 local checkbox_mt = {
@@ -72,6 +75,7 @@ local checkbox_mt = {
                 end
             end
         end, "checkbox_t.draw"),
+        master = element_t.master,
         padding = 6,
     }
 }
@@ -82,7 +86,7 @@ checkbox_t.new = errors.handle(function (name, value)
         value = value,
         el = ui.add_check_box(path, path, value or false),
         anims = anims.new({
-            alpha = 0,
+            alpha = 255,
             hover = 0,
             active = 0,
         }),
@@ -91,6 +95,9 @@ checkbox_t.new = errors.handle(function (name, value)
     c.el:set_visible(false)
     return c
 end, "checkbox_t.new")
+---@param name string
+---@param value? boolean
+---@return gui_checkbox_t
 gui.checkbox = function(name, value)
     return gui.add_element(checkbox_t.new(name, value))
 end

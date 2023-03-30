@@ -64,7 +64,7 @@ local options_mt = {
                         end
                     end
                 end
-                size = v2(size.x, gui.paddings.options_padding * 2 + size.y)
+                size = v2(size.x + 1, gui.paddings.options_padding * 2 + size.y + 1)
 
                 local to = s.pos + size
                 local hovered = drag.hover_absolute(s.pos, to)
@@ -77,7 +77,7 @@ local options_mt = {
                 container_t.draw_background(s.pos, to, open_alpha, 253)
 
                 if s.columns then
-                    local add_pos = v2(gui.paddings.options_padding, gui.paddings.options_padding)
+                    local add_pos = v2(gui.paddings.options_padding + 1, gui.paddings.options_padding + 1)
                     for i = 1, #s.columns do
                         local column = s.columns[i]
                         container_t.draw_elements(column.elements, s.pos + add_pos, size.x, open_alpha, input_allowed)

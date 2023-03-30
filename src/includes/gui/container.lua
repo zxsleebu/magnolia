@@ -4,6 +4,7 @@ local v2 = require("libs.vectors")()
 local errors = require("libs.error_handler")
 require("includes.gui.checkbox")
 local fonts  = require("includes.gui.fonts")
+local element_t = require("includes.gui.element")
 
 ---@class gui_container_t
 local container_t = {}
@@ -61,8 +62,14 @@ container_t.draw_elements = errors.handle(function(elements, pos, width, alpha, 
         for e = 1, #elements do
             local element = elements[e]
             local p = (pos + add_pos):round() ---@type vec2_t
-            add_pos.y = add_pos.y + element.size.y + element.padding
-            element:draw(p, alpha, width, input_allowed)
+            local element_alpha, element_input = element_t.animate_master(element)
+            element_alpha = element_alpha / 255
+            element_input = element_input and element_alpha > 0
+            add_pos.y = add_pos.y + (element.size.y + element.padding) * element_alpha
+            element_alpha = element_alpha * alpha
+            if element_alpha > 0 or alpha == 0.01 then
+                element:draw(p, element_alpha, width, input_allowed and element_input)
+            end
         end
     end
 end, "container_t.draw_elements")
