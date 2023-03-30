@@ -30,7 +30,7 @@ local tab_mt = {
             local line_width = s.anims.underline_width()
             local color_blend, underline_alpha
             if gui.active_tab == s.index then
-                line_width = s.anims.underline_width(text_size.x / 2)
+                line_width = s.anims.underline_width(math.round(text_size.x / 2))
                 underline_alpha = s.anims.underline_alpha(255)
                 color_blend = s.anims.active_color_blend(255)
                 s.anims.alpha(255)

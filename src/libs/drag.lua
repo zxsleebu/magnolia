@@ -8,14 +8,6 @@ ffi.cdef[[
     typedef void* HANDLE;
     HANDLE LoadCursorA(HANDLE, const char*);
     typedef struct { long x; long y; } POINT;
-    typedef struct {
-        DWORD cbSize;
-        DWORD flags;
-        void* hCursor;
-        POINT ptScreenPos;
-    } CURSORINFO;
-    bool GetCursorInfo(CURSORINFO*);
-    void* GetForegroundWindow();
 ]]
 local SetCursor = modules.get_function("HANDLE(__stdcall*)(HANDLE)", "user32", "SetCursor")
 local ss = engine.get_screen_size()
@@ -79,18 +71,7 @@ drag.new = errors.handle(function(key, default_pos, pointer)
     drag.__elements[key].pos.x:set_visible(false) drag.__elements[key].pos.y:set_visible(false)
     return setmetatable(drag.__elements[key], drag.mt)
 end, "drag.new")
-local window_handle = ffi.C.GetForegroundWindow()
-local is_cursor_visible = function()
-    local cursor = ffi.new("CURSORINFO")
-    cursor.cbSize = ffi.sizeof("CURSORINFO")
-    ffi.C.GetCursorInfo(cursor)
-    return cursor.flags ~= 0
-end
-local is_window_active = function()
-    local focused = ffi.C.GetForegroundWindow() == window_handle
-    local inter = ui.is_visible() or not is_cursor_visible()
-    return focused and inter
-end
+
 drag.is_menu_hovered = function()
     local rect = ui.get_menu_rect()
     return drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y))
@@ -99,14 +80,14 @@ end
 ---@param to vec2_t
 drag.hover_absolute = function(from, to)
     return drag.is_hovered(from, nil, to)
-        and not (drag.is_menu_hovered() and ui.is_visible()) and is_window_active()
+        and not (drag.is_menu_hovered() and ui.is_visible())
 end
 ---@param size vec2_t
 ---@param center_x? boolean
 drag.hover_fn = function(size, center_x, center_y)
     return function(pos)
         return drag.is_hovered(v2(center_x and pos.x - size.x / 2 or pos.x, center_y and pos.y - size.y / 2 or pos.y) or pos, size)
-            and not (drag.is_menu_hovered() and ui.is_visible()) and is_window_active()
+            and not (drag.is_menu_hovered() and ui.is_visible())
     end
 end
 drag.block = function()
