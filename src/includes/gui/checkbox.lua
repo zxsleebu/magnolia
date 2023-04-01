@@ -13,19 +13,20 @@ local element_t = require("includes.gui.element")
 ---@field name string
 ---@field value boolean
 ---@field anims __anims_mt
----@field draw fun(s: gui_checkbox_t, pos: vec2_t, alpha: number, width: number, input_allowed: boolean)
 ---@field inline gui_options_t
 ---@field el checkbox_t
 ---@field size vec2_t
----@field padding number
 ---@field master_object? { el?: checkbox_t, fn: fun(): boolean }
----@field master fun(s: gui_checkbox_t, master: gui_checkbox_t|fun(): boolean)
 local checkbox_t = { }
 
 local checkbox_mt = {
+    ---@class gui_checkbox_t
     __index = {
         ---@param s gui_checkbox_t
         ---@param pos vec2_t
+        ---@param alpha number
+        ---@param width number
+        ---@param input_allowed boolean
         draw = errors.handle(function (s, pos, alpha, width, input_allowed)
             -- renderer.rect(pos, pos + v2(width, s.size.y), col.white:alpha(alpha))
             local text_size = render.text_size(fonts.menu, s.name)
@@ -53,11 +54,7 @@ local checkbox_mt = {
             active_anim = s.anims.active(value and 255 or 0)
             renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:fade(col.magnolia, active_anim / 255):alpha(alpha))
             render.smoothed_rect(pos, pos + size, col.magnolia_tinted:fade(col.magnolia, hover_anim / 255):alpha(alpha), false)
-            local check_pos = pos - v2(0, 0)
-            renderer.line(check_pos + v2(5, size.y / 2), check_pos + v2(size.x / 2, size.y / 2 + 3), col.gray:alpha(alpha):salpha(active_anim))
-            -- renderer.line(check_pos + v2(5, size.y / 2 + 1), check_pos + v2(size.x / 2, size.y / 2 + 4), col.gray:alpha(alpha):salpha(active_anim))
-            renderer.line(check_pos + v2(size.x / 2 - 1, size.y / 2 + 3), check_pos + v2(size.x - 5, 5), col.gray:alpha(alpha):salpha(active_anim))
-            -- renderer.line(check_pos + v2(size.x / 2, size.y / 2 + 3), check_pos + v2(size.x - 4, 4), col.gray:alpha(alpha):salpha(active_anim))
+            s:draw_checkmark(pos, alpha * (active_anim / 255))
             if s.inline and s.inline.inline_draw then
                 local i = s.inline
                 local inline_alpha = i.anims.enabled(value and 255 or 0)
@@ -70,6 +67,24 @@ local checkbox_mt = {
                 end
             end
         end, "checkbox_t.draw"),
+        ---@param s gui_checkbox_t
+        ---@param pos vec2_t
+        ---@param alpha number
+        draw_checkmark = errors.handle(function (s, pos, alpha)
+            local color = col.gray:alpha(alpha)
+            local size = v2(18, 18)
+            local anim = s.anims.active()
+            do
+                local start_pos = pos + v2(5, size.y / 2)
+                local difference = pos + v2(size.x / 2, size.y / 2 + 3) - start_pos
+                renderer.line(start_pos, start_pos + difference * math.clamp(anim * 2, 0, 255) / 255, color)
+            end
+            do
+                local start_pos = pos + v2(size.x / 2 - 1, size.y / 2 + 3)
+                local difference = pos + v2(size.x - 5, 5) - start_pos
+                renderer.line(start_pos, start_pos + difference * math.clamp(anim * 2 - 255, 0, 255) / 255, color)
+            end
+        end, "checkbox_t.draw_checkmark"),
         master = element_t.master,
         padding = 6,
     }
