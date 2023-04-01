@@ -6,6 +6,7 @@ local render = require("libs.render")
 local cbs = require("libs.callbacks")
 local col = require("libs.colors")
 local click_effect = require("includes.gui.click_effect")
+local input = require("libs.input")
 
 gui = {
     size = v2(560, 380),
@@ -119,12 +120,12 @@ cbs.add("paint", errors.handle(function()
     end, function(pos, alpha)
         drag.highlight(pos - v2(gui.size.x / 2, 0), gui.size, alpha)
     end)
-    if is_hovered then
+    if (is_hovered and not input.is_key_pressed(1)) or gui.drag.dragging then
         drag.set_cursor(drag.move_cursor)
     end
     pos = (pos - gui.size / 2):round()
     gui.pos = pos
-    gui.draw(pos, main_alpha, input_allowed)
+    gui.draw(pos, main_alpha, input_allowed and not gui.drag.dragging)
     options_t.draw()
     click_effect.draw()
     -- highlight()

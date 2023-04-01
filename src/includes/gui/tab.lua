@@ -29,7 +29,8 @@ local tab_mt = {
             local size = real_size + v2(12, 0)
             local line_width = s.anims.underline_width()
             local color_blend, underline_alpha
-            if gui.active_tab == s.index then
+            local active = gui.active_tab == s.index
+            if active then
                 line_width = s.anims.underline_width(math.round(text_size.x / 2))
                 underline_alpha = s.anims.underline_alpha(255)
                 color_blend = s.anims.active_color_blend(255)
@@ -42,18 +43,23 @@ local tab_mt = {
             end
             local hovered = input_allowed and drag.hover_absolute(pos - v2(2, real_size.y), pos + v2(real_size.x + 4, real_size.y))
             local hover_anim
-            if hovered then
+            if hovered and not active and not gui.drag.dragging then
                 drag.set_cursor(drag.hand_cursor)
             end
-            if hovered or gui.active_tab == s.index then
+            if hovered and active then
+                drag.set_cursor(drag.arrow_cursor)
+            end
+            if hovered or active then
                 hover_anim = s.anims.hover(255)
             else
                 hover_anim = s.anims.hover(0)
             end
-            if hovered and input.is_key_clicked(1) then
+            if hovered then
                 drag.block()
-                gui.active_tab = s.index
-                click_effect.add()
+                if input.is_key_clicked(1) then
+                    gui.active_tab = s.index
+                    click_effect.add()
+                end
             end
             local color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 255)
             local icon_color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 150):fade(col.magnolia:alpha(alpha), color_blend / 255)
