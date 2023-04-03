@@ -52,6 +52,7 @@ local drag = {
 drag.arrow_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32512))
 drag.move_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32646))
 drag.hand_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32649))
+drag.horizontal_resize_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32644))
 drag.new = errors.handle(function(key, default_pos, pointer)
     if pointer == nil then pointer = true end
     drag.__elements[key] = {

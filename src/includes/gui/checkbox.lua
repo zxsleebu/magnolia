@@ -11,7 +11,6 @@ local element_t = require("includes.gui.element")
 
 ---@class gui_checkbox_t
 ---@field name string
----@field value boolean
 ---@field anims __anims_mt
 ---@field inline gui_options_t
 ---@field el checkbox_t
@@ -46,11 +45,7 @@ local checkbox_mt = {
                 end
                 drag.set_cursor(drag.hand_cursor)
             end
-            if hovered or value then
-                hover_anim = s.anims.hover(255)
-            else
-                hover_anim = s.anims.hover(0)
-            end
+            hover_anim = s.anims.hover((hovered or value) and 255 or 0 )
             active_anim = s.anims.active(value and 255 or 0)
             renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:fade(col.magnolia, active_anim / 255):alpha(alpha))
             render.smoothed_rect(pos, pos + size, col.magnolia_tinted:fade(col.magnolia, hover_anim / 255):alpha(alpha), false)
@@ -58,7 +53,9 @@ local checkbox_mt = {
             if s.inline and s.inline.inline_draw then
                 local i = s.inline
                 local inline_alpha = i.anims.enabled(value and 255 or 0)
-                i:inline_draw(pos + v2(width - i.size.x, size.y / 2), alpha * inline_alpha / 255, input_allowed)
+                if inline_alpha > 0 then
+                    i:inline_draw(pos + v2(width - i.size.x, size.y / 2), alpha * inline_alpha / 255, input_allowed and value)
+                end
             end
             if s.size.x == 0 then
                 s.size.x = hover_to.x - pos.x
@@ -93,7 +90,6 @@ checkbox_t.new = errors.handle(function (name, value)
     local path = gui.get_path(name)
     local c = setmetatable({
         name = name,
-        value = value,
         el = ui.add_check_box(path, path, value or false),
         anims = anims.new({
             alpha = 255,

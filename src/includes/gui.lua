@@ -87,6 +87,9 @@ gui.is_input_allowed = errors.handle(function()
                     if element.inline and element.inline.open then
                         return false
                     end
+                    if element.active then
+                        return false
+                    end
                 end
             end
         end

@@ -254,6 +254,20 @@ render.text = function(text, font, pos, color, flags)
     renderer.text(text, font.font, new_pos, font.size, color)
     return new_pos, text_size
 end
+---@param text string
+---@param font __font_t
+---@param size number
+---@param pos vec2_t
+---@param color color_t
+---@param flags? number
+---@return vec2_t, vec2_t?
+render.sized_text = function(text, font, size, pos, color, flags)
+    local old_size = font.size
+    font.size = size
+    local result1, result2 = render.text(text, font, pos, color, flags)
+    font.size = old_size
+    return result1, result2
+end
 render.multi_color_text = function(strings, font, pos, flags)
     if bit.band(flags or 0, render.flags.X_ALIGN) == render.flags.X_ALIGN then
         local str = ""

@@ -3,6 +3,7 @@ local col = require("libs.colors")
 local v2 = require("libs.vectors")()
 local errors = require("libs.error_handler")
 require("includes.gui.checkbox")
+require("includes.gui.slider")
 local fonts  = require("includes.gui.fonts")
 local element_t = require("includes.gui.element")
 
