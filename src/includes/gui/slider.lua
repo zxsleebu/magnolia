@@ -74,7 +74,7 @@ local slider_mt = {
             local text_padding_anim = math.round(1 * (active_anim / 255))
             local text_padding = v2(4 - text_padding_anim, 2 - text_padding_anim)
 
-            local font_size = fonts.menu.size - (active_anim / 255 * 2)
+            local font_size = fonts.menu.size - (active_anim / 255 * 1.6)
 
             local text_size = render.sized_text(s.name, fonts.slider, font_size, from + text_padding,
                 col.white:alpha(alpha), render.flags.OUTLINE)
@@ -83,8 +83,8 @@ local slider_mt = {
 
             if active_anim > 0 then
                 local color = col.white:alpha(alpha):salpha(active_anim)
-                render.text(tostring(s.min), fonts.slider_small, v2(from.x + 4, to.y - 13), color, render.flags.OUTLINE)
-                render.text(tostring(s.max), fonts.slider_small, v2(to.x - 4, to.y - 13), color, render.flags.RIGHT_ALIGN + render.flags.OUTLINE)
+                render.text(tostring(s.min), fonts.slider_small, v2(from.x + 4, to.y - 11), color, render.flags.OUTLINE)
+                render.text(tostring(s.max), fonts.slider_small, v2(to.x - 4, to.y - 11), color, render.flags.RIGHT_ALIGN + render.flags.OUTLINE)
             end
 
             local hovered = input_allowed and drag.hover_absolute(from, to)
