@@ -1,3 +1,4 @@
+local cbs = require("libs.callbacks")
 ffi.cdef([[
     short GetAsyncKeyState(int);
     typedef struct {
@@ -32,10 +33,20 @@ local input = {
 input.is_key_clicked = function(code)
     local state = input.is_key_pressed(code)
     if click_state[code] == nil then
-        click_state[code] = state
+        click_state[code] = {
+            state = state,
+            clicked = false
+        }
     end
-    local clicked = state and not click_state[code]
-    click_state[code] = state
-    return clicked
+    return click_state[code].clicked
 end
+cbs.add("paint", function()
+    for code, _ in pairs(click_state) do
+        local state = input.is_key_pressed(code)
+        click_state[code] = {
+            state = state,
+            clicked = state and not click_state[code].state
+        }
+    end
+end)
 return input

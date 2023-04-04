@@ -80,16 +80,9 @@ gui.is_input_allowed = errors.handle(function()
     for j = 1, #tab.subtabs do
         local subtab = tab.subtabs[j]
         if subtab.active then
-            for k = 1, #subtab.columns do
-                local column = subtab.columns[k]
-                for l = 1, #column.elements do
-                    local element = column.elements[l]
-                    if element.inline and element.inline.open then
-                        return false
-                    end
-                    if element.active then
-                        return false
-                    end
+            for _, column in ipairs(subtab.columns) do
+                if not column:input_allowed() then
+                    return false
                 end
             end
         end

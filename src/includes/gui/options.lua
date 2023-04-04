@@ -27,6 +27,7 @@ local options_mt = {
             ---@cast text_size vec2_t
             local hovered = input_allowed and drag.hover_absolute(text_pos - v2(0, 1), text_pos + text_size + v2(0, 2))
             s.anims.hover((hovered or s.open) and 255 or 100)
+            s.anims.alpha(s.open and 255 or 0)
             if hovered then
                 drag.set_cursor(drag.hand_cursor)
                 if input.is_key_clicked(1) then
@@ -37,14 +38,14 @@ local options_mt = {
                     s.open = true
                 end
             end
-            s.anims.alpha(s.open and 255 or 0)
         end, "options_mt.inline_draw"),
         ---@param s gui_options_t
         ---@param alpha number
         draw = errors.handle(function(s, alpha)
-            local open_alpha = s.anims.alpha() * (alpha / 255)
+            local alpha_anim = s.anims.alpha()
+            local open_alpha = alpha_anim * (alpha / 255)
             if open_alpha > 0 then
-                local input_allowed = true
+                local input_allowed = s.open
                 local size = v2((#s.columns + 1) * gui.paddings.options_padding, 0)
                 if s.columns then
                     for _, column in pairs(s.columns) do
@@ -58,17 +59,15 @@ local options_mt = {
                                 --*HACK: this is a hack to make the options menu wait for the element to calculate its size before drawing it
                                 open_alpha = 0.01
                             end
-                            if element.inline and element.inline.open then
-                                input_allowed = false
-                            end
                         end
+                        input_allowed = input_allowed and column:input_allowed()
                     end
                 end
                 size = v2(size.x + 1, gui.paddings.options_padding * 2 + size.y + 1)
 
                 local to = s.pos + size
                 --if unfocused then
-                if input_allowed and not drag.hover_absolute(s.pos, to) and input.is_key_clicked(1) then
+                if input_allowed and alpha_anim > 127 and not drag.hover_absolute(s.pos, to) and input.is_key_clicked(1) then
                     s.open = false
                 end
 

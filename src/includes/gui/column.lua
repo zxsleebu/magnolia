@@ -29,6 +29,19 @@ local column_mt = {
             s.size = size
             return size
         end, "column_t.get_size"),
+        ---@param s gui_column_t
+        input_allowed = errors.handle(function(s)
+            for l = 1, #s.elements do
+                local element = s.elements[l]
+                if element.inline and element.inline.open then
+                    return false
+                end
+                if element.active then
+                    return false
+                end
+            end
+            return true
+        end, "column_t.input_allowed"),
     }
 }
 
