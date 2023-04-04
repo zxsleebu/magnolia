@@ -141,7 +141,7 @@ loading.draw = function()
                 local text = percentage .. "%"
                 local text_size = render.text_size(percentage_font, text)
                 local x = math.clamp(math.round(from.x + width - (text_size.x + 5)), from.x + 10, to.x - text_size.x)
-                render.text(text, percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN + render.flags.OUTLINE)
+                render.outline_text(text, percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN)
             end
 
             if percentage == 100 then

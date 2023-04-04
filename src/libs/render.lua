@@ -175,7 +175,6 @@ render.flags = {
     X_ALIGN = 0x1,
     Y_ALIGN = 0x2,
     SHADOW = 0x4,
-    OUTLINE = 0x8,
     MORE_SHADOW = 0x10,
     BIG_SHADOW = 0x20,
     RIGHT_ALIGN = 0x40,
@@ -199,13 +198,7 @@ local outline_pos = {
     v2(-1, -1),
 }
 
----@param text string
----@param font __font_t
----@param pos vec2_t
----@param color color_t
----@param flags? number
----@return vec2_t, vec2_t?
-render.text = function(text, font, pos, color, flags)
+local process_flags = function (text, font, pos, flags)
     local new_pos = v2(pos.x, pos.y)
     if type(flags) == "table" then
         local int_flags = 0
@@ -214,7 +207,6 @@ render.text = function(text, font, pos, color, flags)
         end
         flags = int_flags
     end
-    flags = flags or 0
     local text_size
     --horizontal align
     if bit.band(flags, render.flags.X_ALIGN) == render.flags.X_ALIGN then
@@ -236,6 +228,19 @@ render.text = function(text, font, pos, color, flags)
         text_size = text_size or render.text_size(font, text)
     end
 
+    return new_pos, text_size
+end
+
+---@param text string
+---@param font __font_t
+---@param pos vec2_t
+---@param color color_t
+---@param flags? number
+---@return vec2_t, vec2_t?
+render.text = function(text, font, pos, color, flags)
+    flags = flags or 0
+    local new_pos, text_size = process_flags(text, font, pos, flags)
+
     local shadow = bit.band(flags, render.flags.SHADOW) == render.flags.SHADOW
     local more_shadow = bit.band(flags, render.flags.MORE_SHADOW) == render.flags.MORE_SHADOW
     local big_shadow = bit.band(flags, render.flags.BIG_SHADOW) == render.flags.BIG_SHADOW
@@ -245,26 +250,34 @@ render.text = function(text, font, pos, color, flags)
         if big_shadow then offset = 3 end
         renderer.text(text, font.font, new_pos + v2(offset, offset), font.size, col.black:alpha(150):salpha(color.a))
     end
-    if bit.band(flags, render.flags.OUTLINE) == render.flags.OUTLINE then
-        local clr = col.black:alpha(100):salpha(color.a)
-        for _, p in pairs(outline_pos) do
-            renderer.text(text, font.font, new_pos + p, font.size, clr)
-        end
-    end
     renderer.text(text, font.font, new_pos, font.size, color)
     return new_pos, text_size
 end
 ---@param text string
 ---@param font __font_t
----@param size number
 ---@param pos vec2_t
 ---@param color color_t
 ---@param flags? number
+---@param outline_color color_t?
 ---@return vec2_t, vec2_t?
-render.sized_text = function(text, font, size, pos, color, flags)
+render.outline_text = function (text, font, pos, color, flags, outline_color)
+    flags = flags or 0
+    local new_pos, text_size = process_flags(text, font, pos, flags)
+    local clr = (outline_color or col.black:alpha(100)):salpha(color.a)
+    for _, p in pairs(outline_pos) do
+        renderer.text(text, font.font, new_pos + p, font.size, clr)
+    end
+    renderer.text(text, font.font, new_pos, font.size, color)
+    return new_pos, text_size
+end
+
+---@param fn fun(): vec2_t, vec2_t?
+---@param font __font_t
+---@param size number
+render.sized_text = function(fn, font, size)
     local old_size = font.size
     font.size = size
-    local result1, result2 = render.text(text, font, pos, color, flags)
+    local result1, result2 = fn()
     font.size = old_size
     return result1, result2
 end
