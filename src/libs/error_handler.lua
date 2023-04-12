@@ -32,7 +32,7 @@ end
 ---@return T
 errors.handle = function(fn, name)
     return function(...)
-        local ok, err = pcall(fn, ...)
+        local ok, err, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 = pcall(fn, ...)
         if not ok then
             --remove ...r-Strike Global Offensive\lua\ from the error message
             ---@cast err string
@@ -42,7 +42,7 @@ errors.handle = function(fn, name)
             end
             errors.report(err, name)
         end
-        return err
+        return err, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9
     end
 end
 

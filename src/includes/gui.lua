@@ -110,11 +110,9 @@ cbs.add("paint", errors.handle(function()
     if main_alpha == 0 then return end
     local input_allowed = gui.is_input_allowed()
     local is_hovered
-    local pos, highlight = gui.drag:run(function(pos)
+    local pos = gui.drag:run(function(pos)
         is_hovered = input_allowed and drag.hover_absolute(pos - gui.size / 2, pos - gui.size / 2 + v2(gui.size.x, 48))
         return is_hovered
-    end, function(pos, alpha)
-        drag.highlight(pos - v2(gui.size.x / 2, 0), gui.size, alpha)
     end)
     if (is_hovered and not input.is_key_pressed(1)) or gui.drag.dragging then
         drag.set_cursor(drag.move_cursor)
@@ -124,7 +122,6 @@ cbs.add("paint", errors.handle(function()
     gui.draw(pos, main_alpha, input_allowed and not gui.drag.dragging)
     options_t.draw()
     click_effect.draw()
-    -- highlight()
 end, "gui.paint"))
 
 

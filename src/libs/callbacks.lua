@@ -6,6 +6,9 @@ local cbs = {
         frame_stage_notify = {},
     }
 }
+---@overload fun(name: "create_move", fn: fun(cmd: usercmd_t))
+---@overload fun(name: "paint", fn: fun())
+---@overload fun(name: "frame_stage_notify", fn: fun(stage: number))
 cbs.add = function(name, fn)
     if not cbs.list[name] then
         cbs.list[name] = {}

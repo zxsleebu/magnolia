@@ -15,8 +15,9 @@ require("libs.advanced math")
 ---@operator mul(number|vec3_t): vec3_t
 ---@operator sub(number|vec3_t): vec3_t
 ---@operator unm(): vec3_t
----@operator len(): vec3_t
+---@operator len(): number
 ---@field remove_nan fun(self: vec3_t): vec3_t
+---@field dist_to fun(self: vec3_t, other: vec3_t): number
 
 
 ---@type fun(x: number, y: number): vec2_t
@@ -76,11 +77,17 @@ end
 vec3_t.__len = function (a)
     return (a.x ^ 2 + a.y ^ 2 + a.z ^ 2) ^ 0.5
 end
+---@param s vec3_t
 vec3_t.remove_nan = function(s)
     if s.x ~= s.x then s.x = 0 end
     if s.y ~= s.y then s.y = 0 end
     if s.z ~= s.z then s.z = 0 end
     return s
+end
+---@param s vec3_t
+---@param a vec3_t
+vec3_t.dist_to = function(s, a)
+    return #(s - a)
 end
 
 ---@class angle_t

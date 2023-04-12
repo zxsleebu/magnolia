@@ -39,4 +39,4 @@ var luac = new luactor({
     // jit: false
 });
 // luac.compile(virtualizedLua, 'dist/magnolia_build.lua')
-luac.compile(bundledLua, 'dist/magnolia_build.lua')
+// luac.compile(bundledLua, 'dist/magnolia_build.lua')

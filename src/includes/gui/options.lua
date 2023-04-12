@@ -11,92 +11,135 @@ local column_t = require("includes.gui.column")
 local click_effect = require("includes.gui.click_effect")
 
 local options_t = {}
+
+---@class gui_options_t
+---@field anims __anims_mt
+---@field columns gui_column_t[]
+---@field pos vec2_t
+---@field open boolean
+---@field parent gui_checkbox_t
 local options_mt = {
-    ---@class gui_options_t
-    ---@field anims __anims_mt
-    ---@field columns gui_column_t[]
-    ---@field pos vec2_t
-    ---@field open boolean
-    __index = {
-        ---@param s gui_options_t
-        ---@param pos vec2_t
-        ---@param alpha number
-        ---@param input_allowed boolean
-        inline_draw = errors.handle(function(s, pos, alpha, input_allowed)
-            local text_pos, text_size = render.text("E", fonts.menu_icons, pos, col.white:alpha(alpha):salpha(s.anims.hover()), render.flags.Y_ALIGN)
-            ---@cast text_size vec2_t
-            local hovered = input_allowed and drag.hover_absolute(text_pos - v2(0, 1), text_pos + text_size + v2(0, 2))
-            s.anims.hover((hovered or s.open) and 255 or 100)
-            s.anims.alpha(s.open and 255 or 0)
-            if hovered then
-                drag.set_cursor(drag.hand_cursor)
-                if input.is_key_clicked(1) then
-                    click_effect.add()
-                    if not s.open then
-                        s.pos = renderer.get_cursor_pos()
-                    end
-                    s.open = true
-                end
-            end
-        end, "options_mt.inline_draw"),
-        ---@param s gui_options_t
-        ---@param alpha number
-        draw = errors.handle(function(s, alpha)
-            local alpha_anim = s.anims.alpha()
-            local open_alpha = alpha_anim * (alpha / 255)
-            if open_alpha > 0 then
-                local input_allowed = s.open
-                local size = v2((#s.columns + 1) * gui.paddings.options_padding, 0)
-                if s.columns then
-                    for _, column in pairs(s.columns) do
-                        local col_size = column:get_size()
-                        size.x = size.x + col_size.x
-                        if col_size.y > size.y then
-                            size.y = col_size.y
-                        end
-                        for _, element in pairs(column.elements) do
-                            if element.size.x == 0 then
-                                --*HACK: this is a hack to make the options menu wait for the element to calculate its size before drawing it
-                                open_alpha = 0.01
-                            end
-                        end
-                        input_allowed = input_allowed and column:input_allowed()
-                    end
-                end
-                size = v2(size.x + 1, gui.paddings.options_padding * 2 + size.y + 1)
-
-                local to = s.pos + size
-                --if unfocused then
-                if input_allowed and alpha_anim > 127 and not drag.hover_absolute(s.pos, to) and input.is_key_clicked(1) then
-                    s.open = false
-                end
-
-                container_t.draw_background(s.pos, to, open_alpha, 253)
-
-                if s.columns then
-                    local add_pos = v2(gui.paddings.options_padding + 1, gui.paddings.options_padding + 1)
-                    for i = 1, #s.columns do
-                        local column = s.columns[i]
-                        container_t.draw_elements(column.elements, s.pos + add_pos, math.round(column.size.x), open_alpha, input_allowed)
-
-                        --!DEBUG
-                        -- renderer.rect(s.pos + add_pos, s.pos + add_pos + column.size, col.black:alpha(open_alpha))
-                        --!DEBUG
-
-                        add_pos.x = column.size.x + add_pos.x + gui.paddings.options_padding
-                    end
-                end
-            end
-        end, "options_mt.draw"),
-        size = v2(18, 14),
-    }
+    size = v2(18, 14),
 }
+
+---@param self gui_options_t
+---@param pos vec2_t
+---@param alpha number
+---@param input_allowed boolean
+options_mt.inline_draw = errors.handle(function(self, pos, alpha, input_allowed)
+    local text_pos, text_size = render.text("E", fonts.menu_icons, pos, col.white:alpha(alpha):salpha(self.anims.hover()), render.flags.Y_ALIGN)
+    ---@cast text_size vec2_t
+    local hovered = input_allowed and drag.hover_absolute(text_pos - v2(0, 1), text_pos + text_size + v2(0, 2))
+    self.anims.hover((hovered or self.open) and 255 or 100)
+    self.anims.alpha(self.open and 255 or 0)
+    if hovered then
+        drag.set_cursor(drag.hand_cursor)
+        if input.is_key_clicked(1) then
+            click_effect.add()
+            if not self.open then
+                self.pos = renderer.get_cursor_pos()
+            end
+            self.open = true
+        end
+    end
+end, "options_mt.inline_draw")
+---@param self gui_options_t
+---@param alpha number
+options_mt.draw = errors.handle(function(self, alpha)
+    local alpha_anim = self.anims.alpha()
+    local open_alpha = alpha_anim * (alpha / 255)
+    if open_alpha > 0 then
+        local input_allowed = self.open
+        local size = v2((#self.columns + 1) * gui.paddings.options_padding, 0)
+        if self.columns then
+            for _, column in pairs(self.columns) do
+                local col_size = column:get_size()
+                size.x = size.x + col_size.x
+                if col_size.y > size.y then
+                    size.y = col_size.y
+                end
+                for _, element in pairs(column.elements) do
+                    if element.size.x == 0 then
+                        --*HACK: this is a hack to make the options menu wait for the element to calculate its size before drawing it
+                        open_alpha = 0.01
+                    end
+                end
+                input_allowed = input_allowed and column:input_allowed()
+            end
+        end
+        size = v2(size.x + 1, gui.paddings.options_padding * 2 + size.y + 1)
+
+        local to = self.pos + size
+        --if unfocused then
+        if input_allowed and alpha_anim > 127 and not drag.hover_absolute(self.pos, to) and input.is_key_clicked(1) then
+            self.open = false
+        end
+
+        container_t.draw_background(self.pos, to, open_alpha, 253)
+
+        if self.columns then
+            local add_pos = v2(gui.paddings.options_padding + 1, gui.paddings.options_padding + 1)
+            for i = 1, #self.columns do
+                local column = self.columns[i]
+                container_t.draw_elements(column.elements, self.pos + add_pos, math.round(column.size.x), open_alpha, input_allowed)
+
+                --!DEBUG
+                -- renderer.rect(s.pos + add_pos, s.pos + add_pos + column.size, col.black:alpha(open_alpha))
+                --!DEBUG
+
+                add_pos.x = column.size.x + add_pos.x + gui.paddings.options_padding
+            end
+        end
+    end
+end, "options_mt.draw")
+---@param fn fun(cmd: usercmd_t, el: gui_options_t)
+---@return gui_options_t
+options_mt.create_move = function (self, fn)
+    client.register_callback("create_move", errors.handle(function (cmd)
+        if self.parent:value() then fn(cmd, self) end
+    end, self.parent.name .. ".create_move"))
+    return self
+end
+---@param fn fun(el: gui_options_t)
+---@return gui_options_t
+options_mt.paint = function (self, fn)
+    client.register_callback("paint", errors.handle(function()
+        if self.parent:value() then fn(self) end
+    end, self.parent.name .. ".paint"))
+    return self
+end
+
+---@param self gui_options_t
+---@param name string
+---@return gui_element_t?
+options_mt.__get = function (self, name)
+    for _, column in pairs(self.columns) do
+        for _, element in pairs(column.elements) do
+            if element.name == name then
+                return element
+            end
+        end
+    end
+    error("couldn't find element with name '" .. name .. "'")
+end
+---@param name string
+---@return gui_checkbox_t
+options_mt.get_checkbox = function (self, name)
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return self:__get(name)
+end
+---@param name string
+---@return gui_slider_t
+options_mt.get_slider = function (self, name)
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return self:__get(name)
+end
 
 ---@param element gui_element_t
 ---@param options fun()
 options_t.new = errors.handle(function (element, options)
     local self = setmetatable({
-        element = element,
+        parent = element,
         columns = {
             column_t.new(),
         },
@@ -107,12 +150,13 @@ options_t.new = errors.handle(function (element, options)
         }),
         pos = v2(0, 0),
         open = false,
-    }, options_mt)
+    }, { __index = options_mt })
     element.inline = self
     local old_options = gui.current_options
     gui.current_options = self
     options()
     gui.current_options = old_options
+    return self
 end, "options_t.new")
 
 options_t.draw_columns = function(columns, alpha)
