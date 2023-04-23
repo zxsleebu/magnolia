@@ -1,3 +1,4 @@
+local errors = require("libs.error_handler")
 local cbs = {
     list = {
         unload = {},
@@ -14,5 +15,11 @@ cbs.add = function(name, fn)
         cbs.list[name] = {}
     end
     table.insert(cbs.list[name], fn)
+end
+
+---@param name string
+---@param fn fun(event: game_event_t)
+cbs.event = function(name, fn)
+    client.register_callback(name, errors.handle(fn, name))
 end
 return cbs

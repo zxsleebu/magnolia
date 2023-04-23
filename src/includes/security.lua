@@ -1,7 +1,6 @@
 local http = require("libs.http")
 local offi = ffi
 local ffi = require("libs.protected_ffi")
--- local threads = require("libs.threads")
 local ws = {}
 local json = require("libs.json")
 local col = require("libs.colors")
@@ -11,9 +10,10 @@ local once = require("libs.once").new()
 local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
 local lib_engine = require("includes.engine")
+local sockets = require("libs.sockets")
 local security = {}
 security.debug = true
-security.debug_logs = true
+security.debug_logs = false
 security.release_server = true
 security.domain = "localhost"
 if security.release_server then
@@ -161,13 +161,16 @@ security.handle_data = function(s, data, length)
     lib_engine.log("received: " .. decrypted)
     if decoded then
         if decoded.type == "handshake" then
-            security.handlers.server.handshake(s, decoded)
+            return security.handlers.server.handshake(s, decoded)
         end
         if decoded.type == "auth" then
-            security.handlers.server.auth(s, decoded)
+            return security.handlers.server.auth(s, decoded)
         end
         if decoded.type == "file" then
-            security.handlers.server.file(s, decoded)
+            return security.handlers.server.file(s, decoded)
+        end
+        if sockets.callbacks[decoded.type] then
+            sockets.callbacks[decoded.type](s, decoded)
         end
     end
 end
@@ -205,9 +208,9 @@ do
             cbs.add("paint", function()
                 local status, err = pcall(function()
                     security.websocket:execute(function(s, code, data, length)
-                        -- if security.debug then
-                        lib_engine.log("code: " .. code .. " data: " .. data .. " length: " .. length)
-                        -- end
+                        if security.debug_logs then
+                            lib_engine.log("code: " .. code .. " data: " .. data .. " length: " .. length)
+                        end
                         if code == 0 then
                             connected = true
                             security.logger:add({ { "connection established" } })
@@ -235,6 +238,7 @@ security.wait_for_handshake = function()
 end
 security.wait_for_auth = function()
     if security.authorized then
+        sockets.init(security.websocket)
         security.logger:add({ { "authorized" } })
         return true
     end

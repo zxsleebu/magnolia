@@ -1,5 +1,6 @@
 local v2, v3 = require("libs.vectors")()
 local cbs = require("libs.callbacks")
+local errors = require("libs.error_handler")
 
 ---@class entity_t
 ---@field m_bEligibleForScreenHighlight number 
@@ -187,6 +188,7 @@ local cbs = require("libs.callbacks")
 ---@field m_iMatchStats_KillReward table 
 ---@field m_iMatchStats_MoneySaved table 
 ---@field m_iMatchStats_EquipmentValue table 
+---@field m_nPersonaDataPublicLevel table
 ---@field m_iMatchStats_Damage table 
 ---@field m_iMatchStats_Kills table 
 ---@field m_bIsPlayerGhost number 
@@ -294,6 +296,10 @@ end
 ---@return vec3_t
 entity_t.get_origin = function (self)
     return self.m_vecOrigin
+end
+
+entity_t.get_info = function (self)
+    return engine.get_player_info(self:get_index())
 end
 
 entity_t.can_shoot = function (self)
@@ -583,6 +589,7 @@ local netvar_cache = {
     m_iMatchStats_UtilityDamage = { type = "table" },
     m_iMatchStats_EnemiesFlashed = { type = "table" },
     m_hMyWeapons = { type = "table" },
+    m_nPersonaDataPublicLevel = { type = "table" },
     m_vecViewOffset = {
         type = "vector",
         offset = 264
@@ -630,7 +637,7 @@ end
 
 local netvar_table_mt = {
     ---@param self { netvar: __netvar_t, entity: entity_t }
-    __index = function(self, key)
+    __index = errors.handle(function(self, key)
         if type(key) ~= "number" then
             error("netvar table index must be a number")
         end
@@ -639,6 +646,13 @@ local netvar_table_mt = {
             return entitylist.get_entity_from_handle(self.entity:get_prop_int(offset))
         end
         return self.entity["get_prop_"..self.netvar.table_type](self.entity, offset)
+    end, "netvar_table_t.__index"),
+    __newindex = function (self, key, value)
+        if type(key) ~= "number" then
+            error("netvar table index must be a number")
+        end
+        local offset = self.netvar.offset + key * 4
+        return self.entity["set_prop_"..self.netvar.table_type](self.entity, offset, value)
     end
 }
 local netvar_table_t = {
@@ -651,7 +665,7 @@ local netvar_table_t = {
 }
 
 ---@param prop string
-entity_t.__get_prop = function(self, prop)
+entity_t.__get_prop = errors.handle(function(self, prop)
     local netvar = initialize_netvar(prop)
     if not netvar then
         error("failed to init " .. prop .. " netvar")
@@ -663,7 +677,19 @@ entity_t.__get_prop = function(self, prop)
         return entitylist.get_entity_from_handle(self:get_prop_int(netvar.offset))
     end
     return self["get_prop_"..netvar.type](self, netvar.offset)
-end
+end, "entity_t.__get_prop")
+---@param prop string
+---@param value any
+entity_t.__set_prop = errors.handle(function(self, prop, value)
+    local netvar = initialize_netvar(prop)
+    if not netvar then
+        error("failed to init " .. prop .. " netvar")
+    end
+    if netvar.type == "table" then
+        error("cannot set netvar table")
+    end
+    return self["set_prop_"..netvar.type](self, netvar.offset, value)
+end, "entity_t.__set_prop")
 local entity_mt
 local initialize_entity_mt = function()
     local lp = entitylist.get_local_player()
@@ -675,6 +701,13 @@ local initialize_entity_mt = function()
         local result = entity_t[key]
         if result then return result end
         return entity_t.__get_prop(self, key)
+    end
+    ---@param self entity_t
+    entity_mt.__newindex = function (self, key, value)
+        if key == 0 then error("cannot set entity index") end
+        local result = entity_t[key]
+        if result then error("cannot set entity property") end
+        return entity_t.__set_prop(self, key, value)
     end
 end
 
