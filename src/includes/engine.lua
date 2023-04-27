@@ -1,8 +1,8 @@
-local interface = require("libs.interfaces")
+local interface = require("libs.interfaces")()
 require("libs.types")
 local col = require("libs.colors")
 local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
-    PrintColor = {25, "void(__cdecl*)(void*, const color_t&, const char*, ...)"}
+    PrintColor = {25, "void(__cdecl*)(void*, const color_t&, const char*, ...)"},
 })
 local lib_engine = {}
 lib_engine.print_color = function (text, clr, ...)

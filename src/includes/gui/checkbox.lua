@@ -83,6 +83,14 @@ checkbox_mt.paint = function (self, fn)
     end, self.name .. ".paint"))
     return self
 end
+---@param fn fun(event: game_event_t, el: gui_checkbox_t)
+---@return gui_checkbox_t
+checkbox_mt.callback = function (self, event_name, fn)
+    client.register_callback(event_name, errors.handle(function(event)
+        if self:value() then fn(event, self) end
+    end, self.name .. "." .. event_name))
+    return self
+end
 ---@param self gui_checkbox_t 
 ---@param pos vec2_t
 ---@param alpha number

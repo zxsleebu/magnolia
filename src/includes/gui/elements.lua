@@ -5,12 +5,13 @@ local col = require("libs.colors")
 local input = require("libs.input")
 local fonts = require("includes.gui.fonts")
 local v2, v3 = require("libs.vectors")()
+-- local shared = require("features.shared")
 
 gui.tab("Aimbot", "B")
 gui.subtab("General")
 pcall(function()
     gui.options(gui.checkbox("Jumpscout"), function ()
-        gui.slider("Jumpscout hitchance", 40, 100, false, 50)
+        gui.slider("Jumpscout hitchance", 40, 100, false, 60)
         gui.checkbox("Autostop in air")
     end):create_move(function (cmd, el)
         ui.get_key_bind("antihit_accurate_walk_bind"):set_type(1)
@@ -57,13 +58,27 @@ gui.tab("Visuals", "D")
 gui.subtab("Players")
 gui.subtab("World")
 gui.subtab("Local")
+gui.checkbox("Bullet tracers")
 gui.subtab("Widgets")
 gui.subtab("Misc")
 
 gui.tab("Misc", "E")
 gui.subtab("General")
+gui.checkbox("Shared logo"):create_move(function()
+    -- local lp = entitylist.get_local_player()
+    -- if not lp or not lp:is_alive() then return end
+    -- ---@type entity_t
+    -- local playerresource = entitylist.get_entities_by_class_id(41)[0]
+    -- if not playerresource then return end
+    -- print(tostring(playerresource.m_nPersonaDataPublicLevel[lp:get_index()]))
+end)
+
 gui.checkbox("Autostrafer+"):create_move(function ()
     local lp = entitylist.get_local_player()
     if not lp or not lp:is_alive() then return end
-    ui.get_check_box("misc_autostrafer"):set_value(#lp:get_velocity() > 10)
+    if ui.is_visible() then
+        return ui.get_check_box("misc_autostrafer"):set_value(true)
+    end
+    local velocity = lp:get_velocity()
+    ui.get_check_box("misc_autostrafer"):set_value(#v2(velocity.x, velocity.y) > 10)
 end)

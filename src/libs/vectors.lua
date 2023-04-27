@@ -6,6 +6,7 @@ require("libs.advanced math")
 ---@operator mul(number|vec2_t): vec2_t
 ---@operator sub(number|vec2_t): vec2_t
 ---@operator unm(): vec2_t
+---@operator len(): number
 ---@field clamp fun(self: vec2_t, min: vec2_t, max: vec2_t): vec2_t
 ---@field round fun(self: vec2_t): vec2_t
 
@@ -46,6 +47,9 @@ end
 -- vec2_t.__eq = function(a, b)
 --     return a.x == b.x and a.y == b.y
 -- end
+vec2_t.__len = function (a)
+    return (a.x ^ 2 + a.y ^ 2) ^ 0.5
+end
 vec2_t.clamp = function(s, min, max)
     return v2(math.clamp(s.x, min.x, max.x), math.clamp(s.y, min.y, max.y))
 end

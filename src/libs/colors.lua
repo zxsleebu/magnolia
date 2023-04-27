@@ -6,8 +6,7 @@ require("libs.advanced math")
 -- -@field alpha_diff fun(s: color_t, alpha: number, diff: number): color_t
 ---@field alpha_anim fun(s: color_t, alpha: number, from: number, to: number): color_t
 
----@type (fun(r: number, g: number, b: number, a?: number): color_t)
----|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t, transparent: color_t, gray: color_t, magnolia_tinted: color_t }
+---@type (fun(r: number, g: number, b: number, a?: number): color_t)|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t, transparent: color_t, gray: color_t, magnolia_tinted: color_t }
 local col = setmetatable({}, {
     __index = {
         red = color_t.new(255, 127, 127, 255),

@@ -1,8 +1,6 @@
 local http = require("libs.http")
 local offi = ffi
 local ffi = require("libs.protected_ffi")
--- local threads = require("libs.threads")
-local ws = {}
 local json = require("libs.json")
 local col = require("libs.colors")
 local errors = require("libs.error_handler")
@@ -11,6 +9,8 @@ local once = require("libs.once").new()
 local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
 local lib_engine = require("includes.engine")
+local ws = require("libs.websocket")
+local sockets = require("libs.sockets")
 local security = {}
 security.debug = true
 security.debug_logs = true
@@ -72,10 +72,12 @@ end
 
 security.large_data = {}
 security.handlers = {
+    ---@type table<string, fun(socket: __websocket_t, data: any)>
     client = {},
+    ---@type table<string, fun(socket: __websocket_t, data: any)>
     server = {},
 }
-security.handlers.client.auth = function(s)
+security.handlers.client.auth = function(socket)
     local info = security.get_info()
     local stringified = json.encode({
         type = "auth",
@@ -84,9 +86,9 @@ security.handlers.client.auth = function(s)
     if security.debug_logs then
         lib_engine.log("sending auth request: " .. stringified)
     end
-    s:send(security.encrypt(stringified))
+    socket:send(security.encrypt(stringified))
 end
-security.handlers.server.auth = function(_, data)
+security.handlers.server.auth = function(socket, data)
     if data.result == "success" then
         security.authorized = true
     end
@@ -107,14 +109,14 @@ security.handlers.server.auth = function(_, data)
     security.logger.flags.console = true
 end
 security.handshake_success = false
-security.handlers.server.handshake = function(s, data)
+security.handlers.server.handshake = function(socket, data)
     if data.result then
         security.logger:add({ { "handshake succeeded" } })
         security.handshake_success = true
-        security.handlers.client.auth(s)
+        security.handlers.client.auth(socket)
     end
 end
-security.handlers.client.handshake = function(s, data)
+security.handlers.client.handshake = function(socket, data)
     local split = {}
     for str in string.gmatch(data, "([^G]+)") do
         split[#split + 1] = str
@@ -132,15 +134,15 @@ security.handlers.client.handshake = function(s, data)
         data = handshake
     })
     local encrypted = security.encrypt(encoded)
-    s:send(encrypted)
+    socket:send(encrypted)
 end
 
----@param s __websocket_t
+---@param socket __websocket_t
 ---@param data string
 ---@param length number
-security.handle_data = function(s, data, length)
+security.handle_data = function(socket, data, length)
     if security.key == "" then
-        return security.handlers.client.handshake(s, data)
+        return security.handlers.client.handshake(socket, data)
     end
     if data == "handshake failed" then
         security.logger:add({ { "handshake failed", col.red } })
@@ -161,13 +163,16 @@ security.handle_data = function(s, data, length)
     lib_engine.log("received: " .. decrypted)
     if decoded then
         if decoded.type == "handshake" then
-            security.handlers.server.handshake(s, decoded)
+            return security.handlers.server.handshake(socket, decoded)
         end
         if decoded.type == "auth" then
-            security.handlers.server.auth(s, decoded)
+            return security.handlers.server.auth(socket, decoded)
         end
         if decoded.type == "file" then
-            security.handlers.server.file(s, decoded)
+            return security.handlers.server.file(socket, decoded)
+        end
+        if sockets.callbacks[decoded.type] then
+            sockets.callbacks[decoded.type](socket, decoded)
         end
     end
 end
@@ -175,15 +180,12 @@ do
     local got_sockets = false
     security.get_sockets = function()
         once(function()
-            -- threads.new(function ()
-                http.download(security.url .. "resources/sockets.dll", nil, function (path)
-                    local sockets = ffi.load(path)
-                    ws.sockets = sockets
-                    os.remove(path)
-                    security.logger:add({ { "retrieved sockets" } })
-                    got_sockets = true
-                end)
-            -- end)
+            http.download(security.url .. "resources/sockets.dll", nil, function (path)
+                ws.init(ffi.load(path))
+                os.remove(path)
+                security.logger:add({ { "retrieved sockets" } })
+                got_sockets = true
+            end)
         end, "download_sockets")
         return got_sockets
     end
@@ -194,20 +196,15 @@ do
         once(function()
             jit.off()
             collectgarbage("stop")
-            local sockets = ws.sockets
-            ws = require("libs.websockets")
-            ws.sockets = sockets
-            local connection = ws.connect(security.socket_url, security.release_server and 80 or 3000, "/")
-            if not connection then
-                error("couldn't connect to server", 0)
-            end
-            security.websocket = connection
+            local socket = ws.new(security.socket_url, "/", security.release_server and 80 or 3000)
+            socket:connect()
+            security.websocket = socket
             cbs.add("paint", function()
                 local status, err = pcall(function()
                     security.websocket:execute(function(s, code, data, length)
-                        -- if security.debug then
-                        lib_engine.log("code: " .. code .. " data: " .. data .. " length: " .. length)
-                        -- end
+                        if security.debug_logs then
+                            lib_engine.log("code: " .. code .. " data: " .. data .. " length: " .. length)
+                        end
                         if code == 0 then
                             connected = true
                             security.logger:add({ { "connection established" } })
@@ -235,6 +232,7 @@ security.wait_for_handshake = function()
 end
 security.wait_for_auth = function()
     if security.authorized then
+        sockets.init(security.websocket)
         security.logger:add({ { "authorized" } })
         return true
     end

@@ -44,6 +44,7 @@ loading.draw = function()
         if err or security.error then
             once(function()
                 if not security.loaded then
+                    ui.set_visible(true)
                     engine.execute_client_cmd("showconsole")
                     logger.flags.console = false
                     logger:add({{"error. ", col.red}, {"see console for info"}})
@@ -58,6 +59,7 @@ loading.draw = function()
     if anims.transparency() == 0 then return end
 
     if security.debug then
+        loading.do_security = true
         once(function ()
             gui.init()
             gui.can_be_visible = true
@@ -69,7 +71,7 @@ loading.draw = function()
     local slider_sizes = v2(300, 25)
     local main_alpha = 1
     once(function()
-        -- ui.set_visible(false)
+        ui.set_visible(false)
     end, "close_menu")
     if can_be_closed then
         once(function()
@@ -160,6 +162,7 @@ loading.draw = function()
                         delay.add(function()
                             can_be_closed = true
                             gui.can_be_visible = true
+                            ui.set_visible(true)
                         end, close_delay)
                     end, "can_be_closed")
                 end
