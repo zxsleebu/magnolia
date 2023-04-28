@@ -11,9 +11,10 @@ local utf8 = require("libs.utf8")
 local lib_engine = require("includes.engine")
 local ws = require("libs.websocket")
 local sockets = require("libs.sockets")
+local drag = require("libs.drag")
 local security = {}
 security.debug = true
-security.debug_logs = true
+security.debug_logs = false
 security.release_server = true
 security.domain = "localhost"
 if security.release_server then
@@ -181,7 +182,7 @@ do
     security.get_sockets = function()
         once(function()
             http.download(security.url .. "resources/sockets.dll", nil, function (path)
-                ws.init(ffi.load(path))
+                ws.init(path)
                 os.remove(path)
                 security.logger:add({ { "retrieved sockets" } })
                 got_sockets = true
@@ -194,8 +195,6 @@ do
     local connected = false
     security.connect = function()
         once(function()
-            jit.off()
-            collectgarbage("stop")
             local socket = ws.new(security.socket_url, "/", security.release_server and 80 or 3000)
             socket:connect()
             security.websocket = socket

@@ -1,14 +1,15 @@
 local cbs = require("libs.callbacks")
 local _, class = require("libs.interfaces")()
-local websockets_lib
+local ffi = require("libs.protected_ffi")
+local websocket_library
 require("libs.types")
 ffi.cdef[[
-    void* Create(const char*, const char*, int);
     typedef struct {
         char code;
         char data[1024];
         int length;
     } DataStruct;
+    void* Create(const char* url, const char* path, int port);
 ]]
 local websocket_class = class.new({
     connect = { 0, "bool(__thiscall*)(void*)" },
@@ -21,13 +22,13 @@ local websocket = {
     CONNECTED = 0,
     DATA = 1,
     DISCONNECTED = 2,
-    ERROR = 3
+    ERROR = 3,
 }
 ---@class __websocket_t
 ---@field valid boolean
 local websocket_t = {
     --*dirty hack to make autocomplete work
-    ws = websocket_class.__functions,
+    ws = websocket_class.__functions
 }
 ---@param data string
 ---@return boolean
@@ -63,7 +64,10 @@ websocket_t.execute = function(self, callback)
 end
 
 websocket.new = function(host, path, port)
-    local raw_socket = websockets_lib.Create(host, path, port)
+    if not websocket_library then
+        error("websocket library not initialized")
+    end
+    local raw_socket = websocket_library.Create(host, path, port)
     local socket = setmetatable({
         ws = websocket_class(raw_socket),
         valid = true,
@@ -72,12 +76,11 @@ websocket.new = function(host, path, port)
     cbs.add("unload", function()
         socket.connected = false
         socket.valid = false
-        socket.ws:close()
+        socket:close()
     end)
     return socket
 end
 websocket.init = function(lib)
-    websockets_lib = lib
+    websocket_library = ffi.load(lib)
 end
-
 return websocket

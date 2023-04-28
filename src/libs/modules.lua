@@ -22,4 +22,11 @@ modules.get_function = function(cast, module, name)
     end
     return ffi.cast(cast, ptr)
 end
+modules.get_fn_from_module_handle = function (cast, handle, name)
+    local ptr = ffi.C.GetProcAddress(handle, name)
+    if ptr == nil then
+        return nil
+    end
+    return ffi.cast(cast, ptr)
+end
 return modules

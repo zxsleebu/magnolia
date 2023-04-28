@@ -65,7 +65,7 @@ enum class StatusCodes
 class WebSocketAPI
 {
 private:
-    std::thread dataThread;
+    HANDLE dataThread;
     std::vector<DataStruct> data;
     bool running;
     HINTERNET hSession;
@@ -150,7 +150,7 @@ private:
 
         running = true;
 
-        CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&WebSocketAPI::DataThread, this, 0, NULL);
+        dataThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&WebSocketAPI::DataThread, this, 0, NULL);
         return true;
     }
     static void ConnectionHandler(WebSocketAPI* socket) {
@@ -208,6 +208,9 @@ public:
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
+        WinHttpCloseHandle(hWebSocket);
+        WaitForSingleObject(dataThread, INFINITE);
+        CloseHandle(dataThread);
     }
     virtual void Delete()
     {

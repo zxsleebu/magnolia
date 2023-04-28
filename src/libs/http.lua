@@ -3,14 +3,7 @@ require("libs.types")
 local http = {}
 ---@param url string
 ---@param path? string
--- http.download = function(url, path)
---     local succeed = pcall(wininet.DeleteUrlCacheEntryA, url)
---     if succeed == 0 then return false end
---     if path == nil then path = os.tmpname() end
---     local result = pcall(urlmon.URLDownloadToFileA, nil, url, path, 0, 0)
---     if result == 0 then return false end
---     return path
--- end
+---@param callback fun(path: string)
 http.download = function (url, path, callback)
     if path == nil then path = os.tmpname() end
     http_lib.request("get", url, {}, function(success, response)
@@ -22,6 +15,8 @@ http.download = function (url, path, callback)
         callback(path)
     end)
 end
+---@param url string
+---@param callback fun(body: string)
 http.get = function(url, callback)
     http_lib.request("get", url, {}, function(success, response)
         if not success or not response.body then return end
