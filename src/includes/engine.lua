@@ -1,8 +1,15 @@
-local interface = require("libs.interfaces")()
+local interface, class = require("libs.interfaces")()
 require("libs.types")
 local col = require("libs.colors")
 local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
     PrintColor = {25, "void(__cdecl*)(void*, const color_t&, const char*, ...)"},
+})
+local IEngineClient = interface.new("engine", "VEngineClient014", {
+    GetNetChan = {78, "void*(__thiscall*)(void*)"}
+})
+local NetChanClass = class.new({
+    GetName = {0, "const char*(__thiscall*)(void*)"},
+    GetAddress = {1, "const char*(__thiscall*)(void*)"},
 })
 local lib_engine = {}
 lib_engine.print_color = function (text, clr, ...)
@@ -35,6 +42,19 @@ lib_engine.log = function (text)
     end
     t[#t+1] = {"\n"}
     lib_engine.print(t)
+end
+---@return {ip: string, name: string}?
+lib_engine.get_server_info = function ()
+    if not engine.is_connected() then return end
+    local netchan = IEngineClient:GetNetChan()
+    if not netchan then return end
+    netchan = NetChanClass(netchan)
+    local address, name = netchan:GetAddress(), netchan:GetName()
+    if name == nil or address == nil then return end
+    return {
+        ip = ffi.string(address),
+        name = ffi.string(name),
+    }
 end
 
 return lib_engine

@@ -9,7 +9,7 @@ ffi.cdef[[
         char data[1024];
         int length;
     } DataStruct;
-    void* Create(const char* url, const char* path, int port);
+    __cdecl void* Create(const char*, const char*, int);
 ]]
 local websocket_class = class.new({
     connect = { 0, "bool(__thiscall*)(void*)" },
@@ -23,6 +23,7 @@ local websocket = {
     DATA = 1,
     DISCONNECTED = 2,
     ERROR = 3,
+    initialized = false
 }
 ---@class __websocket_t
 ---@field valid boolean
@@ -82,5 +83,6 @@ websocket.new = function(host, path, port)
 end
 websocket.init = function(lib)
     websocket_library = ffi.load(lib)
+    websocket.initialized = true
 end
 return websocket

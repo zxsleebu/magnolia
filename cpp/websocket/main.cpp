@@ -203,19 +203,24 @@ public:
     }
     virtual void Close()
     {
-        Callback((char)StatusCodes::CLOSED, NULL, 0);
+        if(!running)
+            return;
         running = false;
-        WinHttpCloseHandle(hRequest);
-        WinHttpCloseHandle(hConnect);
-        WinHttpCloseHandle(hSession);
-        WinHttpCloseHandle(hWebSocket);
-        WaitForSingleObject(dataThread, INFINITE);
-        CloseHandle(dataThread);
-    }
-    virtual void Delete()
-    {
-        Close();
-        delete this;
+        Callback((char)StatusCodes::CLOSED, NULL, 0);
+        if(hWebSocket != NULL){
+            WinHttpWebSocketClose(hWebSocket, WINHTTP_WEB_SOCKET_SUCCESS_CLOSE_STATUS, NULL, 0);
+            WinHttpCloseHandle(hWebSocket);
+        }
+        if(hRequest != NULL)
+            WinHttpCloseHandle(hRequest);
+        if(hConnect != NULL)
+            WinHttpCloseHandle(hConnect);
+        if(hSession != NULL)
+            WinHttpCloseHandle(hSession);
+        if(dataThread != NULL){
+            WaitForSingleObject(dataThread, INFINITE);
+            CloseHandle(dataThread);
+        }    
     }
 };
 

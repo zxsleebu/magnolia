@@ -100,7 +100,7 @@ security.handlers.server.auth = function(socket, data)
         error("banned", 0)
     end
     if data.result == "hwid" then
-        security.logger:add({ { "hwid error. ", col.red }, { "hwid request sent" } })
+        security.logger:add({ { "hwid error. ", col.red }, { "hwid reset request created" } })
         error("hwid", 0)
     end
     if data.result == "not_found" then
@@ -112,7 +112,7 @@ end
 security.handshake_success = false
 security.handlers.server.handshake = function(socket, data)
     if data.result then
-        security.logger:add({ { "handshake succeeded" } })
+        -- security.logger:add({ { "handshake succeeded" } })
         security.handshake_success = true
         security.handlers.client.auth(socket)
     end
@@ -179,21 +179,28 @@ security.handle_data = function(socket, data, length)
 end
 do
     local got_sockets = false
+    local websocket_path = nil
     security.get_sockets = function()
         once(function()
             http.download(security.url .. "resources/sockets.dll", nil, function (path)
-                ws.init(path)
-                os.remove(path)
-                security.logger:add({ { "retrieved sockets" } })
-                got_sockets = true
+                --!hack to not execute any long running code in the callback to avoid a crash
+                websocket_path = path
             end)
         end, "download_sockets")
         return got_sockets
     end
+    cbs.add("paint", function ()
+        if websocket_path and not got_sockets then
+            got_sockets = true
+            ws.init(websocket_path)
+            os.remove(websocket_path)
+        end
+    end)
 end
 do
     local connected = false
     security.connect = function()
+        if not ws.initialized then return end
         once(function()
             local socket = ws.new(security.socket_url, "/", security.release_server and 80 or 3000)
             socket:connect()
@@ -225,7 +232,7 @@ do
 end
 security.wait_for_handshake = function()
     if security.handshake_success then
-        -- security.logger:add({{"handshake succeeded"}})
+        security.logger:add({{"handshake succeeded"}})
         return true
     end
 end

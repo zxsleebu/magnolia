@@ -33,8 +33,8 @@ local slider_mt = {
 ---@param width number
 ---@param input_allowed boolean
 slider_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowed)
-    local value = self:value()
-    local value_anim = self.anims.value(value)
+    local value = math.clamp(self:value(), self.min, self.max)
+    local value_anim = self.anims.value(value * 10) / 10
     local value_str = self.float and string.format("%."..self.float_accuracy.."f", value) or tostring(value)
     local active_anim = self.anims.active()
     local hover_anim = self.anims.hover()
@@ -181,7 +181,7 @@ slider_t.new = errors.handle(function (name, min, max, float_accuracy, value)
             alpha = 255,
             hover = 0,
             active = 0,
-            value = value,
+            value = value * 10,
         }),
         active = false,
         size = v2(0, 18),

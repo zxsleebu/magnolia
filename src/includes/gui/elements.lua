@@ -5,7 +5,7 @@ local col = require("libs.colors")
 local input = require("libs.input")
 local fonts = require("includes.gui.fonts")
 local v2, v3 = require("libs.vectors")()
--- local shared = require("features.shared")
+local shared = require("features.shared")
 
 gui.tab("Aimbot", "B")
 gui.subtab("General")
@@ -64,14 +64,6 @@ gui.subtab("Misc")
 
 gui.tab("Misc", "E")
 gui.subtab("General")
-gui.checkbox("Shared logo"):create_move(function()
-    -- local lp = entitylist.get_local_player()
-    -- if not lp or not lp:is_alive() then return end
-    -- ---@type entity_t
-    -- local playerresource = entitylist.get_entities_by_class_id(41)[0]
-    -- if not playerresource then return end
-    -- print(tostring(playerresource.m_nPersonaDataPublicLevel[lp:get_index()]))
-end)
 
 gui.checkbox("Autostrafer+"):create_move(function ()
     local lp = entitylist.get_local_player()
