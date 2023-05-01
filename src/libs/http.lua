@@ -3,16 +3,23 @@ require("libs.types")
 local http = {}
 ---@param url string
 ---@param path? string
----@param callback fun(path: string)
+---@param callback? fun(path?: string)
 http.download = function (url, path, callback)
     if path == nil then path = os.tmpname() end
     http_lib.request("get", url, {}, function(success, response)
-        if not success or not response.body then error("couldn't download a file") end
+        if not success or not response.body then
+            if callback then
+                return callback()
+            end
+            error("couldn't download a file")
+        end
         local file = io.open(path, "wb")
         if not file then return end
         file:write(response.body)
         file:close()
-        callback(path)
+        if callback then
+            callback(path)
+        end
     end)
 end
 ---@param url string

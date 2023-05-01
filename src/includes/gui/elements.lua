@@ -23,7 +23,6 @@ pcall(function()
         local autostop = el:get_checkbox("Autostop in air"):value()
         if not autostop or input.is_key_pressed(32) then return end
         if not lp:can_shoot() then return end
-        -- local velocity = #lp:get_velocity()
         local max_distance = 350 / (hitchance / 100)
         for _, entity in pairs(entitylist.get_players(0)) do
             if entity:is_alive() and entity:is_hittable_by(lp) then
@@ -31,10 +30,6 @@ pcall(function()
                 if distance > max_distance then
                     return
                 end
-                -- if velocity < 100 then
-                --     cmd.forwardmove = 0
-                --     cmd.sidemove = 0
-                -- end
                 ui.get_key_bind("antihit_accurate_walk_bind"):set_type(0)
                 ui.get_check_box("antihit_accurate_walk"):set_value(true)
                 return

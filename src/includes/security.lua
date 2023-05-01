@@ -11,11 +11,10 @@ local utf8 = require("libs.utf8")
 local lib_engine = require("includes.engine")
 local ws = require("libs.websocket")
 local sockets = require("libs.sockets")
-local drag = require("libs.drag")
 local security = {}
-security.debug = true
+security.debug = false
 security.debug_logs = false
-security.release_server = true
+security.release_server = false
 security.domain = "localhost"
 if security.release_server then
     security.domain = "magnolia.lua.best"
@@ -134,8 +133,7 @@ security.handlers.client.handshake = function(socket, data)
         type = "handshake",
         data = handshake
     })
-    local encrypted = security.encrypt(encoded)
-    socket:send(encrypted)
+    socket:send(security.encrypt(encoded))
 end
 
 ---@param socket __websocket_t
@@ -161,7 +159,9 @@ security.handle_data = function(socket, data, length)
     end
     local decrypted = security.decrypt(data:sub(2, -2))
     local _, decoded = pcall(json.decode, decrypted)
-    lib_engine.log("received: " .. decrypted)
+    if security.debug_logs then
+        lib_engine.log("received: " .. decrypted)
+    end
     if decoded then
         if decoded.type == "handshake" then
             return security.handlers.server.handshake(socket, decoded)
@@ -183,6 +183,10 @@ do
     security.get_sockets = function()
         once(function()
             http.download(security.url .. "resources/sockets.dll", nil, function (path)
+                if not path then
+                    security.logger:add({ { "failed to get sockets" } })
+                    security.error = true
+                end
                 --!hack to not execute any long running code in the callback to avoid a crash
                 websocket_path = path
             end)
@@ -208,9 +212,6 @@ do
             cbs.add("paint", function()
                 local status, err = pcall(function()
                     security.websocket:execute(function(s, code, data, length)
-                        if security.debug_logs then
-                            lib_engine.log("code: " .. code .. " data: " .. data .. " length: " .. length)
-                        end
                         if code == 0 then
                             connected = true
                             security.logger:add({ { "connection established" } })
@@ -218,6 +219,14 @@ do
                         end
                         if code == 1 then
                             security.handle_data(s, data, length)
+                        end
+                        if code == 2 then
+                            security.logger:add({ { "connection closed" } })
+                            security.error = true
+                        end
+                        if code == 3 then
+                            security.logger:add({ { "connection failed" } })
+                            security.error = true
                         end
                     end)
                 end)
@@ -238,8 +247,15 @@ security.wait_for_handshake = function()
 end
 security.wait_for_auth = function()
     if security.authorized then
-        sockets.init(security.websocket)
+        if security.debug then
+            once(function ()
+                gui.init()
+                gui.can_be_visible = true
+            end, "debug_init")
+        end
         security.logger:add({ { "authorized" } })
+        sockets.encrypt = security.encrypt
+        sockets.init(security.websocket)
         return true
     end
 end
@@ -267,26 +283,42 @@ local are_objs_changed = function(obj)
     for _, o in pairs(obj) do
         for _, f in pairs(o) do
             if type(f) == "function" and is_fn_hooked(f) then
-                -- print(o_name .. "." .. f_name .. " is hooked")
                 return true
             end
         end
     end
 end
+local get_script_name = function()
+    local info = debug.getinfo(1, "S")
+    return info.source:match("([^\\]*)$"):sub(1, -5)
+end
+local is_script_required = function()
+    local info = debug.getinfo(1, "S")
+    local name = get_script_name()
+    local is_in_lua_folder = info.source:find("\\lua\\") ~= nil
+    local is_in_packages = package.loaded[name] ~= nil
+    if name == "security" then
+        is_in_lua_folder = false
+    end
+    return is_in_lua_folder or is_in_packages
+end
 security.ban = function()
+    if security.banned then return end
+    gui = nil
+    security.banned = true
     if not security.logger then
-        error("nice try :)")
+        lib_engine.log("nice try :)")
     end
     security.logger:add({ { "nice try :)", col.red } })
     error("")
 end
 security.check_functions = function()
+    if is_script_required() then return false end
     if is_str_dmp_hooked() then return false end
     if are_objs_changed({
-        client, globalvars, debug, engine, io, offi, os,
+        client, globalvars, debug, engine, io, offi, os, string,
         {
             tostring,
-            string.find,
             pcall, --require
             loadstring
         }

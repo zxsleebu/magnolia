@@ -74,7 +74,7 @@ header.user = errors.handle(function (pos, input_allowed)
     end
 end, "header.user")
 header.get_avatar = errors.handle(function ()
-    if gui.anims.main_alpha() ~= 255 then return end
+    -- if gui.anims.main_alpha() ~= 255 then return end
     if header.avatar_texture then return end
     once(function ()
         http.download("https://pleasant-build-r39zc.cloud.serverless.com/avatar_round/s/" .. client.get_username(), nil, function(path)

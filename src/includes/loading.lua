@@ -9,6 +9,7 @@ local once = require("libs.once").new()
 -- local gui = require("includes.gui")
 local easings = require("libs.easings")
 local logger = require("includes.logger").new({ infinite = true, console = true })
+local fonts = require("includes.gui.fonts")
 local anims = require("libs.anims").new({
     bg_alpha = 0,
     slider_y_offset = 55,
@@ -21,38 +22,35 @@ local anims = require("libs.anims").new({
     percent_align = 0,
     test_progress = 0,
 })
-local logo_font_size_addition = 0
-local loading = {}
-local magnolia_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 80, 0)
-local percentage_font = render.font("C:/Windows/Fonts/trebucbd.ttf", 14, render.font_flags.MonoHinting)
-local large_logo_font = render.font("nix/magnolia/icon.ttf", 250)
-local can_be_closed = false
-local remove_slider = false
-local close_delay = 1000
-loading.skipped_lag = false
-loading.do_security = false
-loading.stopped = false
+local loading = {
+    skipped_lag = false,
+    do_security = false,
+    stopped = false,
+    can_be_closed = false,
+    remove_slider = false,
+    close_delay = 1000,
+    logo_font_size_addition = 0
+}
 loading.draw = function()
     once(function()
         delay.add(function ()
             loading.skipped_lag = true
-        end, 200)
+        end, 400)
     end, "skip_lag")
-    if not loading.skipped_lag then return end
+    if not security.debug and not loading.skipped_lag then return end
     if loading.do_security then
         local _, err = pcall(security.init, logger)
         if err or security.error then
             once(function()
+                loading.remove_slider = true
+                loading.close_delay = 3000
+                loading.stopped = true
                 if not security.loaded then
-                    ui.set_visible(true)
                     engine.execute_client_cmd("showconsole")
                     logger.flags.console = false
                     logger:add({{"error. ", col.red}, {"see console for info"}})
                     logger.flags.console = true
                 end
-                remove_slider = true
-                close_delay = 3000
-                loading.stopped = true
             end, "error")
         end
     end
@@ -60,10 +58,6 @@ loading.draw = function()
 
     if security.debug then
         loading.do_security = true
-        once(function ()
-            gui.init()
-            gui.can_be_visible = true
-        end, "debug_init")
         return
     end
 
@@ -73,7 +67,7 @@ loading.draw = function()
     once(function()
         ui.set_visible(false)
     end, "close_menu")
-    if can_be_closed then
+    if loading.can_be_closed then
         once(function()
             logger:clean()
         end, "clean_logger")
@@ -91,7 +85,7 @@ loading.draw = function()
         local to = v2(ss.x / 2 + slider_sizes.x / 2, y + slider_sizes.y):round()
 
         local slider_border_alpha = anims.slider_border_alpha()
-        if not remove_slider then
+        if not loading.remove_slider then
             slider_border_alpha = anims.slider_border_alpha(255)
         end
         slider_border_alpha = slider_border_alpha * main_alpha
@@ -117,7 +111,7 @@ loading.draw = function()
                 end, "progress_done")
             end
             local alpha = anims.slider_alpha()
-            if not remove_slider then
+            if not loading.remove_slider then
                 alpha = anims.slider_alpha(255)
             end
             local width = math.max(10, slider_sizes.x * anims.progress.value / 100)
@@ -133,43 +127,44 @@ loading.draw = function()
                 end, "start_security")
             end
 
-            local logo_animation = easings.quart.out(logo_font_size_addition) * 40
-            large_logo_font.size = 260 + math.round(logo_animation)
-            render.text("A", large_logo_font, v2(ss.x / 2, ss.y / 2), col.magnolia:alpha(anims.bg_alpha() * main_alpha / 15), render.flags.X_ALIGN + render.flags.Y_ALIGN)
-            render.text("magnolia", magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
+            local logo_animation = easings.quart.out(loading.logo_font_size_addition) * 40
+            fonts.large_logo_font.size = 260 + math.round(logo_animation)
+            render.text("A",fonts.large_logo_font, v2(ss.x / 2, ss.y / 2), col.magnolia:alpha(anims.bg_alpha() * main_alpha / 15), render.flags.X_ALIGN + render.flags.Y_ALIGN)
+            render.text("magnolia", fonts.magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
                 render.flags.X_ALIGN + render.flags.Y_ALIGN + render.flags.BIG_SHADOW)
 
             do
                 local text = percentage .. "%"
-                local text_size = render.text_size(percentage_font, text)
+                local text_size = render.text_size(fonts.percentage_font, text)
                 local x = math.clamp(math.round(from.x + width - (text_size.x + 5)), from.x + 10, to.x - text_size.x)
-                render.outline_text(text, percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN)
+                render.outline_text(text, fonts.percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN)
             end
 
             if percentage == 100 then
-                logo_font_size_addition = math.clamp(logo_font_size_addition + globalvars.get_frame_time() * 1.5, 0, 1)
+                loading.logo_font_size_addition = math.clamp(loading.logo_font_size_addition + globalvars.get_frame_time() * 1.5, 0, 1)
                 once(function()
-                    remove_slider = true
+                    loading.remove_slider = true
                 end, "remove_slider")
             end
 
-            if remove_slider then
+            if loading.remove_slider then
                 anims.slider_border_alpha(0)
                 anims.slider_alpha(0)
                 anims.text_y_offset(0)
-                if not can_be_closed then
+                if not loading.can_be_closed then
                     once(function()
                         delay.add(function()
-                            can_be_closed = true
-                            gui.can_be_visible = true
+                            loading.can_be_closed = true
+                            if not security.error then
+                                gui.can_be_visible = true
+                            end
                             ui.set_visible(true)
-                        end, close_delay)
+                        end, loading.close_delay)
                     end, "can_be_closed")
                 end
             end
         end
     end
-    ---@diagnostic disable-next-line: param-type-mismatch
     logger:draw(ss / 2 + v2(0, 50 + slider_sizes.y))
 end
 cbs.add("paint", loading.draw)

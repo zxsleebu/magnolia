@@ -1,17 +1,29 @@
 local interface, class = require("libs.interfaces")()
 require("libs.types")
 local col = require("libs.colors")
+ffi.cdef[[
+    typedef struct {
+        void* Client;
+        void* User;
+        void* Friends;
+        void* Utils;
+    } SteamAPIContext;
+]]
 local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
     PrintColor = {25, "void(__cdecl*)(void*, const color_t&, const char*, ...)"},
 })
 local IEngineClient = interface.new("engine", "VEngineClient014", {
-    GetNetChan = {78, "void*(__thiscall*)(void*)"}
+    GetNetChan = {78, "void*(__thiscall*)(void*)"},
+    GetSteamContext = {185, "const SteamAPIContext*(*)(void*)"}
 })
 local NetChanClass = class.new({
     GetName = {0, "const char*(__thiscall*)(void*)"},
     GetAddress = {1, "const char*(__thiscall*)(void*)"},
 })
 local lib_engine = {}
+lib_engine.get_steam_context = function ()
+    return IEngineClient:GetSteamContext()
+end
 lib_engine.print_color = function (text, clr, ...)
     local c = ffi.new("color_t")
     c.r, c.g, c.b, c.a = clr.r, clr.g, clr.b, clr.a

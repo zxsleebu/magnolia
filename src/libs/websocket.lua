@@ -27,6 +27,7 @@ local websocket = {
 }
 ---@class __websocket_t
 ---@field valid boolean
+---@field connected boolean
 local websocket_t = {
     --*dirty hack to make autocomplete work
     ws = websocket_class.__functions
@@ -34,7 +35,7 @@ local websocket_t = {
 ---@param data string
 ---@return boolean
 websocket_t.send = function(self, data)
-    if not self.valid then return false end
+    if not self.valid or not self.connected then return false end
     return self.ws:send(data, #data)
 end
 websocket_t.connect = function(self)
@@ -42,7 +43,7 @@ websocket_t.connect = function(self)
     return self.ws:connect()
 end
 websocket_t.close = function(self)
-    if not self.valid then return false end
+    if not self.valid or not self.connected then return false end
     return self.ws:close()
 end
 ---@param callback fun(self: __websocket_t, code: number, data: string, length: number)
@@ -53,10 +54,9 @@ websocket_t.execute = function(self, callback)
     if not result then return end
     local code, length = struct.code, struct.length
     local data = ""
-    if length > 0 then
+    if code == websocket.DATA and length > 0 then
         data = ffi.string(struct.data, math.min(length, 1024))
-    end
-    if code == websocket.CONNECTED then
+    elseif code == websocket.CONNECTED then
         self.connected = true
     elseif code == websocket.DISCONNECTED or code == websocket.ERROR then
         self.connected = false
