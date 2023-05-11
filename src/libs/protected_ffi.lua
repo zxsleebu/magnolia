@@ -1,4 +1,7 @@
 local offi = ffi
+local is_hooked = function()
+    --!ADD THE CHECK HERE
+end
 local protected_mt = {
     new = function(original_table)
         return {
@@ -13,7 +16,17 @@ local protected_mt = {
     end
 }
 local ffi = {
-    cast = offi.cast,
+    cast = function(ctype, obj)
+        local casted = offi.cast(ctype, obj)
+        if type(casted) == "function" then
+            return nil
+        end
+        return casted
+    end,
+    load = function(lib)
+        return setmetatable({}, protected_mt.new(offi.load(lib)))
+    end,
+    C = setmetatable({}, protected_mt.new(offi.C)),
     typeof = offi.typeof,
     metatype = offi.metatype,
     new = offi.new,
@@ -26,9 +39,5 @@ local ffi = {
     cdef = offi.cdef,
     gc = offi.gc,
 }
-ffi.C = setmetatable({}, protected_mt.new(offi.C))
-ffi.load = function(lib)
-    return setmetatable({}, protected_mt.new(offi.load(lib)))
-end
 
 return ffi

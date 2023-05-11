@@ -13,10 +13,9 @@ ffi.cdef[[
 ]]
 local websocket_class = class.new({
     connect = { 0, "bool(__thiscall*)(void*)" },
-    get_data = { 1, "bool(__thiscall*)(void*, DataStruct*)" },
-    send = { 2, "void(__thiscall*)(void*, const char*, int)" },
-    close = { 3, "void(__thiscall*)(void*)" },
-    delete = { 4, "void(__thiscall*)(void*)" },
+    is_data_available = { 1, "bool(__thiscall*)(void*)" },
+    get_data = { 2, "bool(__thiscall*)(void*, DataStruct*)" },
+    send = { 3, "void(__thiscall*)(void*, const char*, int)" },
 })
 local websocket = {
     CONNECTED = 0,
@@ -36,19 +35,16 @@ local websocket_t = {
 ---@return boolean
 websocket_t.send = function(self, data)
     if not self.valid or not self.connected then return false end
-    return self.ws:send(data, #data)
+    return self.ws:send(data, #data + 1)
 end
 websocket_t.connect = function(self)
     if not self.valid then return false end
     return self.ws:connect()
 end
-websocket_t.close = function(self)
-    if not self.valid or not self.connected then return false end
-    return self.ws:close()
-end
 ---@param callback fun(self: __websocket_t, code: number, data: string, length: number)
 websocket_t.execute = function(self, callback)
     if not self.valid then return end
+    if not self.ws:is_data_available() then return end
     local struct = ffi.new("DataStruct")
     local result = self.ws:get_data(struct)
     if not result then return end
@@ -74,10 +70,9 @@ websocket.new = function(host, path, port)
         valid = true,
         connected = false,
     }, { __index = websocket_t })
-    cbs.add("unload", function()
+    cbs.critical("unload", function()
         socket.connected = false
         socket.valid = false
-        socket:close()
     end)
     return socket
 end

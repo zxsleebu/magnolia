@@ -5,7 +5,18 @@ local http = {}
 ---@param path? string
 ---@param callback? fun(path?: string)
 http.download = function (url, path, callback)
-    if path == nil then path = os.tmpname() end
+    if path ~= nil then
+        local file = io.open(path, "rb")
+        if file then
+            file:close()
+            if callback then
+                return callback(path)
+            end
+            return
+        end
+    else
+        path = os.tmpname()
+    end
     http_lib.request("get", url, {}, function(success, response)
         if not success or not response.body then
             if callback then

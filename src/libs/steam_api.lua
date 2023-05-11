@@ -7,7 +7,7 @@ local steam_context = iengine.get_steam_context()
 ---@class __steam_api
 local raw_steam = {
     User = {
-        GetSteamID = "uint64_t(*)(void*)"
+        GetSteamID = "uint64_t(__cdecl*)(void*)"
     }
 }
 for i_name, i in pairs(raw_steam) do

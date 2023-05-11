@@ -68,9 +68,9 @@ private:
     HANDLE dataThread;
     std::vector<DataStruct> data;
     bool running;
+    bool closed = false;
     HINTERNET hSession;
     HINTERNET hConnect;
-    HINTERNET hRequest;
     HINTERNET hWebSocket;
     std::mutex bufferMutex;
     const char *url;
@@ -90,11 +90,15 @@ private:
     }
     static void DataThread(WebSocketAPI* thisptr)
     {
+        if(!thisptr)
+            return;
         while (thisptr->running)
         {
             DWORD bytesRead;
             WINHTTP_WEB_SOCKET_BUFFER_TYPE bufferType;
             char tmpBuffer[BUFFER_SIZE];
+            if(!thisptr || !thisptr->hWebSocket || !thisptr->running)
+                break;
             DWORD result = WinHttpWebSocketReceive(thisptr->hWebSocket, tmpBuffer, sizeof(tmpBuffer), &bytesRead, &bufferType);
             if (result == ERROR_SUCCESS && bytesRead > 0)
             {
@@ -105,48 +109,47 @@ private:
             || result == ERROR_INVALID_OPERATION
             || result == ERROR_WINHTTP_OPERATION_CANCELLED){
                 thisptr->Callback((char)StatusCodes::CLOSED, NULL, 0);
-                thisptr->Close();
+                // thisptr->Close();
+                thisptr->running = false;
             }
         }
     }
     bool RawConnect(){
-        // Create a WinHTTP session.
-        if (!(hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)))
+        hSession = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSession)
             return PrintError("Failed to create session");
 
-        // Create a WinHTTP connection.
-        if (!(hConnect = WinHttpConnect(hSession, to_wstring(url), port, 0)))
+        hConnect = WinHttpConnect(hSession, to_wstring(url), port, 0);
+        if (!hConnect)
             return PrintError("Failed to create connection");
 
-        // Create a WinHTTP request.
-        if (!(hRequest = WinHttpOpenRequest(hConnect, L"GET", to_wstring(path), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0)))
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", to_wstring(path), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+        if (!hRequest)
             return PrintError("Failed to create request");
 
-        // Add upgrade header.
         if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, NULL, 0))
             return PrintError("Failed to set upgrade header");
 
-        // Send a request.
-        if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, -1, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
+        if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
             return PrintError("Failed to send request");
 
-        // End the request.
         if (!WinHttpReceiveResponse(hRequest, NULL))
             return PrintError("Failed to receive response");
 
-        // Get status code.
         DWORD dwStatusCode = 0;
         DWORD dwSize = sizeof(dwStatusCode);
         if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, NULL, &dwStatusCode, &dwSize, NULL))
             return PrintError("Failed to get status code");
 
-        // If status code is not 101, return.
         if (dwStatusCode != 101)
             return PrintError("Status code is not 101");
 
-        // Upgrade to web socket.
-        if (!(hWebSocket = WinHttpWebSocketCompleteUpgrade(hRequest, NULL)))
+        hWebSocket = WinHttpWebSocketCompleteUpgrade(hRequest, NULL);
+        if (!hWebSocket)
             return PrintError("Failed to upgrade to web socket");
+
+        WinHttpCloseHandle(hRequest);
+        hRequest = NULL;
 
         running = true;
 
@@ -173,9 +176,17 @@ public:
     {
         CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ConnectionHandler, this, 0, NULL);
     }
-
+    virtual bool IsDataAvailable()
+    {
+        bufferMutex.lock();
+        bool result = data.size() > 0;
+        bufferMutex.unlock();
+        return result;
+    }
     virtual bool GetData(DataStruct &buffer)
     {
+        if(&buffer == NULL)
+            return false;
         bufferMutex.lock();
         if (data.size() > 0)
         {
@@ -191,9 +202,11 @@ public:
         }
     }
 
-    virtual bool Send(char* data, int length)
+    virtual bool Send(const char* data, int length)
     {
-        if(WinHttpWebSocketSend(hWebSocket, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE, data, length) == ERROR_SUCCESS){
+        char* buffer = new char[length];
+        memcpy(buffer, data, length);
+        if(WinHttpWebSocketSend(hWebSocket, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE, buffer, length) == ERROR_SUCCESS){
             PrintError("Sent data");
             return true;
         }
@@ -203,27 +216,50 @@ public:
     }
     virtual void Close()
     {
-        if(!running)
+        if(!closed)
             return;
+        closed = false;
         running = false;
-        Callback((char)StatusCodes::CLOSED, NULL, 0);
-        if(hWebSocket != NULL){
+        // Callback((char)StatusCodes::CLOSED, NULL, 0);
+        if(hWebSocket){
             WinHttpWebSocketClose(hWebSocket, WINHTTP_WEB_SOCKET_SUCCESS_CLOSE_STATUS, NULL, 0);
-            WinHttpCloseHandle(hWebSocket);
+            USHORT usStatus = 0;
+	        DWORD dwCloseReasonLength = 0;
+	        BYTE rgbCloseReasonBuffer[123];
+	        DWORD dwError = WinHttpWebSocketQueryCloseStatus(
+		        hWebSocket,
+		        &usStatus,
+		        rgbCloseReasonBuffer,
+		        ARRAYSIZE(rgbCloseReasonBuffer),
+		        &dwCloseReasonLength);
         }
-        if(hRequest != NULL)
-            WinHttpCloseHandle(hRequest);
-        if(hConnect != NULL)
-            WinHttpCloseHandle(hConnect);
-        if(hSession != NULL)
-            WinHttpCloseHandle(hSession);
-        if(dataThread != NULL){
-            WaitForSingleObject(dataThread, INFINITE);
+        if(hConnect) WinHttpCloseHandle(hConnect);
+        if(hSession) WinHttpCloseHandle(hSession);
+        if(dataThread){
+            // WaitForSingleObject(dataThread, 1000);
+            TerminateThread(dataThread, 0);
             CloseHandle(dataThread);
-        }    
+        }
+        if(hWebSocket) WinHttpCloseHandle(hWebSocket);
     }
 };
 
+std::vector<WebSocketAPI*> sockets;
+
 export WebSocketAPI* Create(const char *url, const char* path, int port){
-    return new WebSocketAPI(url, path, port);
+    WebSocketAPI* socket = new WebSocketAPI(url, path, port);
+    sockets.push_back(socket);
+    return socket;
+}
+
+//on dll unload
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
+{
+    if(reason == DLL_PROCESS_DETACH){
+        for(auto& socket : sockets){
+            socket->Close();
+            // delete socket;
+        }
+    }
+    return TRUE;
 }

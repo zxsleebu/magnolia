@@ -14,7 +14,7 @@ local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
 })
 local IEngineClient = interface.new("engine", "VEngineClient014", {
     GetNetChan = {78, "void*(__thiscall*)(void*)"},
-    GetSteamContext = {185, "const SteamAPIContext*(*)(void*)"}
+    GetSteamContext = {185, "const SteamAPIContext*(__thiscall*)(void*)"}
 })
 local NetChanClass = class.new({
     GetName = {0, "const char*(__thiscall*)(void*)"},

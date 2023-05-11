@@ -5,6 +5,9 @@ local cbs = {
         paint = {},
         create_move = {},
         frame_stage_notify = {},
+    },
+    critical_list = {
+        unload = {},
     }
 }
 ---@overload fun(name: "create_move", fn: fun(cmd: usercmd_t))
@@ -16,6 +19,13 @@ cbs.add = function(name, fn)
         cbs.list[name] = {}
     end
     table.insert(cbs.list[name], fn)
+end
+
+cbs.critical = function(name, fn)
+    if not cbs.critical_list[name] then
+        cbs.critical_list[name] = {}
+    end
+    table.insert(cbs.critical_list[name], fn)
 end
 
 ---@param name string

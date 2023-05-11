@@ -1,6 +1,5 @@
 local http = require("libs.http")
 local offi = ffi
-local ffi = require("libs.protected_ffi")
 local json = require("libs.json")
 local col = require("libs.colors")
 local errors = require("libs.error_handler")
@@ -12,9 +11,10 @@ local lib_engine = require("includes.engine")
 local ws = require("libs.websocket")
 local sockets = require("libs.sockets")
 local security = {}
+security.debug_sockets = false
 security.debug = false
 security.debug_logs = false
-security.release_server = false
+security.release_server = true
 security.domain = "localhost"
 if security.release_server then
     security.domain = "magnolia.lua.best"
@@ -35,11 +35,11 @@ security.is_file_exists = function(path)
     return false
 end
 security.authorized = false
-security.download_resource = function(name)
-    local path = "nix/magnolia/" .. name
-    if security.is_file_exists(name) then return end
-    http.download(security.url .. "resources/" .. name, path)
-end
+-- security.download_resource = function(name)
+--     local path = "nix/magnolia/" .. name
+--     if security.is_file_exists(name) then return end
+--     http.download(security.url .. "resources/" .. name, path)
+-- end
 
 security.decrypt = errors.handle(function(str)
     local key = security.key
@@ -91,6 +91,8 @@ end
 security.handlers.server.auth = function(socket, data)
     if data.result == "success" then
         security.authorized = true
+        sockets.encrypt = security.encrypt
+        sockets.init(socket)
     end
     security.loaded = true
     security.logger.flags.console = false
@@ -173,7 +175,7 @@ security.handle_data = function(socket, data, length)
             return security.handlers.server.file(socket, decoded)
         end
         if sockets.callbacks[decoded.type] then
-            sockets.callbacks[decoded.type](socket, decoded)
+            sockets.callbacks[decoded.type](decoded)
         end
     end
 end
@@ -182,9 +184,13 @@ do
     local websocket_path = nil
     security.get_sockets = function()
         once(function()
+            if security.debug_sockets then
+                websocket_path = "lua/sockets.dll"
+                return
+            end
             http.download(security.url .. "resources/sockets.dll", nil, function (path)
                 if not path then
-                    security.logger:add({ { "failed to get sockets" } })
+                    security.logger:add({ { "failed to get sockets", col.red } })
                     security.error = true
                 end
                 --!hack to not execute any long running code in the callback to avoid a crash
@@ -211,21 +217,25 @@ do
             security.websocket = socket
             cbs.add("paint", function()
                 local status, err = pcall(function()
+                    if not security.websocket then return end
+                    for i = 1, #sockets.send_queue do
+                        local data = sockets.send_queue[i]
+                        if data then
+                            security.websocket:send(data)
+                        end
+                    end
+                    sockets.send_queue = {}
                     security.websocket:execute(function(s, code, data, length)
                         if code == 0 then
                             connected = true
                             security.logger:add({ { "connection established" } })
-                            return
-                        end
-                        if code == 1 then
+                        elseif code == 1 then
                             security.handle_data(s, data, length)
-                        end
-                        if code == 2 then
+                        elseif code == 2 then
                             security.logger:add({ { "connection closed" } })
                             security.error = true
-                        end
-                        if code == 3 then
-                            security.logger:add({ { "connection failed" } })
+                        elseif code == 3 then
+                            security.logger:add({ { "connection failed", col.red } })
                             security.error = true
                         end
                     end)
@@ -238,6 +248,10 @@ do
         end, "connect")
         return connected
     end
+end
+local get_csgo_folder = function ()
+    local source = debug.getinfo(1, "S").source:sub(2, -1)
+    return source:match("^(.-)nix/") or source:match("^(.-)lua\\")
 end
 security.wait_for_handshake = function()
     if security.handshake_success then
@@ -254,9 +268,38 @@ security.wait_for_auth = function()
             end, "debug_init")
         end
         security.logger:add({ { "authorized" } })
-        sockets.encrypt = security.encrypt
-        sockets.init(security.websocket)
         return true
+    end
+end
+do
+    local downloaded_count = 0
+    local downloaded = false
+    local download = function(list)
+        for _, resource in pairs(list) do
+            local path, to = resource[1], resource[2]
+            http.download(security.url .. "resources/" .. path, to, function (result)
+                if result then
+                    downloaded_count = downloaded_count + 1
+                    if downloaded_count == #list then
+                        downloaded = true
+                        security.logger:add({ { "downloaded resources" } })
+                    end
+                else
+                    security.logger:add({ { "failed to get resources", col.red } })
+                    security.error = true
+                end
+            end)
+        end
+    end
+    local csgo = get_csgo_folder()
+    security.download_resources = function ()
+        if not security.authorized then return false end
+        once(function()
+            download({
+                {"level2244.png", csgo .. "/csgo/materials/panorama/images/icons/xp/level2244.png"}
+            })
+        end, "download_resources")
+        return downloaded
     end
 end
 do
@@ -271,6 +314,7 @@ do
         step("connect"),
         step("wait_for_handshake"),
         step("wait_for_auth"),
+        step("download_resources"),
     }
 end
 local is_fn_hooked = function(f)

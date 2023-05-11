@@ -13,6 +13,11 @@ errors.handle(function()
             for i = 1, #callback_fns do
                 errors.handle(callback_fns[i])()
             end
+            if cbs.critical_list[callback_name] then
+                for i = 1, #cbs.critical_list[callback_name] do
+                    errors.handle(cbs.critical_list[callback_name][i])()
+                end
+            end
         end)
     end
 end, "magnolia")()

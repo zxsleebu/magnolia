@@ -1,0 +1,29 @@
+{
+    "tasks": [
+        {
+            "label": "Build Websockets",
+            "type": "shell",
+            "command": "./build/build.bat",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "options": {
+                "cwd": "./cpp/websocket/"
+            },
+            "problemMatcher": [
+                "$msCompile",
+            ]
+        },
+        {
+            "label": "Build Script",
+            "type": "shell",
+            "command": "node ./builder/index.js",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+        }
+    ],
+    "version": "2.0.0"
+}
