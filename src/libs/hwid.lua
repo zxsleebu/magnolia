@@ -19,7 +19,7 @@ ffi.cdef[[
         WORD wProcessorRevision;
     } SYSTEM_INFO;
     void GetSystemInfo(SYSTEM_INFO*);
-    BOOL GetVolumeInformationA(const char*, char*, DWORD, DWORD*, DWORD*, DWORD*, char*, DWORD);
+    BOOL GetVolumeInformationA(PCSTR, char*, DWORD, DWORD*, DWORD*, DWORD*, char*, DWORD);
 ]]
 return function()
     local si = ffi.new("SYSTEM_INFO[1]")

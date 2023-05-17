@@ -9,13 +9,14 @@ ffi.cdef[[
         char data[1024];
         int length;
     } DataStruct;
-    __cdecl void* Create(const char*, const char*, int);
+    __cdecl void* Create(PCSTR);
+    __cdecl void Unload();
 ]]
 local websocket_class = class.new({
     connect = { 0, "bool(__thiscall*)(void*)" },
     is_data_available = { 1, "bool(__thiscall*)(void*)" },
     get_data = { 2, "bool(__thiscall*)(void*, DataStruct*)" },
-    send = { 3, "void(__thiscall*)(void*, const char*, int)" },
+    send = { 3, "void(__thiscall*)(void*, PCSTR)" },
 })
 local websocket = {
     CONNECTED = 0,
@@ -35,7 +36,7 @@ local websocket_t = {
 ---@return boolean
 websocket_t.send = function(self, data)
     if not self.valid or not self.connected then return false end
-    return self.ws:send(data, #data + 1)
+    return self.ws:send(data)
 end
 websocket_t.connect = function(self)
     if not self.valid then return false end
@@ -60,17 +61,17 @@ websocket_t.execute = function(self, callback)
     pcall(callback, self, code, data, length)
 end
 
-websocket.new = function(host, path, port)
+websocket.new = function(url)
     if not websocket_library then
         error("websocket library not initialized")
     end
-    local raw_socket = websocket_library.Create(host, path, port)
+    local raw_socket = websocket_library.Create(url)
     local socket = setmetatable({
         ws = websocket_class(raw_socket),
         valid = true,
         connected = false,
     }, { __index = websocket_t })
-    cbs.critical("unload", function()
+    cbs.add("unload", function()
         socket.connected = false
         socket.valid = false
     end)
@@ -80,4 +81,8 @@ websocket.init = function(lib)
     websocket_library = ffi.load(lib)
     websocket.initialized = true
 end
+cbs.critical("unload", function ()
+    if not websocket_library then return end
+    websocket_library.Unload()
+end)
 return websocket

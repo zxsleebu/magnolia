@@ -3,7 +3,6 @@ local cbs = require("libs.callbacks")
 local iengine = require("includes.engine")
 local steam = require("libs.steam_api")
 local security = require("includes.security")
-local delay = require("libs.delay")
 local errors = require("libs.error_handler")
 
 local shared = {}
@@ -12,7 +11,10 @@ local shared = {}
 shared.elements = {}
 shared.features = {}
 
+local last_time_presence = globalvars.get_real_time() + 10
 shared.features.presence = function()
+    if not sockets.websocket then return end
+    last_time_presence = globalvars.get_real_time()
     if security.debug_logs then
         iengine.log("presence called")
     end
@@ -28,47 +30,60 @@ end
 
 local player_cache = {}
 shared.features.update_players = errors.handle(function ()
+    iengine.log("update players")
     if not engine.is_in_game() then return end
     local playerresource = entitylist.get_entities_by_class_id(41)[1]
     if not playerresource then return end
-    for _, entity in pairs(entitylist.get_players(2)) do
-        local entity_steam_id = entity:get_info().steam_id64
-        for cached_steam_id, cached in pairs(player_cache) do
-            if entity_steam_id == cached_steam_id then
-                local index = entity:get_index()
-                if not cached.real_rank then
-                    player_cache[cached_steam_id].real_rank = playerresource.m_nPersonaDataPublicLevel[index]
-                end
-                if cached.revoke then
-                    playerresource.m_nPersonaDataPublicLevel[index] = player_cache[cached_steam_id].real_rank
-                    player_cache[cached_steam_id] = nil
-                    break
-                end
-                playerresource.m_nPersonaDataPublicLevel[index] = 2244
+    for cached_steam_id, cached in pairs(player_cache) do
+        local entity = entitylist.get_entity_by_steam_id(cached_steam_id)
+        if entity then
+            iengine.log("update presence on " .. entity:get_info().name)
+            local index = entity:get_index()
+            if not cached.real_rank then
+                player_cache[cached_steam_id].real_rank = playerresource.m_nPersonaDataPublicLevel[index]
+            end
+            if cached.revoke then
+                playerresource.m_nPersonaDataPublicLevel[index] = player_cache[cached_steam_id].real_rank
+                player_cache[cached_steam_id] = nil
                 break
             end
+            playerresource.m_nPersonaDataPublicLevel[index] = 2244
+            break
         end
     end
 end, "shared.features.update_players")
 
-local interval_presence
-interval_presence = function ()
-    delay.add(function()
+local last_heartbeat = globalvars.get_real_time()
+
+cbs.add("paint", function ()
+    if not sockets.websocket then return end
+    local realtime = globalvars.get_real_time()
+    if realtime > last_heartbeat + 20 then
+        if security.debug_logs then
+            iengine.log("heartbeat called")
+        end
+        sockets.send({type = "heartbeat"})
+        last_heartbeat = realtime
+    end
+    if not engine.is_in_game() then return end
+    if globalvars.get_real_time() - last_time_presence > 120 then
         shared.features.presence()
-        interval_presence()
-    end, 60000 * 2)
-end
+    end
+end)
 
 sockets.add("on_socket_init", function()
+    if engine.is_in_game() then return end
     shared.features.presence()
 end)
 
 
 sockets.add("player", function(data)
-    -- print(tostring(data))
     local steam_id = data.steam_id
     player_cache[steam_id] = player_cache[steam_id] or {}
     player_cache[steam_id].time = globalvars.get_real_time()
+    if data.unload then
+        player_cache[steam_id].revoke = true
+    end
     shared.features.update_players()
 end)
 
@@ -94,6 +109,7 @@ cbs.add("paint", function ()
         if not was_connected then
             was_connected = true
             shared.features.presence()
+            shared.features.update_players()
         end
     else
         if was_connected then
@@ -105,6 +121,10 @@ end)
 
 cbs.event("player_spawn", shared.features.update_players)
 cbs.add("unload", function()
+    if security.debug_logs then
+        iengine.log("unload")
+    end
+    sockets.send({type = "unload"}, true)
     if not engine.is_in_game() then return end
     for cached_steam_id, cache in pairs(player_cache) do
         player_cache[cached_steam_id].revoke = true

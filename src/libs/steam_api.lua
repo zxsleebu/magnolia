@@ -1,6 +1,7 @@
 local iengine = require("includes.engine")
+require("libs.types")
 ffi.cdef[[
-    void* GetModuleHandleA(const char*);
+    void* GetModuleHandleA(PCSTR);
 ]]
 local steam_api = ffi.C.GetModuleHandleA("steam_api.dll")
 local steam_context = iengine.get_steam_context()

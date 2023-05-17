@@ -24,7 +24,8 @@ sockets.init = function(websocket)
     end
 end
 ---@param data table
-sockets.send = function(data)
+---@param direct? boolean
+sockets.send = function(data, direct)
     if not sockets.websocket then return false end
     local encoded = json.encode(data)
     if not encoded then
@@ -34,7 +35,11 @@ sockets.send = function(data)
     if not encrypted or encrypted == "" then
         error("failed to encrypt data")
     end
-    table.insert(sockets.send_queue, encrypted)
+    if direct then
+        sockets.websocket:send(encrypted)
+    else
+        table.insert(sockets.send_queue, encrypted)
+    end
 end
 
 return sockets

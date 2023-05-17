@@ -1,5 +1,4 @@
 *.pdb
-*.lib
 *.exp
 *.winmd
 *.exe

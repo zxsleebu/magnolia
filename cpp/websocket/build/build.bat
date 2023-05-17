@@ -5,5 +5,6 @@ if not exist %VSTOOLS% (
     exit
 )
 call %VSTOOLS%
-
+set INCLUDE=%INCLUDE%;%cd%\include
+set LIB=%LIB%;%cd%\lib
 cl /LD /O2 /MD /EHsc /Fe: ./build/sockets.dll main.cpp

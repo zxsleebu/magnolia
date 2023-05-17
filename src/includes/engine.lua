@@ -1,6 +1,7 @@
 local interface, class = require("libs.interfaces")()
 require("libs.types")
 local col = require("libs.colors")
+local v2, v3 = require("libs.vectors")()
 ffi.cdef[[
     typedef struct {
         void* Client;
@@ -8,19 +9,35 @@ ffi.cdef[[
         void* Friends;
         void* Utils;
     } SteamAPIContext;
+    typedef float Matrix4x4[4][4];
 ]]
 local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
-    PrintColor = {25, "void(__cdecl*)(void*, const color_t&, const char*, ...)"},
+    PrintColor = {25, "void(__cdecl*)(void*, const color_t&, PCSTR, ...)"},
 })
 local IEngineClient = interface.new("engine", "VEngineClient014", {
     GetNetChan = {78, "void*(__thiscall*)(void*)"},
-    GetSteamContext = {185, "const SteamAPIContext*(__thiscall*)(void*)"}
+    GetSteamContext = {185, "const SteamAPIContext*(__thiscall*)(void*)"},
+    GetGameDirectory = {36, "PCSTR(__thiscall*)(void*)"},
+    GetWorldToScreenMatrix = {37, "const Matrix4x4&(__thiscall*)(void*)"}
+})
+local IDebugOverlay = interface.new("engine", "VDebugOverlay004", {
+    AddBoxOverlay = {1, "void(__thiscall*)(void*, const vector_t&, const vector_t&, const vector_t&, const vector_t&, int, int, int, int, float)"},
+    AddLineOverlay = {5, "void(__thiscall*)(void*, const vector_t&, const vector_t&, int, int, int, bool, float)"},
+    WorldToScreen = {13, "int(__thiscall*)(void*, const vector_t&, vector_t&)"}
 })
 local NetChanClass = class.new({
-    GetName = {0, "const char*(__thiscall*)(void*)"},
-    GetAddress = {1, "const char*(__thiscall*)(void*)"},
+    GetName = {0, "PCSTR(__thiscall*)(void*)"},
+    GetAddress = {1, "PCSTR(__thiscall*)(void*)"},
 })
 local lib_engine = {}
+lib_engine.get_csgo_folder = function()
+    local path = IEngineClient:GetGameDirectory()
+    if not path then
+        local source = debug.getinfo(1, "S").source:sub(2, -1)
+        return source:match("^(.-)nix/") or source:match("^(.-)lua\\")
+    end
+    return ffi.string(path)
+end
 lib_engine.get_steam_context = function ()
     return IEngineClient:GetSteamContext()
 end
@@ -67,6 +84,35 @@ lib_engine.get_server_info = function ()
         ip = ffi.string(address),
         name = ffi.string(name),
     }
+end
+---@param pos vec3_t
+---@return vec2_t?
+lib_engine.world_to_screen = function(pos)
+    local world_pos = ffi.new("vector_t[1]")
+    world_pos[0].x, world_pos[0].y, world_pos[0].z = pos.x, pos.y, pos.z
+    local screen_pos = ffi.new("vector_t[1]")
+    IDebugOverlay:WorldToScreen(world_pos, screen_pos)
+    return v2(screen_pos[0].x, screen_pos[0].y)
+end
+
+lib_engine.add_box_overlay = function(pos, time, color)
+    local p = ffi.new("vector_t")
+    p.x, p.y, p.z = pos.x, pos.y, pos.z
+    local n = ffi.new("vector_t")
+    n.x, n.y, n.z = -2, -2, -2
+    local x = ffi.new("vector_t")
+    x.x, x.y, x.z = 2, 2, 2
+    local a = ffi.new("vector_t")
+    a.x, a.y, a.z = 0, 0, 0
+    IDebugOverlay:AddBoxOverlay(p, n, x, a, color.r, color.g, color.b, color.a, time)
+end
+
+lib_engine.add_line_overlay = function (from, to, time, color)
+    local p = ffi.new("vector_t")
+    p.x, p.y, p.z = from.x, from.y, from.z
+    local d = ffi.new("vector_t")
+    d.x, d.y, d.z = to.x, to.y, to.z
+    IDebugOverlay:AddLineOverlay(p, d, color.r, color.g, color.b, true, time)
 end
 
 return lib_engine

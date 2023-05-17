@@ -1,6 +1,7 @@
+require("libs.types")
 ffi.cdef[[
-    void* GetModuleHandleA(const char*);
-    uintptr_t GetProcAddress(void*, const char*);
+    void* GetModuleHandleA(PCSTR);
+    uintptr_t GetProcAddress(void*, PCSTR);
 ]]
 local modules = {}
 ---@return ffi.ctype*|nil

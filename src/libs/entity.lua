@@ -277,6 +277,15 @@ entitylist.get_players = function (type)
     end
     return new
 end
+---@param steam_id string
+---@return entity_t?
+entitylist.get_entity_by_steam_id = function (steam_id)
+    for _, player in pairs(entitylist.get_players(2)) do
+        if player:get_info().steam_id64 == steam_id then
+            return player
+        end
+    end
+end
 
 ---@param flag number
 entity_t.get_flag = function (self, flag)
@@ -347,6 +356,16 @@ entity_t.is_hittable_by = function(self, attacker)
         return true
     end
     return false
+end
+
+---@param cmd? usercmd_t
+entity_t.is_shooting = function(self, cmd)
+    local lp = entitylist.get_local_player()
+    local is_shooting = (lp.m_iShotsFired >= 1) and self:can_shoot()
+    if self == lp and cmd then
+        is_shooting = is_shooting and bit.band(cmd.buttons, 1) ~= 0
+    end
+    return is_shooting
 end
 
 ffi.cdef[[

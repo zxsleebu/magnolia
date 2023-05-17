@@ -46,6 +46,12 @@ gui.get_path = errors.handle(function(name)
         tab.subtabs[#tab.subtabs].name,
         name
     }
+    if gui.current_options then
+        path = {
+            gui.current_options.path,
+            name
+        }
+    end
     return table.concat(path, "_")
 end, "gui.get_path")
 
@@ -62,16 +68,6 @@ gui.add_element = errors.handle(function (element)
     table.insert(subtab.columns[#subtab.columns].elements, element)
     return element
 end, "gui.add_element")
-
-gui.column = errors.handle(function ()
-    if gui.current_options then
-        table.insert(gui.current_options.columns, column_t.new())
-        return
-    end
-    local tab = gui.elements[#gui.elements]
-    local subtab = tab.subtabs[#tab.subtabs]
-    table.insert(subtab.columns, column_t.new())
-end, "gui.column")
 
 require("includes.gui.elements")
 

@@ -30,14 +30,8 @@ utf8.byte = function(char)
     end
     return c
 end
-local unescape_bytes = function(str)
-    return str:gsub("\\([0-9A-F]+)", function(a)
-        return utf8.char(tonumber(a, 16))
-    end)
-end
-local pattern = "[%z\\1-\\127\\194-\\244][\\128-\\191]*"
-local unescaped_pattern = unescape_bytes(pattern)
+local pattern = loadstring('return "[%z\\1-\\127\\194-\\244][\\128-\\191]*"')()
 utf8.map = function(str, fn)
-    return str:gsub(unescaped_pattern, fn)
+    return str:gsub(pattern, fn)
 end
 return utf8

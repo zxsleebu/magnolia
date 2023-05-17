@@ -6,6 +6,9 @@ local input = require("libs.input")
 local fonts = require("includes.gui.fonts")
 local v2, v3 = require("libs.vectors")()
 local shared = require("features.shared")
+local cbs = require("libs.callbacks")
+local iengine = require("includes.engine")
+local anims = require("libs.anims")
 
 gui.tab("Aimbot", "B")
 gui.subtab("General")
@@ -53,7 +56,61 @@ gui.tab("Visuals", "D")
 gui.subtab("Players")
 gui.subtab("World")
 gui.subtab("Local")
-gui.checkbox("Bullet tracers")
+do
+    local tracers = gui.options(gui.checkbox("Bullet tracers"), function()
+        gui.slider("Time", 1, 10, 1, 4)
+    end)
+    local impacts = gui.options(gui.checkbox("Bullet impacts"), function()
+        gui.slider("Time", 1, 10, 1, 4)
+    end)
+    cbs.event("bullet_impact", function(event)
+        if not impacts:value() then return end
+        local lp = entitylist.get_local_player()
+        if not lp or not lp:is_alive() then return end
+        local userid = lp:get_info().user_id
+        if event:get_int("userid", 0) ~= userid then return end
+        local pos = v3(event:get_float("x", 0), event:get_float("y", 0), event:get_float("z", 0))
+        iengine.add_box_overlay(pos, impacts:get_slider("Time"):value(), col.blue:alpha(127))
+    end)
+    client.register_callback("shot_fired", function (shot_info)
+        if not impacts:value() then return end
+        iengine.add_box_overlay(shot_info.aim_point, impacts:get_slider("Time"):value(), col.red:alpha(127))
+    end)
+    ---@type { from: vec3_t, to: vec3_t, time: number, anims: __anims_mt }[]
+    local tracers_list = {}
+    cbs.on_shot_fired(function(shot)
+        if tracers:value() then
+            iengine.add_line_overlay(shot.from, shot.to, tracers:get_slider("Time"):value(), col.white:alpha(255))
+        end
+        -- tracers_list[#tracers_list+1] = {
+        --     from = shot.from,
+        --     to = shot.to,
+        --     time = globalvars.get_real_time(),
+        --     anims = anims.new({
+        --         alpha = 255
+        --     })
+        -- }
+    end)
+    cbs.add("paint", function (cmd)
+        -- if not tracers:value() then return end
+        -- local time = tracers:get_slider("Time"):value()
+        -- local current_time = globalvars.get_real_time()
+        -- for i = 1, #tracers_list do
+        --     local tracer = tracers_list[i]
+        --     local alpha = tracer.anims.alpha(current_time < tracer.time + time and 255 or 0)
+        --     local from, to = iengine.world_to_screen(tracer.from), iengine.world_to_screen(tracer.to)
+        --     if from and to then
+        --         renderer.line(from, to, col.white:alpha(alpha))
+        --     end
+        -- end
+        -- for i = 1, #tracers_list do
+        --     local tracer = tracers_list[i]
+        --     if tracer and tracer.anims.alpha() <= 0 then
+        --         table.remove(tracers_list, i)
+        --     end
+        -- end
+    end)
+end
 gui.subtab("Widgets")
 gui.subtab("Misc")
 

@@ -35,7 +35,7 @@ ffi.cdef[[
 
     int MultiByteToWideChar(unsigned int CodePage,
         DWORD dwFlags,
-        const char* lpMultiByteStr,
+        PCSTR lpMultiByteStr,
         int cbMultiByte,
         wchar_t* lpWideCharStr,
         int cchWideChar
@@ -48,7 +48,7 @@ ffi.cdef[[
         int cchWideChar,
         char* lpMultiByteStr,
         int cbMultiByte,
-        const char* lpDefaultChar,
+        PCSTR lpDefaultChar,
         BOOL* lpUsedDefaultChar
     );
 

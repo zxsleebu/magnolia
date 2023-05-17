@@ -6,7 +6,10 @@
             "command": "./build/build.bat",
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": true,
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/"
             },
             "problemMatcher": [
                 "$msCompile"

@@ -19,6 +19,7 @@ require("libs.advanced math")
 ---@operator len(): number
 ---@field remove_nan fun(self: vec3_t): vec3_t
 ---@field dist_to fun(self: vec3_t, other: vec3_t): number
+---@field round fun(self: vec3_t): vec3_t
 
 
 ---@type fun(x: number, y: number): vec2_t
@@ -93,6 +94,10 @@ end
 vec3_t.dist_to = function(s, a)
     return #(s - a)
 end
+vec3_t.round = function(s)
+    return v3(math.round(s.x), math.round(s.y), math.round(s.z))
+end
+
 
 ---@class angle_t
 ---@field to_vec fun(s: angle_t): vec3_t

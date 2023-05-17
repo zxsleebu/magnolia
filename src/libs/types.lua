@@ -8,4 +8,11 @@ ffi.cdef[[
     typedef struct{
         char r, g, b, a;
     } color_t;
+    typedef struct{
+        float x, y, z;
+    } vector_t;
+    typedef const wchar_t* LPCWSTR;
+    typedef LPCWSTR PCWSTR;
+    typedef unsigned int UINT;
+    typedef const char* PCSTR;
 ]]

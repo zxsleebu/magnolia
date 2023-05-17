@@ -1,7 +1,7 @@
 ---@class class_t
 ---@field this ffi.ctype*
 ---@field ptr number
-
+require("libs.types")
 local class_t = {
     __call = function(s, classptr)
         local fns = s.__functions

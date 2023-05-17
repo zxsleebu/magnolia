@@ -54,6 +54,9 @@ options_mt.draw = errors.handle(function(self, alpha)
         if self.columns then
             for _, column in pairs(self.columns) do
                 local col_size = column:get_size()
+                if col_size.x < 100 then
+                    col_size.x = 100
+                end
                 size.x = size.x + col_size.x
                 if col_size.y > size.y then
                     size.y = col_size.y
@@ -109,6 +112,10 @@ options_mt.paint = function (self, fn)
     return self
 end
 
+options_mt.value = function (self)
+    return self.parent:value()
+end
+
 ---@param self gui_options_t
 ---@param name string
 ---@return gui_element_t?
@@ -137,8 +144,9 @@ end
 
 ---@param element gui_element_t
 ---@param options fun()
+---@return gui_options_t
 options_t.new = errors.handle(function (element, options)
-    local self = setmetatable({
+    local t = setmetatable({
         parent = element,
         columns = {
             column_t.new(),
@@ -148,15 +156,16 @@ options_t.new = errors.handle(function (element, options)
             enabled = 0,
             alpha = 0,
         }),
+        path = gui.get_path(element.name),
         pos = v2(0, 0),
         open = false,
     }, { __index = options_mt })
-    element.inline = self
+    element.inline = t
     local old_options = gui.current_options
-    gui.current_options = self
+    gui.current_options = t
     options()
     gui.current_options = old_options
-    return self
+    return t
 end, "options_t.new")
 
 options_t.draw_columns = function(columns, alpha)

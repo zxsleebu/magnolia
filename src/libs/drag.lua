@@ -4,9 +4,10 @@ local col = require("libs.colors")
 require("libs.advanced math")
 local modules = require("libs.modules")
 ffi.load('user32')
+require("libs.types")
 ffi.cdef[[
     typedef void* HANDLE;
-    HANDLE LoadCursorA(HANDLE, const char*);
+    HANDLE LoadCursorA(HANDLE, PCSTR);
     typedef struct { long x; long y; } POINT;
 ]]
 local SetCursor = modules.get_function("HANDLE(__stdcall*)(HANDLE)", "user32", "SetCursor")
@@ -49,10 +50,10 @@ local drag = {
     end,
     current_cursor = nil,
 }
-drag.arrow_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32512))
-drag.move_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32646))
-drag.hand_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32649))
-drag.horizontal_resize_cursor = ffi.C.LoadCursorA(nil, ffi.cast("const char*", 32644))
+drag.arrow_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32512))
+drag.move_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32646))
+drag.hand_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32649))
+drag.horizontal_resize_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32644))
 drag.new = errors.handle(function(key, default_pos, pointer)
     if pointer == nil then pointer = true end
     drag.__elements[key] = {

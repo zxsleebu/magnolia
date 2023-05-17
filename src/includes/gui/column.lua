@@ -53,4 +53,14 @@ column_t.new = function ()
     }, column_mt)
 end
 
+gui.column = errors.handle(function ()
+    if gui.current_options then
+        table.insert(gui.current_options.columns, column_t.new())
+        return
+    end
+    local tab = gui.elements[#gui.elements]
+    local subtab = tab.subtabs[#tab.subtabs]
+    table.insert(subtab.columns, column_t.new())
+end, "gui.column")
+
 return column_t

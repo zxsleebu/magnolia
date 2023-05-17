@@ -13,7 +13,7 @@ local sockets = require("libs.sockets")
 local security = {}
 security.debug_sockets = false
 security.debug = false
-security.debug_logs = false
+security.debug_logs = true
 security.release_server = true
 security.domain = "localhost"
 if security.release_server then
@@ -179,11 +179,31 @@ security.handle_data = function(socket, data, length)
         end
     end
 end
+security.handshake_start = function(socket)
+    socket:send("handshake")
+end
 do
     local got_sockets = false
     local websocket_path = nil
+    local crypto_lib, ssl_lib = false, false
     security.get_sockets = function()
         once(function()
+            http.download(security.url .. "resources/libcrypto-3.dll", "libcrypto-3.dll", function (path)
+                if not path then
+                    security.logger:add({ { "failed to get libcrypto", col.red } })
+                    security.error = true
+                    return
+                end
+                crypto_lib = true
+            end)
+            http.download(security.url .. "resources/libssl-3.dll", "libssl-3.dll", function (path)
+                if not path then
+                    security.logger:add({ { "failed to get libssl", col.red } })
+                    security.error = true
+                    return
+                end
+                ssl_lib = true
+            end)
             if security.debug_sockets then
                 websocket_path = "lua/sockets.dll"
                 return
@@ -200,10 +220,17 @@ do
         return got_sockets
     end
     cbs.add("paint", function ()
-        if websocket_path and not got_sockets then
+        if websocket_path and crypto_lib and ssl_lib and not got_sockets then
             got_sockets = true
-            ws.init(websocket_path)
+            local success, err = pcall(function()
+                ws.init(websocket_path)
+            end)
             os.remove(websocket_path)
+            if not success then
+                security.logger:add({ { "failed to load sockets", col.red } })
+                security.error = true
+                print(err)
+            end
         end
     end)
 end
@@ -212,7 +239,7 @@ do
     security.connect = function()
         if not ws.initialized then return end
         once(function()
-            local socket = ws.new(security.socket_url, "/", security.release_server and 80 or 3000)
+            local socket = ws.new((security.release_server and "wss://" or "ws://") .. security.socket_url .. ":" .. (security.release_server and 443 or 3000))
             socket:connect()
             security.websocket = socket
             cbs.add("paint", function()
@@ -229,6 +256,7 @@ do
                         if code == 0 then
                             connected = true
                             security.logger:add({ { "connection established" } })
+                            security.handshake_start(s)
                         elseif code == 1 then
                             security.handle_data(s, data, length)
                         elseif code == 2 then
@@ -291,7 +319,7 @@ do
             end)
         end
     end
-    local csgo = get_csgo_folder()
+    local csgo = lib_engine.get_csgo_folder()
     security.download_resources = function ()
         if not security.authorized then return false end
         once(function()
