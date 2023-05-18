@@ -53,7 +53,7 @@ websocket_t.execute = function(self, callback)
     local data = ""
     if code == websocket.DATA and length > 0 then
         data = ffi.string(struct.data, math.min(length, 1024))
-    elseif code == websocket.CONNECTED then
+    elseif code == websocket.CONNECTED and not self.connected then
         self.connected = true
     elseif code == websocket.DISCONNECTED or code == websocket.ERROR then
         self.connected = false

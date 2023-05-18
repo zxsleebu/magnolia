@@ -4,6 +4,7 @@ local iengine = require("includes.engine")
 local steam = require("libs.steam_api")
 local security = require("includes.security")
 local errors = require("libs.error_handler")
+local delay = require("libs.delay")
 
 local shared = {}
 ---@class __shared_features_t
@@ -119,7 +120,9 @@ cbs.add("paint", function ()
     end
 end)
 
-cbs.event("player_spawn", shared.features.update_players)
+cbs.event("player_spawn", function()
+    delay.add(shared.features.update_players, 3000)
+end)
 cbs.add("unload", function()
     if security.debug_logs then
         iengine.log("unload")
