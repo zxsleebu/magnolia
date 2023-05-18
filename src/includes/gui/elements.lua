@@ -40,9 +40,6 @@ pcall(function()
             end
         end
     end)
-    gui.options(jumpscout, function()
-        gui.checkbox("test")
-    end)
 end)
 -- gui.checkbox("Hitbox override")
 gui.column()
