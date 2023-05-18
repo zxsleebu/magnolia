@@ -33,8 +33,12 @@ local column_mt = {
         input_allowed = errors.handle(function(s)
             for l = 1, #s.elements do
                 local element = s.elements[l]
-                if element.inline and element.inline.open then
-                    return false
+                if element.inline then
+                    for i = 1, #element.inline do
+                        if element.inline[i].open then
+                            return false
+                        end
+                    end
                 end
                 if element.active then
                     return false

@@ -126,7 +126,7 @@ cbs.add("unload", function()
     end
     sockets.send({type = "unload"}, true)
     if not engine.is_in_game() then return end
-    for cached_steam_id, cache in pairs(player_cache) do
+    for cached_steam_id, _ in pairs(player_cache) do
         player_cache[cached_steam_id].revoke = true
     end
     shared.features.update_players()

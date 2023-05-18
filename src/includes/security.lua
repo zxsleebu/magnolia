@@ -277,10 +277,6 @@ do
         return connected
     end
 end
-local get_csgo_folder = function ()
-    local source = debug.getinfo(1, "S").source:sub(2, -1)
-    return source:match("^(.-)nix/") or source:match("^(.-)lua\\")
-end
 security.wait_for_handshake = function()
     if security.handshake_success then
         security.logger:add({{"handshake succeeded"}})

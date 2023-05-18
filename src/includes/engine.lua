@@ -17,7 +17,6 @@ local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
 local IEngineClient = interface.new("engine", "VEngineClient014", {
     GetNetChan = {78, "void*(__thiscall*)(void*)"},
     GetSteamContext = {185, "const SteamAPIContext*(__thiscall*)(void*)"},
-    GetGameDirectory = {36, "PCSTR(__thiscall*)(void*)"},
     GetWorldToScreenMatrix = {37, "const Matrix4x4&(__thiscall*)(void*)"}
 })
 local IDebugOverlay = interface.new("engine", "VDebugOverlay004", {
@@ -31,12 +30,8 @@ local NetChanClass = class.new({
 })
 local lib_engine = {}
 lib_engine.get_csgo_folder = function()
-    local path = IEngineClient:GetGameDirectory()
-    if not path then
-        local source = debug.getinfo(1, "S").source:sub(2, -1)
-        return source:match("^(.-)nix/") or source:match("^(.-)lua\\")
-    end
-    return ffi.string(path)
+    local source = debug.getinfo(1, "S").source:sub(2, -1)
+    return source:match("^(.-)nix/") or source:match("^(.-)lua\\")
 end
 lib_engine.get_steam_context = function ()
     return IEngineClient:GetSteamContext()

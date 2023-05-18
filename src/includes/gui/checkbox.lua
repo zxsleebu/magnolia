@@ -8,6 +8,7 @@ local input = require("libs.input")
 local errors = require("libs.error_handler")
 local click_effect = require("includes.gui.click_effect")
 local element_t = require("includes.gui.element")
+local inline_t = require("includes.gui.inline")
 
 local checkbox_t = { }
 
@@ -15,7 +16,7 @@ local checkbox_t = { }
 ---@field name string
 ---@field path string
 ---@field anims __anims_mt
----@field inline gui_options_t
+---@field inline gui_options_t[]
 ---@field el checkbox_t
 ---@field size vec2_t
 ---@field master_object? { el?: checkbox_t, fn: fun(): boolean }
@@ -53,18 +54,9 @@ checkbox_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowe
     renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:fade(col.magnolia, active_anim / 255):alpha(alpha))
     render.smoothed_rect(pos, pos + size, col.magnolia_tinted:fade(col.magnolia, hover_anim / 255):alpha(alpha), false)
     self:draw_checkmark(pos, alpha * (active_anim / 255))
-    if self.inline and self.inline.inline_draw then
-        local i = self.inline
-        local inline_alpha = i.anims.enabled(value and 255 or 0)
-        if inline_alpha > 0 then
-            i:inline_draw(pos + v2(width - i.size.x, size.y / 2), alpha * inline_alpha / 255, input_allowed and value)
-        end
-    end
+    inline_t.draw(self, pos, alpha, width, input_allowed)
     if self.size.x == 0 then
-        self.size.x = hover_to.x - pos.x
-        if self.inline then
-            self.size.x = self.size.x + self.inline.size.x + gui.paddings.options_padding
-        end
+        self.size.x = hover_to.x - pos.x + inline_t.calculate_size(self)
     end
 end, "checkbox_t.draw")
 ---@param fn fun(cmd: usercmd_t, el: gui_checkbox_t)
@@ -122,6 +114,7 @@ checkbox_t.new = errors.handle(function (name, value)
             hover = 0,
             active = 0,
         }),
+        inline = {},
         size = v2(0, 18),
     }, { __index = checkbox_mt })
     c.el:set_visible(false)

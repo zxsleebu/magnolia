@@ -13,7 +13,8 @@ local anims = require("libs.anims")
 gui.tab("Aimbot", "B")
 gui.subtab("General")
 pcall(function()
-    gui.options(gui.checkbox("Jumpscout"), function ()
+    local jumpscout = gui.checkbox("Jumpscout")
+    gui.options(jumpscout, function ()
         gui.slider("Jumpscout hitchance", 40, 100, false, 60)
         gui.checkbox("Autostop in air")
     end):create_move(function (cmd, el)
@@ -39,15 +40,18 @@ pcall(function()
             end
         end
     end)
+    gui.options(jumpscout, function()
+        gui.checkbox("test")
+    end)
 end)
-gui.checkbox("Hitbox override")
+-- gui.checkbox("Hitbox override")
 gui.column()
-gui.checkbox("HP conditions")
+-- gui.checkbox("HP conditions")
 
 gui.subtab("Exploits")
-gui.checkbox("Ideal tick")
-gui.checkbox("Improve speed")
-gui.checkbox("Auto teleport")
+-- gui.checkbox("Ideal tick")
+-- gui.checkbox("Improve speed")
+-- gui.checkbox("Auto teleport")
 gui.subtab("Misc")
 gui.tab("Anti-Aim", "C")
 gui.subtab("General")
@@ -63,6 +67,7 @@ do
     local impacts = gui.options(gui.checkbox("Bullet impacts"), function()
         gui.slider("Time", 1, 10, 1, 4)
     end)
+    gui.column()
     cbs.event("bullet_impact", function(event)
         if not impacts:value() then return end
         local lp = entitylist.get_local_player()
@@ -76,8 +81,8 @@ do
         if not impacts:value() then return end
         iengine.add_box_overlay(shot_info.aim_point, impacts:get_slider("Time"):value(), col.red:alpha(127))
     end)
-    ---@type { from: vec3_t, to: vec3_t, time: number, anims: __anims_mt }[]
-    local tracers_list = {}
+    -- ---@type { from: vec3_t, to: vec3_t, time: number, anims: __anims_mt }[]
+    -- local tracers_list = {}
     cbs.on_shot_fired(function(shot)
         if tracers:value() then
             iengine.add_line_overlay(shot.from, shot.to, tracers:get_slider("Time"):value(), col.white:alpha(255))

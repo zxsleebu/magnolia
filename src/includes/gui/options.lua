@@ -19,7 +19,7 @@ local options_t = {}
 ---@field open boolean
 ---@field parent gui_checkbox_t
 local options_mt = {
-    size = v2(18, 14),
+    size = v2(18, 18),
 }
 
 ---@param self gui_options_t
@@ -27,9 +27,11 @@ local options_mt = {
 ---@param alpha number
 ---@param input_allowed boolean
 options_mt.inline_draw = errors.handle(function(self, pos, alpha, input_allowed)
-    local text_pos, text_size = render.text("E", fonts.menu_icons, pos, col.white:alpha(alpha):salpha(self.anims.hover()), render.flags.Y_ALIGN)
+    local _, text_size = render.sized_text(function ()
+        return render.text("E", fonts.menu_icons, pos - v2(2, 1), col.white:alpha(alpha):salpha(self.anims.hover()), render.flags.TEXT_SIZE)
+    end, fonts.menu_icons, 19)
     ---@cast text_size vec2_t
-    local hovered = input_allowed and drag.hover_absolute(text_pos - v2(0, 1), text_pos + text_size + v2(0, 2))
+    local hovered = input_allowed and drag.hover_absolute(pos - v2(0, 1), pos + text_size + v2(0, 2))
     self.anims.hover((hovered or self.open) and 255 or 100)
     self.anims.alpha(self.open and 255 or 0)
     if hovered then
@@ -50,7 +52,7 @@ options_mt.draw = errors.handle(function(self, alpha)
     local open_alpha = alpha_anim * (alpha / 255)
     if open_alpha > 0 then
         local input_allowed = self.open
-        local size = v2((#self.columns + 1) * gui.paddings.options_padding, 0)
+        local size = v2((#self.columns + 1) * gui.paddings.options_container_padding, 0)
         if self.columns then
             for _, column in pairs(self.columns) do
                 local col_size = column:get_size()
@@ -70,7 +72,7 @@ options_mt.draw = errors.handle(function(self, alpha)
                 input_allowed = input_allowed and column:input_allowed()
             end
         end
-        size = v2(size.x + 1, gui.paddings.options_padding * 2 + size.y + 1)
+        size = v2(size.x + 1, gui.paddings.options_container_padding * 2 + size.y + 1)
 
         local to = self.pos + size
         --if unfocused then
@@ -81,7 +83,7 @@ options_mt.draw = errors.handle(function(self, alpha)
         container_t.draw_background(self.pos, to, open_alpha, 253)
 
         if self.columns then
-            local add_pos = v2(gui.paddings.options_padding + 1, gui.paddings.options_padding + 1)
+            local add_pos = v2(gui.paddings.options_container_padding + 1, gui.paddings.options_container_padding + 1)
             for i = 1, #self.columns do
                 local column = self.columns[i]
                 container_t.draw_elements(column.elements, self.pos + add_pos, math.round(column.size.x), open_alpha, input_allowed)
@@ -90,7 +92,7 @@ options_mt.draw = errors.handle(function(self, alpha)
                 -- renderer.rect(s.pos + add_pos, s.pos + add_pos + column.size, col.black:alpha(open_alpha))
                 --!DEBUG
 
-                add_pos.x = column.size.x + add_pos.x + gui.paddings.options_padding
+                add_pos.x = column.size.x + add_pos.x + gui.paddings.options_container_padding
             end
         end
     end
@@ -160,7 +162,7 @@ options_t.new = errors.handle(function (element, options)
         pos = v2(0, 0),
         open = false,
     }, { __index = options_mt })
-    element.inline = t
+    element.inline[#element.inline+1] = t
     local old_options = gui.current_options
     gui.current_options = t
     options()
@@ -168,12 +170,18 @@ options_t.new = errors.handle(function (element, options)
     return t
 end, "options_t.new")
 
+---comment
+---@param columns gui_column_t[]
+---@param alpha any
 options_t.draw_columns = function(columns, alpha)
     for _, column in pairs(columns) do
         for _, element in pairs(column.elements) do
-            if element.inline then
-                element.inline:draw(alpha)
-                options_t.draw_columns(element.inline.columns, alpha)
+            for i = 1, #(element.inline or {}) do
+                local inline = element.inline[i]
+                if inline.columns then
+                    inline:draw(alpha)
+                    options_t.draw_columns(inline.columns, alpha)
+                end
             end
         end
     end

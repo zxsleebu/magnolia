@@ -23,7 +23,8 @@ gui = {
     paddings = {
         menu_padding = 14,
         subtab_list_width = 114,
-        options_padding = 10,
+        options_container_padding = 10,
+        inline_padding = 4,
     }
 }
 
@@ -33,7 +34,7 @@ require("includes.gui.tab")
 local subtab_t = require("includes.gui.subtab")
 local container_t = require("includes.gui.container")
 local options_t = require("includes.gui.options")
-local column_t = require("includes.gui.column")
+require("includes.gui.column")
 
 gui.init = function()
     gui.initialized = true
@@ -49,6 +50,7 @@ gui.get_path = errors.handle(function(name)
     if gui.current_options then
         path = {
             gui.current_options.path,
+            #gui.current_options.parent.inline,
             name
         }
     end
