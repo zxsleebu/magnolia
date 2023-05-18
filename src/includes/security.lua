@@ -84,7 +84,7 @@ security.handlers.client.auth = function(socket)
         data = info
     })
     if security.debug_logs then
-        lib_engine.log("sending auth request: " .. stringified)
+        -- lib_engine.log("sending auth request: " .. stringified)
     end
     socket:send(security.encrypt(stringified))
 end
