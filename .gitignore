@@ -9,3 +9,4 @@
 *.a
 node_modules
 dist
+output-err.lua
