@@ -58,7 +58,7 @@ websocket_t.execute = function(self, callback)
     elseif code == websocket.DISCONNECTED or code == websocket.ERROR then
         self.connected = false
     end
-    pcall(callback, self, code, data, length)
+    callback(self, code, data, length)
 end
 
 websocket.new = function(url)

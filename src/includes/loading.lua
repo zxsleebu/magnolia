@@ -8,6 +8,7 @@ local security = require("includes.security")
 local once = require("libs.once").new()
 -- local gui = require("includes.gui")
 local easings = require("libs.easings")
+local colors = require("includes.colors")
 local logger = require("includes.logger").new({ infinite = true, console = true })
 local fonts = require("includes.gui.fonts")
 local anims = require("libs.anims").new({
@@ -43,7 +44,7 @@ loading.draw = function()
         if err or security.error then
             once(function()
                 loading.remove_slider = true
-                loading.close_delay = 3000
+                loading.close_delay = 4000
                 loading.stopped = true
                 if not security.loaded then
                     engine.execute_client_cmd("showconsole")
@@ -54,7 +55,14 @@ loading.draw = function()
             end, "error")
         end
     end
-    if anims.transparency() == 0 then return end
+    if anims.transparency() == 0 then
+        if security.error then
+            once(function ()
+                client.unload_script(client.get_script_name())
+            end, "unload_script")
+        end
+        return
+    end
 
     if security.debug then
         loading.do_security = true
@@ -101,12 +109,12 @@ loading.draw = function()
                 gui.init()
             end
             once(function()
-                logger:add({{"magnolia", col.magnolia}, {" by ", col.white}, {"lia", col.magnolia}})
+                logger:add({{"magnolia", colors.magnolia}, {" by ", col.white}, {"lia", colors.magnolia}})
             end, "magnolia_start_log")
             local percentage = anims.progress(progress)
             if percentage == 100 then
                 once(function()
-                    logger:add({{"have", col.white}, {" fun!", col.magnolia}})
+                    logger:add({{"have", col.white}, {" fun!", colors.magnolia}})
                     print("")
                 end, "progress_done")
             end
@@ -116,7 +124,7 @@ loading.draw = function()
             end
             local width = math.max(10, slider_sizes.x * anims.progress.value / 100)
             if percentage > 0 then
-                render.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), col.magnolia:salpha(alpha), 2.1, true)
+                render.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), colors.magnolia:salpha(alpha), 2.1, true)
             end
             local text_alpha = anims.text_alpha(255) * main_alpha
 
@@ -129,7 +137,7 @@ loading.draw = function()
 
             local logo_animation = easings.quart.out(loading.logo_font_size_addition) * 40
             fonts.large_logo_font.size = 260 + math.round(logo_animation)
-            render.text("A",fonts.large_logo_font, v2(ss.x / 2, ss.y / 2), col.magnolia:alpha(anims.bg_alpha() * main_alpha / 15), render.flags.X_ALIGN + render.flags.Y_ALIGN)
+            render.text("A",fonts.large_logo_font, v2(ss.x / 2, ss.y / 2), colors.magnolia:alpha(anims.bg_alpha() * main_alpha / 15), render.flags.X_ALIGN + render.flags.Y_ALIGN)
             render.text("magnolia", fonts.magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
                 render.flags.X_ALIGN + render.flags.Y_ALIGN + render.flags.BIG_SHADOW)
 
@@ -155,10 +163,10 @@ loading.draw = function()
                     once(function()
                         delay.add(function()
                             loading.can_be_closed = true
+                            ui.set_visible(true)
                             if not security.error then
                                 gui.can_be_visible = true
                             end
-                            ui.set_visible(true)
                         end, loading.close_delay)
                     end, "can_be_closed")
                 end
@@ -167,6 +175,6 @@ loading.draw = function()
     end
     logger:draw(ss / 2 + v2(0, 50 + slider_sizes.y))
 end
-cbs.add("paint", loading.draw)
+cbs.paint(loading.draw)
 
 return loading

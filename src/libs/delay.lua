@@ -1,6 +1,6 @@
 local cbs = require("libs.callbacks")
 local fns = {}
-cbs.add("paint", function()
+cbs.paint(function()
     for i = 1, #fns do
         if fns[i] and fns[i].time <= globalvars.get_real_time() then
             fns[i].fn()

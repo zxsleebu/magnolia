@@ -1,6 +1,6 @@
 local v2, v3 = require("libs.vectors")()
 local col = require("libs.colors")
-local iengine = require("includes.engine")
+-- local iengine = require("includes.engine")
 
 local corner_angles = {
     {180, 270},
@@ -26,10 +26,11 @@ render.polyline = function(pts, color, smoothing, closed)
     end
 end
 ---@param pos vec2_t
----@param clr color_t
+---@param clr? color_t
 ---@param size? number
 render.dot = function(pos, clr, size)
     size = size or 1
+    clr = clr or col.red
     renderer.rect_filled(pos, pos + v2(size, size), clr)
 end
 ---@param pos vec2_t
@@ -282,7 +283,15 @@ render.sized_text = function(fn, font, size)
     font.size = old_size
     return result1, result2
 end
-render.multi_color_text = function(strings, font, pos, flags)
+---@param strings { [1]: string, [2]: color_t }[]
+---@param font __font_t
+---@param pos vec2_t
+---@param flags number
+---@param alpha_multiplier number?
+render.multi_color_text = function(strings, font, pos, flags, alpha_multiplier)
+    if alpha_multiplier == nil then
+        alpha_multiplier = 255
+    end
     if bit.band(flags or 0, render.flags.X_ALIGN) == render.flags.X_ALIGN then
         local str = ""
         for i = 1, #strings do str = str .. strings[i][1] end
@@ -290,9 +299,39 @@ render.multi_color_text = function(strings, font, pos, flags)
         flags = bit.band(flags, bit.bnot(render.flags.X_ALIGN))
     end
     for i = 1, #strings do
-        local text, color = strings[i][1], strings[i][2]
+        local text, color = strings[i][1], strings[i][2]:salpha(alpha_multiplier)
         render.text(text, font, pos, color, flags)
         pos.x = pos.x + render.text_size(font, text).x
+    end
+end
+
+---@param strings { [1]: string, [2]: color_t }[]
+---@param font __font_t
+render.multi_text_size = function(strings, font)
+    local str = ""
+    for i = 1, #strings do str = str .. strings[i][1] end
+    return render.text_size(font, str)
+end
+
+---@param from vec2_t
+---@param to vec2_t
+---@param color color_t
+---@param radius number
+---@param opacity? number
+---@param spreading? number
+---@param steps? number
+render.box_shadow = function(from, to, color, radius, opacity, steps, spreading)
+    spreading = spreading or 2
+    steps = steps or 4
+    opacity = opacity or 15
+    for i = 1, steps do
+        render.rounded_rect(
+            from - v2(spreading * i, spreading * i),
+            to + v2(spreading * i, spreading * i),
+            color:salpha(opacity / i),
+            math.min(math.ceil(radius * i + 1), 20),
+            true
+        )
     end
 end
 

@@ -11,6 +11,8 @@ local container_t = require("includes.gui.container")
 local column_t = require("includes.gui.column")
 local click_effect = require("includes.gui.click_effect")
 require("includes.gui.types")
+local colors = require("includes.colors")
+
 
 ---@class gui_g_subtab_t
 local subtab_t = {}
@@ -52,7 +54,7 @@ end
 ---@param pos vec2_t
 ---@param global_alpha number
 ---@param input_allowed boolean
-subtab_t.draw = errors.handle(function (pos, global_alpha, input_allowed)
+subtab_t.draw = errors.handler(function (pos, global_alpha, input_allowed)
     local menu_padding = gui.paddings.menu_padding
     local padding = 40
     local width = gui.paddings.subtab_list_width
@@ -61,7 +63,7 @@ subtab_t.draw = errors.handle(function (pos, global_alpha, input_allowed)
         local tab = gui.elements[i]
         local alpha = tab.anims.alpha()
         local active = gui.active_tab == i
-        errors.handle(function()
+        errors.handler(function()
             if alpha == 0 then return end
             alpha = alpha * (global_alpha / 255)
             for t = 1, #tab.subtabs do
@@ -79,7 +81,7 @@ subtab_t.draw = errors.handle(function (pos, global_alpha, input_allowed)
                     drag.set_cursor(drag.hand_cursor)
                 end
                 if is_hovered and input.is_key_clicked(1) then
-                    drag.block()
+                    gui.drag:block()
                     click_effect.add()
                     for a = 1, #tab.subtabs do
                         tab.subtabs[a].active = false
@@ -101,10 +103,10 @@ subtab_t.draw = errors.handle(function (pos, global_alpha, input_allowed)
                 end
                 render.text(subtab.name,
                     fonts.header, p,
-                    col.white:fade(col.magnolia, underline_alpha / 255):alpha(alpha):alpha_anim(hover, 100, 255),
+                    col.white:fade(colors.magnolia, underline_alpha / 255):alpha(alpha):alpha_anim(hover, 100, 255),
                     render.flags.Y_ALIGN)
                 -- if underline_alpha > 0 then
-                --     local active_line_color = col.magnolia:alpha(alpha):salpha(underline_alpha)
+                --     local active_line_color = colors.magnolia:alpha(alpha):salpha(underline_alpha)
                 --     -- renderer.rect_filled(active_line_pos, active_line_pos + v2(text_size.x, 1), active_line_color)
                 --     -- renderer.rect_filled(active_line_pos + v2(0, 1), active_line_pos + v2(text_size.x, 2), active_line_color:salpha(100))
                 -- end

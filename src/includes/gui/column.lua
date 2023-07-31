@@ -13,7 +13,7 @@ local column_mt = {
     __index = {
         ---@param s gui_column_t
         ---@return vec2_t
-        get_size = errors.handle(function(s)
+        get_size = errors.handler(function(s)
             local size = v2(0, 0)
             local last_padding = 0
             for i = 1, #s.elements do
@@ -22,7 +22,7 @@ local column_mt = {
                     size.x = element.size.x
                 end
                 local alpha = element.anims.alpha() / 255
-                last_padding = element.padding
+                last_padding = 6
                 size.y = size.y + (element.size.y + last_padding) * alpha
             end
             size.y = size.y - last_padding
@@ -30,9 +30,12 @@ local column_mt = {
             return size
         end, "column_t.get_size"),
         ---@param s gui_column_t
-        input_allowed = errors.handle(function(s)
+        input_allowed = errors.handler(function(s)
             for l = 1, #s.elements do
                 local element = s.elements[l]
+                if element.open then
+                    return false
+                end
                 if element.inline then
                     for i = 1, #element.inline do
                         if element.inline[i].open then
@@ -57,7 +60,7 @@ column_t.new = function ()
     }, column_mt)
 end
 
-gui.column = errors.handle(function ()
+gui.column = errors.handler(function ()
     if gui.current_options then
         table.insert(gui.current_options.columns, column_t.new())
         return

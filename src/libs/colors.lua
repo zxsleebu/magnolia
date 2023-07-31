@@ -6,7 +6,7 @@ require("libs.advanced math")
 -- -@field alpha_diff fun(s: color_t, alpha: number, diff: number): color_t
 ---@field alpha_anim fun(s: color_t, alpha: number, from: number, to: number): color_t
 
----@type (fun(r: number, g: number, b: number, a?: number): color_t)|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, magnolia: color_t, transparent: color_t, gray: color_t, magnolia_tinted: color_t }
+---@type (fun(r: number, g: number, b: number, a?: number): color_t)|{ red: color_t, green: color_t, blue: color_t, black: color_t, white: color_t, transparent: color_t, gray: color_t }
 local col = setmetatable({}, {
     __index = {
         red = color_t.new(255, 127, 127, 255),
@@ -14,9 +14,7 @@ local col = setmetatable({}, {
         blue = color_t.new(127, 127, 255, 255),
         white = color_t.new(255, 255, 255, 255),
         black = color_t.new(0, 0, 0, 255),
-        magnolia = color_t.new(242, 227, 201, 255),
         gray = color_t.new(15, 15, 15, 255),
-        magnolia_tinted = color_t.new(31, 29, 26, 255),
         transparent = color_t.new(0, 0, 0, 0),
     },
     __call = function(s, r, g, b, a)
@@ -62,6 +60,7 @@ color_t.fade = function(a, b, t)
     return color_t.new(lerp(a.r, b.r, t), lerp(a.g, b.g, t), lerp(a.b, b.b, t), lerp(a.a, b.a, t))
 end
 color_t.salpha = function(s, a)
+    if not a then error("no alpha given to color_t:alpha", 2) end
     return color_t.new(s.r, s.g, s.b, math.clamp((s.a / 255) * a, 0, 255))
 end
 -- ---@param s color_t

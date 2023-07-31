@@ -2,46 +2,52 @@ local http = require("libs.http")
 local offi = ffi
 local json = require("libs.json")
 local col = require("libs.colors")
+local colors = require("includes.colors")
 local errors = require("libs.error_handler")
 local get_hwid = require("libs.hwid")
 local once = require("libs.once").new()
 local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
-local lib_engine = require("includes.engine")
+local iengine = require("includes.engine")
 local ws = require("libs.websocket")
 local sockets = require("libs.sockets")
-local security = {}
-security.debug_sockets = false
-security.debug = false
-security.debug_logs = true
-security.release_server = true
-security.domain = "localhost"
+local win32 = require("libs.win32")
+local set = require("libs.set")
+local security = {
+    debug_sockets = false,
+    debug = false,
+    debug_logs = false,
+    release_server = true,
+    key = "",
+    progress = 0,
+    logger = false, ---@type logger_t
+    loaded = false,
+    websocket = false, ---@type __websocket_t
+    domain = "localhost",
+    authorized = false,
+    stopped = false,
+    sub_expires = 0,
+}
 if security.release_server then
-    security.domain = "magnolia.lua.best"
+    security.domain = "site--main--44fhg5c78hhm.code.run"
 end
 security.url = "http://" .. security.domain .. "/server/"
-security.socket_url = security.domain
+security.socket_url = "ws://localhost:3000"
 if security.release_server then
-    security.socket_url = "ws." .. security.domain
+    security.socket_url = "wss://socket--main--44fhg5c78hhm.code.run:443"
 end
-security.key = ""
-security.progress = 0
-security.logger = false ---@type logger_t
-security.loaded = false
-security.websocket = false ---@type __websocket_t
 security.is_file_exists = function(path)
     local file = io.open(path, "r")
     if file then file:close() return true end
     return false
 end
-security.authorized = false
 -- security.download_resource = function(name)
 --     local path = "nix/magnolia/" .. name
 --     if security.is_file_exists(name) then return end
 --     http.download(security.url .. "resources/" .. name, path)
 -- end
 
-security.decrypt = errors.handle(function(str)
+security.decrypt = errors.handler(function(str)
     local key = security.key
     local c = 0
     return str:gsub("[G]-([0-9A-F]+)", function(a)
@@ -50,7 +56,7 @@ security.decrypt = errors.handle(function(str)
     end)
 end, "security.decrypt")
 
-security.encrypt = errors.handle(function(str)
+security.encrypt = errors.handler(function(str)
     local key = security.key
     local c = 0
     return utf8.map(str, function(char)
@@ -63,10 +69,9 @@ security.get_info = function()
         username = client.get_username(),
         hwid = get_hwid(),
         info = {
-            computer = os.getenv("COMPUTERNAME"),
-            username = os.getenv("USERNAME"),
+            computer = win32.get_env("COMPUTERNAME"),
+            username = win32.get_env("USERNAME"),
         },
-
     }
 end
 
@@ -95,9 +100,13 @@ security.handlers.server.auth = function(socket, data)
         sockets.init(socket)
     end
     security.loaded = true
-    security.logger.flags.console = false
+    security.logger.flags.console = true
+    if data.result == "sub" then
+        security.logger:add({ { "your subcription ended. ", col.red }, { "consider buying " }, { "magnolia", colors.magnolia }, { "!" } })
+        error("sub", 0)
+    end
     if data.result == "banned" then
-        security.logger:add({ { "error: ", col.red }, { "banned" } })
+        security.logger:add({ {"lmao you were "} , { "banned", col.red } })
         error("banned", 0)
     end
     if data.result == "hwid" then
@@ -105,8 +114,8 @@ security.handlers.server.auth = function(socket, data)
         error("hwid", 0)
     end
     if data.result == "not_found" then
-        security.logger:add({ { "buy magnolia!", col.magnolia } })
-        error("user not found", 0)
+        -- security.logger:add({ { "buy magnolia!", colors.magnolia } })
+        -- error("user not found", 0)
     end
     security.logger.flags.console = true
 end
@@ -117,6 +126,21 @@ security.handlers.server.handshake = function(socket, data)
         security.handshake_success = true
         security.handlers.client.auth(socket)
     end
+end
+security.handlers.server.secret = function(socket, data)
+    security.logger.flags.console = false
+    security.logger:clean()
+    security.logger:add({ {"paste it into the discord bot and get "}, { "free sub", colors.magnolia} })
+    security.logger:add({ {"secret key was "}, {"copied to the clipboard", colors.magnolia}, {"!"} })
+    security.logger.flags.console = true
+    iengine.log({{"secret key: "}, {data.data, colors.magnolia}})
+    security.loaded = true
+    win32.copy_to_clipboard(data.data)
+    error("secret", 0)
+end
+security.handlers.server.user = function(socket, data)
+    security.sub_expires = data.expires
+    security.discord_username = data.discord
 end
 security.handlers.client.handshake = function(socket, data)
     local split = {}
@@ -162,17 +186,12 @@ security.handle_data = function(socket, data, length)
     local decrypted = security.decrypt(data:sub(2, -2))
     local _, decoded = pcall(json.decode, decrypted)
     if security.debug_logs then
-        lib_engine.log("received: " .. decrypted)
+        iengine.log("received: " .. decrypted)
     end
     if decoded then
-        if decoded.type == "handshake" then
-            return security.handlers.server.handshake(socket, decoded)
-        end
-        if decoded.type == "auth" then
-            return security.handlers.server.auth(socket, decoded)
-        end
-        if decoded.type == "file" then
-            return security.handlers.server.file(socket, decoded)
+        if set({"handshake", "auth", "secret", "user"})[decoded.type] then
+            security.handlers.server[decoded.type](socket, decoded)
+            return
         end
         if sockets.callbacks[decoded.type] then
             sockets.callbacks[decoded.type](decoded)
@@ -186,9 +205,10 @@ do
     local got_sockets = false
     local websocket_path = nil
     local crypto_lib, ssl_lib = false, false
+    local csgo = iengine.get_csgo_folder()
     security.get_sockets = function()
         once(function()
-            http.download(security.url .. "resources/libcrypto-3.dll", "libcrypto-3.dll", function (path)
+            http.download(security.url .. "resources/libcrypto-3.dll", csgo .. "libcrypto-3.dll", function (path)
                 if not path then
                     security.logger:add({ { "failed to get libcrypto", col.red } })
                     security.error = true
@@ -196,7 +216,7 @@ do
                 end
                 crypto_lib = true
             end)
-            http.download(security.url .. "resources/libssl-3.dll", "libssl-3.dll", function (path)
+            http.download(security.url .. "resources/libssl-3.dll", csgo .. "libssl-3.dll", function (path)
                 if not path then
                     security.logger:add({ { "failed to get libssl", col.red } })
                     security.error = true
@@ -219,11 +239,12 @@ do
         end, "download_sockets")
         return got_sockets
     end
-    cbs.add("paint", function ()
+    cbs.paint(function ()
         if websocket_path and crypto_lib and ssl_lib and not got_sockets then
             got_sockets = true
             local success, err = pcall(function()
                 ws.init(websocket_path)
+                security.logger:add({{"initialized sockets"}})
             end)
             os.remove(websocket_path)
             if not success then
@@ -239,10 +260,10 @@ do
     security.connect = function()
         if not ws.initialized then return end
         once(function()
-            local socket = ws.new((security.release_server and "wss://" or "ws://") .. security.socket_url .. ":" .. (security.release_server and 443 or 3000))
+            local socket = ws.new(security.socket_url)
             socket:connect()
             security.websocket = socket
-            cbs.add("paint", function()
+            cbs.paint(function()
                 local status, err = pcall(function()
                     if not security.websocket then return end
                     for i = 1, #sockets.send_queue do
@@ -270,7 +291,7 @@ do
                 end)
                 if not status then
                     security.error = err
-                    error(err, 0)
+                    -- error(err, 0)
                 end
             end)
         end, "connect")
@@ -315,7 +336,7 @@ do
             end)
         end
     end
-    local csgo = lib_engine.get_csgo_folder()
+    local csgo = iengine.get_csgo_folder()
     security.download_resources = function ()
         if not security.authorized then return false end
         once(function()
@@ -375,13 +396,13 @@ security.ban = function()
     gui = nil
     security.banned = true
     if not security.logger then
-        lib_engine.log("nice try :)")
+        iengine.log("nice try :)")
     end
     security.logger:add({ { "nice try :)", col.red } })
     error("")
 end
 security.check_functions = function()
-    if is_script_required() then return false end
+    -- if is_script_required() then return false end
     if is_str_dmp_hooked() then return false end
     if are_objs_changed({
         client, globalvars, debug, engine, io, offi, os, string,

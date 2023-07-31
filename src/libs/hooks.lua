@@ -1,43 +1,32 @@
-ffi.cdef[[
-    typedef unsigned long DWORD;
-    int VirtualProtect(void*, DWORD, DWORD, DWORD*);
-    void* VirtualAlloc(void*, DWORD, DWORD, DWORD);
-]]
-local copy = function(dst, src, len)
-    ffi.copy(ffi.cast('void*', dst), ffi.cast('const void*', src), len)
-end
-local VirtualProtect = function(addr, size, new_protect, old_protect)
-    return ffi.C.VirtualProtect(ffi.cast('void*', addr), size, new_protect, old_protect)
-end
-local VirtualAllocBuff = {free = {}}
-local VirtualAlloc = function(addr, size, alloctype, protect, free)
-    local alloc = ffi.C.VirtualAlloc(addr, size, alloctype, protect)
-    if free then table.insert(VirtualAllocBuff.free, alloc) end
-    return ffi.cast('intptr_t', alloc)
-end
+local win32 = require("libs.win32")
 local vmt_hook = {
     __index = {
+        ---@generic T
+        ---@param cast string
+        ---@param func T
+        ---@param method number
+        ---@return T
         hookMethod = function(h, cast, func, method)
             h.hook[method] = func
             jit.off(h.hook[method], true)
             h.orig[method] = h.vt[method]
-            VirtualProtect(h.vt + method, 4, 0x4, h.prot)
+            win32.VirtualProtect(h.vt + method, 4, 0x4, h.prot)
             h.vt[method] = ffi.cast('intptr_t', ffi.cast(cast, h.hook[method]))
-            VirtualProtect(h.vt + method, 4, h.prot[0], h.prot)
+            win32.VirtualProtect(h.vt + method, 4, h.prot[0], h.prot)
             return ffi.cast(cast, h.orig[method])
         end,
         unHookMethod = function(h, method)
             if not h.orig[method] then return end
             h.hook[method] = function() end
-            VirtualProtect(h.vt + method, 4, 0x4, h.prot)
-            local alloc_addr = VirtualAlloc(nil, 5, 0x1000, 0x40, false)
+            win32.VirtualProtect(h.vt + method, 4, 0x4, h.prot)
+            local alloc_addr = win32.VirtualAlloc(nil, 5, 0x1000, 0x40, false)
             if not alloc_addr then return end
             local trampoline_bytes = ffi.new('uint8_t[?]', 5, 0x90)
             trampoline_bytes[0] = 0xE9
             ffi.cast('int32_t*', trampoline_bytes + 1)[0] = h.orig[method] - tonumber(alloc_addr) - 5
-            copy(alloc_addr, trampoline_bytes, 5)
+            win32.copy(alloc_addr, trampoline_bytes, 5)
             h.vt[method] = ffi.cast('intptr_t', alloc_addr)
-            VirtualProtect(h.vt + method, 4, h.prot[0], h.prot)
+            win32.VirtualProtect(h.vt + method, 4, h.prot[0], h.prot)
             h.orig[method] = nil
         end,
         unHookAll = function(h)
@@ -46,6 +35,9 @@ local vmt_hook = {
     },
 }
 vmt_hook.new = function(vt)
+    if not vt or vt == 0 or vt == nil then
+        error('vmt_hook.new: invalid vtable pointer')
+    end
     return setmetatable({
         orig = {},
         vt = ffi.cast('intptr_t**', vt)[0],
@@ -79,7 +71,7 @@ local jmp_hook = {
 }
 
 ---@param cast string
----@param callback fun(orig: fun(...): any): fun(...)
+---@param callback fun(...): any
 ---@param address ffi.ctype*|number|nil
 ---@param size? number
 function jmp_hook.new(cast, callback, address, size)
@@ -98,9 +90,9 @@ function jmp_hook.new(cast, callback, address, size)
     new_hook.status = false
     local function set_status(bool)
         new_hook.status = bool
-        VirtualProtect(void_addr, size, 0x40, old_prot)
-        copy(void_addr, bool and hook_bytes or org_bytes, size)
-        VirtualProtect(void_addr, size, old_prot[0], old_prot)
+        win32.VirtualProtect(void_addr, size, 0x40, old_prot)
+        win32.copy(void_addr, bool and hook_bytes or org_bytes, size)
+        win32.VirtualProtect(void_addr, size, old_prot[0], old_prot)
     end
     new_hook.stop = function() set_status(false) end
     new_hook.start = function() set_status(true) end
@@ -147,7 +139,60 @@ end
 --     return s
 -- end
 
+local jmp_hook_2 = {
+    list = {},
+    rel_jmp = function(address)
+        local addr = ffi.cast("uintptr_t", address)
+        local jmp_addr = ffi.cast("uintptr_t", addr)
+        local jmp_disp = ffi.cast("int32_t*", jmp_addr + 0x1)[0]
+        return ffi.cast("uintptr_t", jmp_addr + 0x5 + jmp_disp)
+    end
+}
+local hook = ffi.cast("int(__cdecl*)(void*, void*, void*, int)", client.find_pattern("gameoverlayrenderer.dll", "55 8B EC 51 8B 45 10 C7"))
+local unhook = ffi.cast("void(__cdecl*)(void*, bool)", jmp_hook_2.rel_jmp(client.find_pattern("gameoverlayrenderer.dll", "E8 ? ? ? ? 83 C4 08 FF 15 ? ? ? ?")))
+---@param cast string
+---@param callback fun(orig: function, ...): function
+---@param address any
+jmp_hook_2.new = function(cast, callback, address)
+    local addr_pointer = ffi.cast("void*", address)
+    local typedef = ffi.typeof(cast)
+
+    local callback_fn = ffi.cast(typedef, callback)
+    local original_pointer = ffi.typeof("$[1]", callback_fn)()
+
+    local function actual_callback(...)
+        local original = original_pointer[0]
+
+        local call, result = pcall(callback, original, ...)
+        if not call then
+            return original(...)
+        end
+
+        return result
+    end
+
+    local callback_type = ffi.cast(typedef, actual_callback)
+
+    local result = hook(addr_pointer, callback_type, original_pointer, 0)
+    if result == 1 then
+
+    elseif result == 0 then
+        if type(address) ~= "number" then
+            return print(("[EPIC FAIL] Failed to hook function! Unknown calling conv.!"))
+        end
+
+        print(("[EPIC FAIL] Failed to hook function! Addr: 0x%x!!!"):format(address or 0))
+    end
+
+    return {
+        unhook = function()
+            unhook(addr_pointer, true)
+        end
+    }
+end
+
 return {
     vmt = vmt_hook,
-    jmp = jmp_hook
+    jmp = jmp_hook,
+    jmp2 = jmp_hook_2
 }

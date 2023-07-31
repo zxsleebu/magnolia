@@ -1,1 +1,1 @@
----@alias gui_element_t gui_checkbox_t|gui_slider_t
+---@alias gui_element_t gui_checkbox_t|gui_slider_t|gui_dropdown_t

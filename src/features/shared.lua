@@ -30,7 +30,7 @@ shared.features.presence = function()
 end
 
 local player_cache = {}
-shared.features.update_players = errors.handle(function ()
+shared.features.update_players = errors.handler(function ()
     iengine.log("update players")
     if not engine.is_in_game() then return end
     local playerresource = entitylist.get_entities_by_class_id(41)[1]
@@ -56,7 +56,7 @@ end, "shared.features.update_players")
 
 local last_heartbeat = globalvars.get_real_time()
 
-cbs.add("paint", function ()
+cbs.paint(function ()
     if not sockets.websocket then return end
     local realtime = globalvars.get_real_time()
     if realtime > last_heartbeat + 20 then
@@ -103,7 +103,7 @@ local revoke_players = function ()
 end
 
 local was_connected = false
-cbs.add("paint", function ()
+cbs.paint(function ()
     if not sockets.websocket then return end
     if engine.is_in_game() then
         revoke_players()
@@ -124,9 +124,9 @@ cbs.event("player_spawn", function()
     delay.add(shared.features.update_players, 3000)
 end)
 cbs.add("unload", function()
-    if security.debug_logs then
-        iengine.log("unload")
-    end
+    -- if security.debug_logs then
+    --     iengine.log("unload")
+    -- end
     sockets.send({type = "unload"}, true)
     if not engine.is_in_game() then return end
     for cached_steam_id, _ in pairs(player_cache) do

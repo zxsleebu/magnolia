@@ -3,9 +3,13 @@ local col = require("libs.colors")
 local v2 = require("libs.vectors")()
 local errors = require("libs.error_handler")
 require("includes.gui.checkbox")
+require("includes.gui.dropdown")
 require("includes.gui.slider")
+require("includes.gui.label")
 local fonts  = require("includes.gui.fonts")
 local element_t = require("includes.gui.element")
+local colors = require("includes.colors")
+
 
 ---@class gui_container_t
 local container_t = {}
@@ -13,8 +17,8 @@ local container_t = {}
 ---@param to vec2_t
 ---@param alpha number
 ---@param background_alpha? number
-container_t.draw_background = errors.handle(function(from, to, alpha, background_alpha)
-    local background_color = col(23, 22, 20, background_alpha or 200):salpha(alpha)
+container_t.draw_background = errors.handler(function(from, to, alpha, background_alpha)
+    local background_color = colors.container_bg:alpha(background_alpha or 200):salpha(alpha)
     render.rounded_rect(from + v2(1, 1), to, background_color, 7.5, true)
     render.rounded_rect(from, to, col.white:alpha(alpha):salpha(30), 7.5, false)
 end)
@@ -22,7 +26,7 @@ end)
 ---@param pos vec2_t
 ---@param alpha number
 ---@param input_allowed boolean
-container_t.draw = errors.handle(function (pos, alpha, input_allowed)
+container_t.draw = errors.handler(function (pos, alpha, input_allowed)
     local width = gui.paddings.subtab_list_width
     local menu_padding = gui.paddings.menu_padding
     local padding = 34
@@ -33,7 +37,7 @@ container_t.draw = errors.handle(function (pos, alpha, input_allowed)
     for i = 1, #gui.elements do
         local tab = gui.elements[i]
         local tab_alpha = tab.anims.alpha()
-        render.text(tab.icon, fonts.title_icon, from + v2(23, menu_padding), col.magnolia:alpha(tab_alpha):salpha(alpha), render.flags.X_ALIGN)
+        render.text(tab.icon, fonts.title_icon, from + v2(23, menu_padding), colors.magnolia:alpha(tab_alpha):salpha(alpha), render.flags.X_ALIGN)
         local text_pos = from + v2(40, 13)
         render.text(tab.name, fonts.tab_title, text_pos, col.white:alpha(tab_alpha):salpha(alpha), render.flags.TEXT_SIZE)
         if tab_alpha > 0 then
@@ -57,7 +61,8 @@ end, "container_t.draw")
 ---@param width number
 ---@param alpha number
 ---@param input_allowed boolean
-container_t.draw_elements = errors.handle(function(elements, pos, width, alpha, input_allowed)
+container_t.draw_elements = errors.handler(function(elements, pos, width, alpha, input_allowed)
+    local padding = 6
     local add_pos = v2(0, 0)
     if alpha > 0 then
         for e = 1, #elements do
@@ -66,7 +71,7 @@ container_t.draw_elements = errors.handle(function(elements, pos, width, alpha, 
             local element_alpha, element_input = element_t.animate_master(element)
             element_alpha = element_alpha / 255
             element_input = element_input and element_alpha > 0
-            add_pos.y = add_pos.y + (element.size.y + element.padding) * element_alpha
+            add_pos.y = add_pos.y + (element.size.y + padding) * element_alpha
             element_alpha = element_alpha * alpha
             if element_alpha > 0 or alpha == 0.01 then
                 element:draw(p, element_alpha, width, input_allowed and element_input)
@@ -80,7 +85,7 @@ end, "container_t.draw_elements")
 ---@param width number
 ---@param alpha number
 ---@param input_allowed boolean
-container_t.draw_columns = errors.handle(function(columns, pos, width, alpha, input_allowed)
+container_t.draw_columns = errors.handler(function(columns, pos, width, alpha, input_allowed)
     local column_width = math.round(width / #columns - gui.paddings.menu_padding)
     for i = 1, #columns do
         local column = columns[i]

@@ -9,28 +9,28 @@ local errors = require("libs.error_handler")
 local click_effect = require("includes.gui.click_effect")
 local element_t = require("includes.gui.element")
 local inline_t = require("includes.gui.inline")
+local colors = require("includes.colors")
+local cbs = require("libs.callbacks")
+local options_t = require("includes.gui.options")
 
 local checkbox_t = { }
 
----@class gui_checkbox_t
----@field name string
----@field path string
----@field anims __anims_mt
+---@class gui_checkbox_t : gui_element_class
 ---@field inline gui_options_t[]
 ---@field el checkbox_t
----@field size vec2_t
----@field master_object? { el?: checkbox_t, fn: fun(): boolean }
+---@field old_value boolean
+---@field default_value boolean
 ---@field callbacks table<string, fun()>
 local checkbox_mt = {
     master = element_t.master,
-    padding = 6,
+    options = options_t.new
 }
 ---@param self gui_checkbox_t
 ---@param pos vec2_t
 ---@param alpha number
 ---@param width number
 ---@param input_allowed boolean
-checkbox_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowed)
+checkbox_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed)
     -- renderer.rect(pos, pos + v2(width, s.size.y), col.white:alpha(alpha))
     local text_size = render.text_size(fonts.menu, self.name)
     local size = v2(18, 18)
@@ -43,7 +43,7 @@ checkbox_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowe
     local hover_anim, active_anim
     if hovered then
         if input.is_key_clicked(1) then
-            drag.block()
+            gui.drag:block()
             click_effect.add()
             value = self.el:set_value(not value)
         end
@@ -51,8 +51,8 @@ checkbox_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowe
     end
     hover_anim = self.anims.hover((hovered or value) and 255 or 0 )
     active_anim = self.anims.active(value and 255 or 0)
-    renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:fade(col.magnolia, active_anim / 255):alpha(alpha))
-    render.smoothed_rect(pos, pos + size, col.magnolia_tinted:fade(col.magnolia, hover_anim / 255):alpha(alpha), false)
+    renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:fade(colors.magnolia, active_anim / 255):alpha(alpha))
+    render.smoothed_rect(pos, pos + size, colors.magnolia_tinted:fade(colors.magnolia, hover_anim / 255):alpha(alpha), false)
     self:draw_checkmark(pos, alpha * (active_anim / 255))
     inline_t.draw(self, pos, alpha, width, input_allowed)
     if self.size.x == 0 then
@@ -62,31 +62,47 @@ end, "checkbox_t.draw")
 ---@param fn fun(cmd: usercmd_t, el: gui_checkbox_t)
 ---@return gui_checkbox_t
 checkbox_mt.create_move = function (self, fn)
-    client.register_callback("create_move", errors.handle(function (cmd)
+    cbs.create_move(function (cmd)
         if self:value() then fn(cmd, self) end
-    end, self.name .. ".create_move"))
+    end, self.name .. ".create_move")
     return self
 end
 ---@param fn fun(el: gui_checkbox_t)
 ---@return gui_checkbox_t
 checkbox_mt.paint = function (self, fn)
-    client.register_callback("paint", errors.handle(function()
+    cbs.paint(function ()
         if self:value() then fn(self) end
-    end, self.name .. ".paint"))
+    end, self.name .. ".paint")
     return self
 end
 ---@param fn fun(event: game_event_t, el: gui_checkbox_t)
 ---@return gui_checkbox_t
 checkbox_mt.callback = function (self, event_name, fn)
-    client.register_callback(event_name, errors.handle(function(event)
+    cbs.event(event_name, function (event)
         if self:value() then fn(event, self) end
-    end, self.name .. "." .. event_name))
+    end, self.name .. "." .. event_name)
+    return self
+end
+---@param fn fun(el: gui_checkbox_t)
+---@return gui_checkbox_t
+checkbox_mt.update = function (self, fn)
+    cbs.paint(function ()
+        local value = self:value()
+        if value ~= self.old_value then
+            fn(self)
+        end
+        self.old_value = value
+    end, self.name .. ".update")
+    cbs.unload(function ()
+        self:value(false)
+        fn(self)
+    end, self.name .. ".update")
     return self
 end
 ---@param self gui_checkbox_t 
 ---@param pos vec2_t
 ---@param alpha number
-checkbox_mt.draw_checkmark = errors.handle(function (self, pos, alpha)
+checkbox_mt.draw_checkmark = errors.handler(function (self, pos, alpha)
     local color = col.gray:alpha(alpha)
     local size = v2(18, 18)
     local anim = self.anims.active()
@@ -101,13 +117,19 @@ checkbox_mt.draw_checkmark = errors.handle(function (self, pos, alpha)
         renderer.line(start_pos, start_pos + difference * math.clamp(anim * 2 - 255, 0, 255) / 255, color)
     end
 end, "checkbox_t.draw_checkmark")
-checkbox_mt.value = function (self)
+---@param value? boolean
+---@return boolean
+checkbox_mt.value = function (self, value)
+    if value ~= nil then
+        self.el:set_value(value)
+    end
     return self.el:get_value()
 end
-checkbox_t.new = errors.handle(function (name, value)
+checkbox_t.new = errors.handler(function (name, value)
     local path = gui.get_path(name)
     local c = setmetatable({
         name = name,
+        default_value = value or false,
         el = ui.add_check_box(path, path, value or false),
         anims = anims.new({
             alpha = 255,
@@ -116,6 +138,7 @@ checkbox_t.new = errors.handle(function (name, value)
         }),
         inline = {},
         size = v2(0, 18),
+        old_value = value or false,
     }, { __index = checkbox_mt })
     c.el:set_visible(false)
     return c

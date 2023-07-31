@@ -30,7 +30,7 @@ utf8.byte = function(char)
     end
     return c
 end
-local pattern = loadstring('return "[%z\\1-\\127\\194-\\244][\\128-\\191]*"')()
+local pattern = loadstring('return "[%z\\1-\\127\\194-\\244][\\128-\\191]*"')() --[%z\1-\127\194-\244][\128-\191]*
 utf8.map = function(str, fn)
     return str:gsub(pattern, fn)
 end

@@ -1,5 +1,5 @@
+---@diagnostic disable
 local a = require("libs.protected_ffi")
-local b = json
 local function c(...)
     print(tostring(...))
 end
@@ -596,13 +596,6 @@ local function bi(method, url, options, callbacks)
         end
     end
     local bq
-    if options.json ~= nil then
-        local br
-        br, bq = pcall(b.encode, options.json)
-        if not br then
-            return error("options.json is invalid: " .. bq)
-        end
-    end
     local bs = options.network_timeout
     if bs == nil then
         bs = 10

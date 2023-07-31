@@ -1,23 +1,32 @@
+local errors = require("libs.error_handler")
+-- local ffi = require("ffi")
+local protected_ffi = require("libs.protected_ffi")
 ---@class class_t
 ---@field this ffi.ctype*
 ---@field ptr number
 require("libs.types")
 local class_t = {
-    __call = function(s, classptr)
+    __call = errors.handler(function(s, classptr)
         local fns = s.__functions
         if not classptr then return end
         local ptr = ffi.cast("void***", classptr)
-        local result = {}
-        for fn, data in pairs(fns) do
-            local casted_fn = ffi.cast(data[2], ptr[0][data[1]])
-            result[fn] = function (class, ...)
-                return casted_fn(class.this, ...)
+        if not s.__pointers then
+            s.__pointers = {}
+            for fn_name, data in pairs(fns) do
+                ---@cast data {[1]: number, [2]: string}
+                local index = data[1]
+                local cast_type = data[2]
+                local casted_fn = ffi.cast(cast_type, ptr[0][index])
+                s.__pointers[fn_name] = function (class, ...)
+                    return casted_fn(class.this, ...)
+                end
             end
         end
+        local result = setmetatable({}, { __index = s.__pointers })
         result.this = ptr
         result.ptr = ffi.cast("uintptr_t", ptr)
         return result
-    end
+    end, "class_t.__call")
 }
 local class = {
     ---@generic T

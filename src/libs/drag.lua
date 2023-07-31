@@ -16,6 +16,7 @@ local input = require("libs.input")
 local cbs = require("libs.callbacks")
 local errors = require("libs.error_handler")
 local drag = {
+    ---@type table<string, draggable_t>
     __elements = {},
     __blocked = false,
     ---@param to_pos? vec2_t
@@ -54,7 +55,7 @@ drag.arrow_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32512))
 drag.move_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32646))
 drag.hand_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32649))
 drag.horizontal_resize_cursor = ffi.C.LoadCursorA(nil, ffi.cast("PCSTR", 32644))
-drag.new = errors.handle(function(key, default_pos, pointer)
+drag.new = errors.handler(function(key, default_pos, pointer)
     if pointer == nil then pointer = true end
     drag.__elements[key] = {
         pos = {
@@ -67,10 +68,10 @@ drag.new = errors.handle(function(key, default_pos, pointer)
         old_cursor = renderer.get_cursor_pos() / engine.get_screen_size(),
         dragging = false,
         move_cursor = false,
-        blocked = false,
         pointer = pointer
     }
-    drag.__elements[key].pos.x:set_visible(false) drag.__elements[key].pos.y:set_visible(false)
+    drag.__elements[key].pos.x:set_visible(false)
+    drag.__elements[key].pos.y:set_visible(false)
     return setmetatable(drag.__elements[key], drag.mt)
 end, "drag.new")
 
@@ -100,7 +101,6 @@ drag.mt = {
     ---@field pos { x: slider_float_t, y: slider_float_t }
     ---@field key string
     ---@field dragging boolean
-    ---@field blocked boolean
     ---@field highlight_alpha number
     ---@field old_cursor vec2_t
     ---@field pointer boolean
@@ -109,10 +109,10 @@ drag.mt = {
         ---@param hover_fn fun(pos: vec2_t): boolean
         ---@param highlight? fun(pos: vec2_t, alpha: number)
         ---@return vec2_t, fun()
-        run = errors.handle(function(s, hover_fn, highlight)
-            local draggable = ui.is_visible() and not s.blocked
+        run = errors.handler(function(s, hover_fn, highlight)
+            local draggable = ui.is_visible()
             for _, elem in pairs(drag.__elements) do
-                if draggable and elem.hovered and elem.key ~= s.key then
+                if draggable and elem.dragging and elem.key ~= s.key then
                     draggable = false
                 end
             end
@@ -125,10 +125,7 @@ drag.mt = {
             s.hovered = (hover_fn(transformed_pos) or (s.dragging and pressed)) and draggable
             s.highlight_alpha = math.anim(s.highlight_alpha, (not pressed and s.hovered) and 255 or 0)
             local highlight_alpha = math.round(s.highlight_alpha)
-            if pressed and not s.hovered and not s.dragging then
-                drag.__blocked = true
-            end
-            if draggable and s.hovered and not drag.__blocked then
+            if draggable and s.hovered and not ((s.blocked or drag.__blocked) and not s.dragging) and not (s.key ~= "magnolia" and gui.hovered and not s.dragging) then
                 if s.pointer then
                     drag.set_cursor(drag.move_cursor)
                 end
@@ -139,9 +136,12 @@ drag.mt = {
                     s.pos.x:set_value(pos.x) s.pos.y:set_value(pos.y)
                 end
             end
+            if pressed and (not s.hovered and not s.dragging) then
+                s.blocked = true
+            end
             if not pressed then
+                s.blocked = false
                 s.dragging = false
-                drag.__blocked = false
             end
 
             transformed_pos = pos * ss
@@ -153,38 +153,48 @@ drag.mt = {
                     highlight(transformed_pos, highlight_alpha)
                 end
             end
-        end, "drag_mt.run")
+        end, "drag_mt.run"),
+        block = function(s)
+            s.blocked = true
+        end,
     }
 }
 
+local set_cursor
+local original_set_cursor
 local hooks = require("libs.hooks")
-local hooked_setcursor = function (cursor)
+local hooked_setcursor = function (original, cursor)
     drag.original_cursor = cursor
-    if drag.current_cursor then
-        local result = set_cursor(drag.current_cursor)
-        return result
+    original_set_cursor = original
+    -- if drag.current_cursor then
+    --     local result = original(drag.current_cursor)
+    --     return result
+    -- end
+    if drag.original_cursor then
+        return nil
     end
-    return set_cursor(cursor)
+    return original(cursor)
 end
 drag.set_cursor = function(cursor)
     drag.current_cursor = cursor
 end
-set_cursor = hooks.jmp.new("HANDLE(__stdcall*)(HANDLE)", hooked_setcursor, SetCursor)
-cbs.add("paint", errors.handle(function ()
+-- set_cursor = hooks.jmp2.new("HANDLE(__stdcall*)(HANDLE)", hooked_setcursor, SetCursor)
+cbs.paint(errors.handler(function ()
+    if not original_set_cursor then return end
     for _, elem in pairs(drag.__elements) do
         if elem.move_cursor and elem.pointer then
-            return set_cursor(drag.move_cursor)
+            return original_set_cursor(drag.move_cursor)
         end
     end
     if drag.current_cursor then
-        local result = set_cursor(drag.current_cursor)
+        local result = original_set_cursor(drag.current_cursor)
         drag.current_cursor = nil
         return result
     end
-    return set_cursor(drag.original_cursor)
+    return original_set_cursor(drag.original_cursor)
 end, "drag.paint"))
 cbs.add("unload", function ()
-    set_cursor:stop()
+    set_cursor:unhook()
 end)
 
 return drag

@@ -15,4 +15,5 @@ ffi.cdef[[
     typedef LPCWSTR PCWSTR;
     typedef unsigned int UINT;
     typedef const char* PCSTR;
+    typedef unsigned char BYTE;
 ]]

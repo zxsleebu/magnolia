@@ -26,3 +26,14 @@ end
 ---@param a number
 ---@return number
 math.deg2rad = function(a) return a * math.pi / 180.0 end
+---@param yaw number
+---@return number
+math.normalize_yaw = function(yaw)
+    yaw = yaw % 360.0
+    if yaw > 180.0 then
+        yaw = yaw - 360.0
+    elseif yaw < -180.0 then
+        yaw = yaw + 360.0
+    end
+    return yaw
+end

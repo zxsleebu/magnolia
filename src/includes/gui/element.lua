@@ -1,13 +1,21 @@
+---@alias gui_element_draw_fn fun(self: any, pos: vec2_t, alpha: number, width: number, input_allowed: boolean)
+
+---@class gui_element_class
+---@field name string
+---@field path string
+---@field anims __anims_mt
+---@field size vec2_t
+---@field master_object? { el?: checkbox_t, fn: fun(): boolean }
 local element_t = {}
 
 ---@param s gui_element_t
 ---@param master gui_checkbox_t|fun(): boolean
 element_t.master = function(s, master)
     s.master_object = {}
-    if master.el then
-        s.master_object.el = master.el
-    elseif type(master) == "function" then
+    if type(master) == "function" then
         s.master_object.fn = master
+    elseif master.el then
+        s.master_object.el = master.el
     end
     s.anims.alpha.value = 0
     return s

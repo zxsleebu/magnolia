@@ -11,6 +11,10 @@ local input = require("libs.input")
 local win32 = require("libs.win32")
 local once = require("libs.once").new()
 local click_effect = require("includes.gui.click_effect")
+local colors = require("includes.colors")
+local security = require("includes.security")
+local label_t = require("includes.gui.label")
+
 
 local header = {
     ---@param pos vec2_t
@@ -28,9 +32,15 @@ local header = {
     }),
     avatar_texture = nil,
 }
+local expiration_label ---@type gui_label_t
+local discord_username_label ---@type gui_label_t
+local dummy_options = label_t.new("header"):options(function ()
+    expiration_label = gui.label("Expires: Never")
+    discord_username_label = gui.label("Discord: unknown")
+end)
 ---@param pos vec2_t
 ---@param input_allowed boolean
-header.user = errors.handle(function (pos, input_allowed)
+header.user = errors.handler(function (pos, input_allowed)
     local avatar_size = v2(26, 26)
     local avatar_pos = pos - v2(avatar_size.x - 4, avatar_size.y / 2)
     local alpha = gui.anims.main_alpha()
@@ -62,20 +72,51 @@ header.user = errors.handle(function (pos, input_allowed)
         (drag.hover_absolute(normalized_text_pos - v2(2, 0), v2(avatar_pos.x, normalized_text_pos.y + text_size.y)) or
         drag.hover_absolute(avatar_pos - v2(1, 1), avatar_pos + avatar_size + v2(1, 1)))
     if hovered then
-        drag.block()
+        gui.drag:block()
         header.anims.hover(175)
         drag.set_cursor(drag.hand_cursor)
     else
         header.anims.hover(255)
     end
+    dummy_options.anims.alpha(dummy_options.open and 255 or 0)
+    local seconds_difference = security.sub_expires - os.time()
+    local expiration = "Never"
+    if security.sub_expires ~= -1 then
+        expiration = ""
+        local minutes = math.max(math.floor((seconds_difference) / 60), 0)
+        --if more than 1 day 
+        if minutes > 60*24 then
+            local days = math.max(math.floor(minutes / 60 / 24), 1)
+            expiration = expiration .. days .. "d "
+        elseif minutes > 60 then
+            local hours = math.max(math.floor(minutes / 60), 1)
+            expiration = expiration .. hours .. "h "
+        else
+            expiration = expiration .. minutes .. "m "
+        end
+    end
+    expiration_label.name = "Expires: " .. expiration
+    if security.discord_username and discord_username_label.name == "Discord: unknown" then
+        discord_username_label.name = "Discord: " .. security.discord_username
+        discord_username_label.size.x = 0
+    end
     if hovered and input.is_key_clicked(1) then
         click_effect.add()
-        header.open_link()
+        header.open()
     end
 end, "header.user")
-header.get_avatar = errors.handle(function ()
+
+header.open = errors.handler(function()
+    if not dummy_options.open then
+        dummy_options.pos = renderer.get_cursor_pos()
+    end
+    dummy_options.open = true
+    -- dummy_options
+end, "header.open")
+header.get_avatar = errors.handler(function ()
     -- if gui.anims.main_alpha() ~= 255 then return end
     if header.avatar_texture then return end
+    if security.debug then return end
     once(function ()
         http.download("https://pleasant-build-r39zc.cloud.serverless.com/avatar_round/s/" .. client.get_username(), nil, function(path)
             header.avatar_texture = renderer.setup_texture(path)
@@ -89,12 +130,12 @@ end
 ---@param pos vec2_t
 ---@param alpha number
 ---@param input_allowed boolean
-header.draw = errors.handle(function (pos, alpha, input_allowed)
+header.draw = errors.handler(function (pos, alpha, input_allowed)
     header.get_avatar()
     local icon_padding = 14
     local icon_pos = pos + v2(icon_padding, icon_padding - 3)
-    render.text("A", fonts.logo_shadow, icon_pos - v2(2, 2), col.magnolia:alpha(alpha):salpha(50))
-    render.text("A", fonts.logo, icon_pos, col.magnolia:alpha(alpha))
+    render.text("A", fonts.logo_shadow, icon_pos - v2(2, 2), colors.magnolia:alpha(alpha):salpha(50))
+    render.text("A", fonts.logo, icon_pos, colors.magnolia:alpha(alpha))
     local center_after_icon_pos = icon_pos + v2(fonts.logo.size + icon_padding, fonts.logo.size / 2)
     local line_size = 14
     local line_start_pos = center_after_icon_pos - v2(0, line_size / 2 - 4)
@@ -105,5 +146,14 @@ header.draw = errors.handle(function (pos, alpha, input_allowed)
     header.tabs(tab_icon_pos, input_allowed)
     header.user(v2(pos.x + gui.size.x - icon_padding, tab_icon_pos.y), input_allowed)
 end, "header.draw")
+
+---@param alpha number
+header.draw_popout = errors.handler(function(alpha)
+    dummy_options:draw(alpha)
+end, "header.draw_popout")
+
+header.is_popout_open = function()
+    return dummy_options.open
+end
 
 return header

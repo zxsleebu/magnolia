@@ -126,7 +126,7 @@ nixware.get_allocbase = error_handler(function()
 end, "nixware.get_allocbase")
 local allocbase_scanner = coroutine.wrap(nixware.get_allocbase)
 nixware.init = function()
-    cbs.add("paint", function()
+    cbs.paint(function()
         if nixware.allocbase then return end
         pcall(function() for _ = 1, 100 do allocbase_scanner() end end)
         if not nixware.allocbase then return end

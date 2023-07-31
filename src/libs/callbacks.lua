@@ -6,20 +6,62 @@ local cbs = {
         paint = {},
         create_move = {},
         frame_stage_notify = {},
+        shot_fired = {},
+        override_view = {}
     },
     critical_list = {
         unload = {},
     }
 }
----@overload fun(name: "create_move", fn: fun(cmd: usercmd_t))
----@overload fun(name: "paint", fn: fun())
----@overload fun(name: "unload", fn: fun())
----@overload fun(name: "frame_stage_notify", fn: fun(stage: number))
+---@param fn fun()
+---@param name? string
+cbs.paint = function(fn, name)
+    local t = { fn = fn }
+    if name then t.name = name end
+    table.insert(cbs.list.paint, t)
+end
+---@param fn fun(cmd: usercmd_t)
+---@param name? string
+cbs.create_move = function(fn, name)
+    local t = { fn = fn }
+    if name then t.name = name end
+    table.insert(cbs.list.create_move, t)
+end
+---@param fn fun(stage: number)
+---@param name? string
+cbs.frame_stage = function(fn, name)
+    local t = { fn = fn }
+    if name then t.name = name end
+    table.insert(cbs.list.frame_stage_notify, t)
+end
+---@param fn fun()
+---@param name? string
+cbs.unload = function(fn, name)
+    local t = { fn = fn }
+    if name then t.name = name end
+    table.insert(cbs.list.unload, t)
+end
+---@param fn fun(shot_info: shot_info_t)
+---@param name? string
+cbs.shot_fired = function(fn, name)
+    local t = { fn = fn }
+    if name then t.name = name end
+    table.insert(cbs.list.shot_fired, t)
+end
+---@param fn fun(view_setup: view_setup_t)
+---@param name? string
+cbs.override_view = function(fn, name)
+    local t = { fn = fn }
+    if name then t.name = name end
+    table.insert(cbs.list.override_view, t)
+end
+
 cbs.add = function(name, fn)
     if not cbs.list[name] then
         cbs.list[name] = {}
     end
-    table.insert(cbs.list[name], fn)
+    local t = { fn = fn }
+    table.insert(cbs.list[name], t)
 end
 
 cbs.critical = function(name, fn)
@@ -29,42 +71,14 @@ cbs.critical = function(name, fn)
     table.insert(cbs.critical_list[name], fn)
 end
 
----@param name string
+---@param event_name string
 ---@param fn fun(event: game_event_t)
-cbs.event = function(name, fn)
-    client.register_callback(name, errors.handle(fn, name))
+---@param name? string
+cbs.event = function(event_name, fn, name)
+    client.register_callback(event_name, errors.handler(fn, name or event_name))
 end
 
-local last_impact_pos
 local shot_fired_callbacks = {}
-cbs.event("bullet_impact", function(event)
-    local lp = entitylist.get_local_player()
-    if not lp or not lp:is_alive() then return end
-    local userid = lp:get_info().user_id
-    if event:get_int("userid", 0) ~= userid then return end
-    last_impact_pos = v3(event:get_float("x", 0), event:get_float("y", 0), event:get_float("z", 0))
-end)
-local last_eye_pos
-cbs.add("create_move", function (cmd)
-    ---@cast cmd usercmd_t
-    local lp = entitylist.get_local_player()
-    if not lp or not lp:is_alive() then
-        last_impact_pos = nil
-        last_eye_pos = nil
-    end
-    if last_impact_pos and last_eye_pos then
-        local dir = (last_impact_pos - last_eye_pos)
-        last_eye_pos = last_eye_pos + (dir / #dir) * 3
-        for _, fn in pairs(shot_fired_callbacks) do
-            fn({
-                from = last_eye_pos,
-                to = last_impact_pos,
-            })
-        end
-    end
-    last_eye_pos = lp:get_eye_pos()
-    last_impact_pos = nil
-end)
 ---@param fn fun(shot: {from: vec3_t, to: vec3_t})
 cbs.on_shot_fired = function(fn)
     table.insert(shot_fired_callbacks, fn)

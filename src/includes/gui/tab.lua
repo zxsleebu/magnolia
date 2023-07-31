@@ -8,6 +8,7 @@ local input = require("libs.input")
 local subtabs = require("includes.gui.subtab")
 local errors = require("libs.error_handler")
 local click_effect = require("includes.gui.click_effect")
+local colors = require("includes.colors")
 
 ---@class gui_tab_t
 ---@field name string
@@ -23,7 +24,7 @@ local tab_mt = {
         ---@param alpha number
         ---@param input_allowed boolean
         ---@return vec2_t
-        draw = errors.handle(function (s, pos, alpha, input_allowed)
+        draw = errors.handler(function (s, pos, alpha, input_allowed)
             local text_size = render.text_size(fonts.header, s.name)
             local real_size = v2(text_size.x + fonts.tab_icons.size + 8, fonts.tab_icons.size)
             local size = real_size + v2(12, 0)
@@ -55,14 +56,14 @@ local tab_mt = {
                 hover_anim = s.anims.hover(0)
             end
             if hovered then
-                drag.block()
+                gui.drag:block()
                 if input.is_key_clicked(1) then
                     gui.active_tab = s.index
                     click_effect.add()
                 end
             end
             local color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 255)
-            local icon_color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 150):fade(col.magnolia:alpha(alpha), color_blend / 255)
+            local icon_color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 150):fade(colors.magnolia:alpha(alpha), color_blend / 255)
 
             render.text(s.icon, fonts.tab_icons, pos, icon_color, render.flags.Y_ALIGN)
             local text_pos = pos + v2(fonts.tab_icons.size + 8, 0)
@@ -70,7 +71,7 @@ local tab_mt = {
 
             line_width = line_width * 2
             local line_pos = text_pos + v2(text_size.x / 2 - line_width / 2, size.y - 2)
-            local line_color = col.magnolia:alpha(alpha):alpha_anim(underline_alpha, 0, 255)
+            local line_color = colors.magnolia:alpha(alpha):alpha_anim(underline_alpha, 0, 255)
             renderer.rect_filled(line_pos, line_pos + v2(line_width, 1), line_color:salpha(100))
             renderer.rect_filled(line_pos + v2(0, 1), line_pos + v2(line_width, 2), line_color)
             return size

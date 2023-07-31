@@ -33,6 +33,7 @@ local ffi = {
     string = offi.string,
     sizeof = offi.sizeof,
     alignof = offi.alignof,
+    offsetof = offi.offsetof,
     istype = offi.istype,
     copy = offi.copy,
     fill = offi.fill,

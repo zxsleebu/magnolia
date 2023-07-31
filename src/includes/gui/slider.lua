@@ -8,23 +8,19 @@ local input = require("libs.input")
 local errors = require("libs.error_handler")
 local click_effect = require("includes.gui.click_effect")
 local element_t = require("includes.gui.element")
+local colors = require("includes.colors")
 
 local slider_t = { }
 
----@class gui_slider_t
----@field name string
----@field anims __anims_mt
+---@class gui_slider_t : gui_element_class
 ---@field active boolean
 ---@field el slider_int_t|slider_float_t
 ---@field float boolean
 ---@field float_accuracy number
 ---@field min number
 ---@field max number
----@field size vec2_t
----@field master_object? { el?: checkbox_t, fn: fun(): boolean }
 local slider_mt = {
     master = element_t.master,
-    padding = 6,
 }
 
 ---@param self gui_slider_t
@@ -32,7 +28,7 @@ local slider_mt = {
 ---@param alpha number
 ---@param width number
 ---@param input_allowed boolean
-slider_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowed)
+slider_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed)
     local value = math.clamp(self:value(), self.min, self.max)
     local value_anim = self.anims.value(value * 10) / 10
     local value_str = self.float and string.format("%."..self.float_accuracy.."f", value) or tostring(value)
@@ -54,8 +50,8 @@ slider_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowed)
         self.size.x = max_width
     end
 
-    local border_color = col.magnolia_tinted:fade(col.magnolia, hover_anim / 255):alpha(alpha)
-    local active_color = col.magnolia:alpha(alpha)
+    local border_color = colors.magnolia_tinted:fade(colors.magnolia, hover_anim / 255):alpha(alpha)
+    local active_color = colors.magnolia:alpha(alpha)
 
 
     --borders of slider progress
@@ -65,7 +61,7 @@ slider_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowed)
     --slider progress
     renderer.rect_filled(v2(from.x, from.y + 1), v2(from.x + progress_offset.x, to.y - 1), active_color)
 
-    local left_color, right_color = col.magnolia:alpha(alpha), col.magnolia:alpha(alpha)
+    local left_color, right_color = colors.magnolia:alpha(alpha), colors.magnolia:alpha(alpha)
 
     if progress_offset.x > 0 then
         --top and bottom borders of slider progress
@@ -114,7 +110,7 @@ slider_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowed)
     local hovered = input_allowed and drag.hover_absolute(from, to)
     if hovered then
         drag.set_cursor(drag.horizontal_resize_cursor)
-        drag.block()
+        gui.drag:block()
         local change_value = 1
         if input.is_key_pressed(16) then
             change_value = 10
@@ -141,7 +137,7 @@ slider_mt.draw = errors.handle(function (self, pos, alpha, width, input_allowed)
 
     if active then
         drag.set_cursor(drag.horizontal_resize_cursor)
-        drag.block()
+        gui.drag:block()
         if not self.active then
             click_effect.add()
         end
@@ -161,7 +157,10 @@ slider_mt.value = function (self)
     return self.el:get_value()
 end
 
-slider_t.new = errors.handle(function (name, min, max, float_accuracy, value)
+slider_t.new = errors.handler(function (name, min, max, float_accuracy, value)
+    if value == nil then
+        value = min
+    end
     float_accuracy = float_accuracy or 0
     if float_accuracy == true then
         float_accuracy = 1

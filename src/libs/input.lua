@@ -30,23 +30,49 @@ local input = {
         return ffi.C.GetAsyncKeyState(code) ~= 0 and is_window_active()
     end
 }
+---@param code number
+---@return boolean
 input.is_key_clicked = function(code)
     local state = input.is_key_pressed(code)
     if click_state[code] == nil then
         click_state[code] = {
             state = state,
-            clicked = false
+            clicked = false,
+            time = false,
         }
     end
     return click_state[code].clicked
 end
-cbs.add("paint", function()
+---@param code number
+---@return number
+input.get_key_pressed_time = function (code)
+    if click_state[code] == nil then
+        click_state[code] = {
+            state = false,
+            clicked = false,
+            time = false
+        }
+    end
+    if click_state[code].time == false then
+        return 0
+    end
+    return globalvars.get_real_time() - click_state[code].time
+end
+cbs.paint(function()
+    local realtime = globalvars.get_real_time()
     for code, _ in pairs(click_state) do
         local state = input.is_key_pressed(code)
         click_state[code] = {
             state = state,
-            clicked = state and not click_state[code].state
+            clicked = state and not click_state[code].state,
+            time = click_state[code].time
         }
+        if click_state[code].time == false and state then
+            click_state[code].time = realtime
+        end
+        if not state then
+            click_state[code].time = false
+        end
     end
 end)
 return input
