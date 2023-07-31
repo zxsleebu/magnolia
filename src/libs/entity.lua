@@ -279,16 +279,19 @@ local CBaseEntity = class.new({
     IsPlayer = {158, "bool(__thiscall*)(void*)"},
     IsWeapon = {166, "bool(__thiscall*)(void*)"},
 })
-ffi.cdef[[
-    struct ClientClass {
-        void*   m_pCreateFn;
-        void*   m_pCreateEventFn;
-        char*   network_name;
-        void*   m_pRecvTable;
-        void*   m_pNext;
-        int     class_id;
-    };
-]]
+--check if clientclass struct exists
+if not pcall(ffi.typeof, "struct ClientClass") then
+    ffi.cdef[[
+        struct ClientClass {
+            void*   m_pCreateFn;
+            void*   m_pCreateEventFn;
+            char*   network_name;
+            void*   m_pRecvTable;
+            void*   m_pNext;
+            int     class_id;
+        };
+    ]]
+end
 local CClientNetworkable = class.new({
     -- GetClientUnknown = {0, "uintptr_t(__thiscall*)(void*)"},
     -- GetClientClass = {2, "struct ClientClass*(__thiscall*)(void*)"},
@@ -444,14 +447,16 @@ entity_t.get_studio_hdr = function(self)
     return studio_hdr
 end
 
-ffi.cdef[[
-    typedef struct {
-        char pad[8];
-	    float m_start;
-	    float m_end;
-        float m_state;
-    } m_flposeparameter_t;
-]]
+if not pcall(ffi.typeof, "m_flposeparameter_t") then
+    ffi.cdef[[
+        typedef struct {
+            char pad[8];
+	        float m_start;
+	        float m_end;
+            float m_state;
+        } m_flposeparameter_t;
+    ]]
+end
 do
     local get_poseparam_sig = client.find_pattern('client.dll', '55 8B EC 8B 45 08 57 8B F9 8B 4F 04 85 C9 75 15')
     local native_get_poseparam = ffi.cast('m_flposeparameter_t*(__thiscall*)(void*, int)', get_poseparam_sig)
@@ -579,20 +584,22 @@ entity_t.get_eye_pos = function(self)
     return self:get_abs_origin() + self.m_vecViewOffset
 end
 
-ffi.cdef[[
-    typedef struct{
-        void*       handle;
-        char        name[260];
-        int         load_flags;
-        int         server_count;
-        int         type;
-        int         flags;
-        vector_t    mins;
-        vector_t    maxs;
-        float       radius;
-        char        pad[28];  
-    } model_t;
-]]
+if not pcall(ffi.typeof, "model_t") then
+    ffi.cdef[[
+        typedef struct{
+            void*       handle;
+            char        name[260];
+            int         load_flags;
+            int         server_count;
+            int         type;
+            int         flags;
+            vector_t    mins;
+            vector_t    maxs;
+            float       radius;
+            char        pad[28];  
+        } model_t;
+    ]]
+end
 local IModelInfoClient = interface.new("engine", "VModelInfoClient004", {
     GetModelIndex = {2, "int(__thiscall*)(void*, PCSTR)"},
     FindOrLoadModel = {39, "const model_t(__thiscall*)(void*, PCSTR)"}
@@ -656,20 +663,22 @@ entity_t.get_model = function(self)
 end
 
 
-ffi.cdef[[
-    typedef struct {
-        char pad0x0[ 20 ];
-        int	order;
-        int	sequence;
-        float previous_cycle;
-        float weight;
-        float weight_delta_rate;
-        float playback_rate;
-        float cycle;
-        void* owner;
-        char pad0x1[ 4 ];
-    } animlayer_t;
-]]
+if not pcall(ffi.typeof, "animlayer_t") then
+    ffi.cdef[[
+        typedef struct {
+            char pad0x0[ 20 ];
+            int	order;
+            int	sequence;
+            float previous_cycle;
+            float weight;
+            float weight_delta_rate;
+            float playback_rate;
+            float cycle;
+            void* owner;
+            char pad0x1[ 4 ];
+        } animlayer_t;
+    ]]
+end
 ---@param index number
 ---@return { order: number, sequence: number, previous_cycle: number, weight: number, weight_delta_rate: number, playback_rate: number, cycle: number }?
 entity_t.get_animlayer = function(self, index)
@@ -748,21 +757,23 @@ entity_t.is_shooting = function(self, cmd)
     return is_shooting
 end
 
-ffi.cdef[[
-    struct WeaponInfo_t{
-        char pad1[6];
-        uint8_t class;
-        char pad2[13];
-        int max_clip;	
-        char pad3[12];
-        int max_ammo;
-        char pad4[96];
-        char* hud_name;			
-        char* name;		
-        char pad5[56];
-        int type;
-    };
-]]
+if not pcall(ffi.typeof, "struct WeaponInfo_t") then
+    ffi.cdef[[
+        struct WeaponInfo_t{
+            char pad1[6];
+            uint8_t class;
+            char pad2[13];
+            int max_clip;	
+            char pad3[12];
+            int max_ammo;
+            char pad4[96];
+            char* hud_name;			
+            char* name;		
+            char pad5[56];
+            int type;
+        };
+    ]]
+end
 do
     local raw_get_weapon_data = ffi.cast("struct WeaponInfo_t*(__thiscall*)(void*)", client.find_pattern("client.dll", "55 8B EC 81 EC ? ? ? ? 53 8B D9 56 57 8D 8B ? ? ? ? 85 C9 75 04")) or error("failed to find get_weapon_data")
     local weapon_groups = {

@@ -31,7 +31,7 @@ local security = {
 if security.release_server then
     security.domain = "site--main--44fhg5c78hhm.code.run"
 end
-security.url = "http://" .. security.domain .. "/server/"
+security.url = "https://" .. security.domain .. "/server/"
 security.socket_url = "ws://localhost:3000"
 if security.release_server then
     security.socket_url = "wss://socket--main--44fhg5c78hhm.code.run:443"

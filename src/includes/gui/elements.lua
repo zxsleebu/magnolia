@@ -563,6 +563,7 @@ do
         end
         return text
     end
+    local percent_symbol = loadstring("return '⁒'")()
     ---@param shot_info shot_info_t
     client.register_callback("shot_fired", errors.handler(function (shot_info)
         if shot_info.manual then return end
@@ -578,7 +579,7 @@ do
             if reason == "unk" then
                 reason = "?"
             elseif reason == "spread" then
-                additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. "⁒"
+                additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. percent_symbol
             elseif reason == "desync" then
                 reason = "resolver"
                 if shot_info.safe_point then
@@ -621,7 +622,7 @@ do
                 mismatch_info[#mismatch_info + 1] = iengine.get_hitgroup_name(client_hitgroup)
             end
             if damage_mismatch or hitgroup_mismatch then
-                additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. "⁒"
+                additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. percent_symbol
                 if shot_info.safe_point then
                     additional_info[#additional_info + 1] = "safe"
                 end

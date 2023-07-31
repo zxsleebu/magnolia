@@ -1,20 +1,24 @@
-lockfileVersion: 5.4
+lockfileVersion: '6.0'
 
-specifiers:
-  luabundle: ^1.6.0
-  luactor: git+https://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:x-oauth-basic@github.com/zxsleebu/luactor.git
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 dependencies:
-  luabundle: 1.6.0
-  luactor: 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+x-oauth-basic@github.com/zxsleebu/luactor/4d471a5360207c32d8b24415220716d08ce767e4
+  luabundle:
+    specifier: ^1.6.0
+    version: 1.6.0
+  luactor:
+    specifier: git+https://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:x-oauth-basic@github.com/zxsleebu/luactor.git
+    version: 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+x-oauth-basic@github.com/zxsleebu/luactor/13cef4e63584321c5c3d4cc3a8817f81f364789c
 
 packages:
 
-  /date-and-time/2.4.3:
+  /date-and-time@2.4.3:
     resolution: {integrity: sha512-xkS/imTmsyEdpp9ie5oV5UWolg3XkYWNySbT2W4ESWr6v4V8YrsHbhpk9fIeQcr0NFTnYbQJLXlgU1zrLItysA==}
     dev: false
 
-  /fengari/0.1.4:
+  /fengari@0.1.4:
     resolution: {integrity: sha512-6ujqUuiIYmcgkGz8MGAdERU57EIluGGPSUgGPTsco657EHa+srq0S3/YUl/r9kx1+D+d4rGfYObd+m8K22gB1g==}
     dependencies:
       readline-sync: 1.4.10
@@ -22,7 +26,7 @@ packages:
       tmp: 0.0.33
     dev: false
 
-  /luabundle/1.6.0:
+  /luabundle@1.6.0:
     resolution: {integrity: sha512-WAiumy/R8GZIq4eCkFkOYXjAqxZUphGrKVvr5AG/obflBgV8ltiNLMF8nKbCmZvhR0b94S4rYFKisJ5eYJaRvA==}
     engines: {node: '>=8.0.0'}
     dependencies:
@@ -30,50 +34,50 @@ packages:
       tslib: 1.14.1
     dev: false
 
-  /luamin/1.0.4:
+  /luamin@1.0.4:
     resolution: {integrity: sha512-z1h0bclRD/QGsS/Dz4Skp9z0qPTmmm+IKcrCapGmdTczPWVdN9f9jk6WqkNrcifQr8+n9Pzsm9WkwpOH1JBUAQ==}
     hasBin: true
     dependencies:
       luaparse: 0.2.1
     dev: false
 
-  /luaparse/0.2.1:
+  /luaparse@0.2.1:
     resolution: {integrity: sha512-VKBcryd5nJte4ZNR29NOk8F/UkMipjeb4yoxcSS51z6QAzg9DXUC2WsfLniS0J1eh3pr/ZL3e9ha6V8fhoLbBQ==}
     hasBin: true
     dev: false
 
-  /moonsharp-luaparse/0.2.4:
+  /moonsharp-luaparse@0.2.4:
     resolution: {integrity: sha512-1bkZPHRVJhCzt681KnFxWB5fYQlmcOZuBAlzdcsdTSjDfL//sqjcH2L2bbbgxf/l5s1krpGL8Ba7twT7mdj91Q==}
     hasBin: true
     dev: false
 
-  /os-tmpdir/1.0.2:
+  /os-tmpdir@1.0.2:
     resolution: {integrity: sha512-D2FR03Vir7FIu45XBY20mTb+/ZSWB00sjU9jdQXt83gDrI4Ztz5Fs7/yy74g2N5SVQY4xY1qDr4rNddwYRVX0g==}
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /readline-sync/1.4.10:
+  /readline-sync@1.4.10:
     resolution: {integrity: sha512-gNva8/6UAe8QYepIQH/jQ2qn91Qj0B9sYjMBBs3QOB8F2CXcKgLxQaJRP76sWVRQt+QU+8fAkCbCvjjMFu7Ycw==}
     engines: {node: '>= 0.8.0'}
     dev: false
 
-  /sprintf-js/1.1.2:
+  /sprintf-js@1.1.2:
     resolution: {integrity: sha512-VE0SOVEHCk7Qc8ulkWw3ntAzXuqf7S2lvwQaDLRnUeIEaKNQJzV6BwmLKhOqT61aGhfUMrXeaBk+oDGCzvhcug==}
     dev: false
 
-  /tmp/0.0.33:
+  /tmp@0.0.33:
     resolution: {integrity: sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==}
     engines: {node: '>=0.6.0'}
     dependencies:
       os-tmpdir: 1.0.2
     dev: false
 
-  /tslib/1.14.1:
+  /tslib@1.14.1:
     resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
     dev: false
 
-  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+x-oauth-basic@github.com/zxsleebu/luactor/4d471a5360207c32d8b24415220716d08ce767e4:
-    resolution: {commit: 4d471a5360207c32d8b24415220716d08ce767e4, repo: https://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:x-oauth-basic@github.com/zxsleebu/luactor.git, type: git}
+  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+x-oauth-basic@github.com/zxsleebu/luactor/13cef4e63584321c5c3d4cc3a8817f81f364789c:
+    resolution: {commit: 13cef4e63584321c5c3d4cc3a8817f81f364789c, repo: https://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:x-oauth-basic@github.com/zxsleebu/luactor.git, type: git}
     name: luactor
     version: 1.0.1
     dependencies:
