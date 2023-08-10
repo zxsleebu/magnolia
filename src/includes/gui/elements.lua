@@ -6,7 +6,7 @@ local col = require("libs.colors")
 local input = require("libs.input")
 local fonts = require("includes.gui.fonts")
 local v2, v3 = require("libs.vectors")()
-local shared = require("features.shared")
+-- local shared = require("features.shared")
 local cbs = require("libs.callbacks")
 local iengine = require("includes.engine")
 local anims = require("libs.anims")
@@ -32,7 +32,9 @@ do
         ui.get_key_bind("antihit_accurate_walk_bind"):set_type(1)
         local lp = entitylist.get_local_player()
         if not lp or not lp:is_alive() or lp:is_on_ground() then return end
-        if lp:get_weapon().group ~= "scout" then return end
+        local weapon = lp:get_weapon()
+        if not weapon then return end
+        if weapon.group ~= "scout" then return end
         local hitchance = el:get_slider("Jumpscout hitchance"):value()
         ragebot.override_hitchance(hitchance)
         local autostop = el:get_checkbox("Autostop in air"):value()
@@ -353,22 +355,9 @@ gui.checkbox("Custom model"):options(function ()
         lp:set_model(model_path)
     end, "custom_model.frame_stage")
 end)
-do
-    local setup_bones = require("features.animbreaker")
-    local leg_movement = ui.get_combo_box("antihit_leg_movement")
-    gui.label("Animbreaker"):options(function ()
-        setup_bones.walk_legs = gui.dropdown("Walking legs", {"Default", "Slide", "Walking"})
-        setup_bones.air_legs = gui.dropdown("Air legs", {"Default", "Static", "Walking"})
-    end):create_move(function(cmd)
-        local walk_legs = setup_bones.walk_legs:value()
-        if walk_legs == "Slide" then
-            local choked = clientstate.get_choked_commands() > 0
-            leg_movement:set_value(choked and 2 or 1)
-        elseif walk_legs == "Walking" then
-            leg_movement:set_value(1)
-        end
-    end)
-end
+
+require("features.animbreaker")
+
 gui.column()
 
 

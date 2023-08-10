@@ -24,20 +24,25 @@ require("libs.types")
 --     } ModelRenderInfo_t;
 -- ]]
 
-local elements = {
-    ---@type gui_dropdown_t
-    walk_legs = nil,
-    ---@type gui_dropdown_t
-    air_legs = nil,
-}
+local leg_movement = ui.get_combo_box("antihit_leg_movement")
+local menu_walk_legs, menu_air_legs
+gui.label("Animbreaker"):options(function ()
+    menu_walk_legs = gui.dropdown("Walking legs", {"Default", "Slide", "Walking"})
+    menu_air_legs = gui.dropdown("Air legs", {"Default", "Static", "Walking"})
+end):create_move(function(cmd)
+    local move_legs = menu_walk_legs:value()
+    if move_legs == "Slide" then
+        local choked = clientstate.get_choked_commands() > 0
+        leg_movement:set_value(choked and 2 or 1)
+    elseif move_legs == "Walking" then
+        leg_movement:set_value(1)
+    end
+end)
 
 local function animbreaker()
     local lp = entitylist.get_local_player()
     local in_air = not lp:is_on_ground()
-    if not elements.walk_legs or not elements.air_legs then
-        return
-    end
-    local walk_legs, air_legs = elements.walk_legs:value(), elements.air_legs:value()
+    local walk_legs, air_legs = menu_walk_legs:value(), menu_air_legs:value()
     local MOVEMENT_MOVE = lp:get_animlayer(6)
     if walk_legs == "Slide" then
         lp:set_poseparam(0, -180, -179)

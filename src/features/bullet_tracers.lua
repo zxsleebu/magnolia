@@ -43,7 +43,7 @@ ffi.cdef[[
 ]]
 local beams_vmt = hooks.vmt.new(ffi.cast("void****", ffi.cast("char*", client.find_pattern("client.dll", "B9 ? ? ? ? A1 ? ? ? ? FF 10 A1 ? ? ? ? B9")) + 1)[0])
 local create_beam_orig
----@param beam_info { type: number, start_ent: any, start_attachment: number, end_ent: any, end_attachment: number, start: vec3_t, to: vec3_t, model_index: number, model_name: PCSTR, halo_index: number, halo_name: PCSTR, haldo_scale: number, life: number, width: number, end_width: number, fade_length: number, amplitude: number, brightness: number, speed: number, start_frame: number, frame_rate: number, red: number, green: number, blue: number, renderable: boolean, num_segments: number, flags: number, center: vec3_t, start_radius: number, end_radius: number }
+---@param beam_info { type: number, start_ent: any, start_attachment: number, end_ent: any, end_attachment: number, start: vec3_t, to: vec3_t, model_index: number, model_name: any, halo_index: number, halo_name: any, haldo_scale: number, life: number, width: number, end_width: number, fade_length: number, amplitude: number, brightness: number, speed: number, start_frame: number, frame_rate: number, red: number, green: number, blue: number, renderable: boolean, num_segments: number, flags: number, center: vec3_t, start_radius: number, end_radius: number }
 create_beam_orig = beams_vmt:hookMethod("void*(__thiscall*)(void*, struct beam_info_t&)", function (this, beam_info)
     errors.handler(function()
         if beam_info.life == 2.5 then

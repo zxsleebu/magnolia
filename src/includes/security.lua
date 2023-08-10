@@ -14,6 +14,7 @@ local sockets = require("libs.sockets")
 local win32 = require("libs.win32")
 local set = require("libs.set")
 local security = {
+    avatar_url = nil,
     debug_sockets = false,
     debug = false,
     debug_logs = false,
@@ -30,8 +31,10 @@ local security = {
 }
 if security.release_server then
     security.domain = "site--main--44fhg5c78hhm.code.run"
+    security.url = "https://" .. security.domain .. "/server/"
+else
+    security.url = "http://" .. security.domain .. "/server/"
 end
-security.url = "https://" .. security.domain .. "/server/"
 security.socket_url = "ws://localhost:3000"
 if security.release_server then
     security.socket_url = "wss://socket--main--44fhg5c78hhm.code.run:443"
@@ -102,7 +105,9 @@ security.handlers.server.auth = function(socket, data)
     security.loaded = true
     security.logger.flags.console = true
     if data.result == "sub" then
-        security.logger:add({ { "your subcription ended. ", col.red }, { "consider buying " }, { "magnolia", colors.magnolia }, { "!" } })
+        security.logger:clean()
+        security.logger:add({ { "consider buying " }, { "magnolia", colors.magnolia }, { "!" } })
+        security.logger:add({ { "you do not have active subcription. ", col.red } })
         error("sub", 0)
     end
     if data.result == "banned" then
@@ -141,6 +146,7 @@ end
 security.handlers.server.user = function(socket, data)
     security.sub_expires = data.expires
     security.discord_username = data.discord
+    security.avatar_url = "https://" .. security.domain .. "/api/avatar/" .. data.id
 end
 security.handlers.client.handshake = function(socket, data)
     local split = {}

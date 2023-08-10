@@ -194,6 +194,7 @@ cbs.paint(errors.handler(function ()
     return original_set_cursor(drag.original_cursor)
 end, "drag.paint"))
 cbs.add("unload", function ()
+    if not set_cursor then return end
     set_cursor:unhook()
 end)
 

@@ -264,6 +264,12 @@ local ffi = require("libs.protected_ffi")
 ---@field m_nExplodeEffectTickBegin number
 ---@field m_nGrenadeSpawnTime number
 ---@field m_vInitialVelocity vec3_t
+---@field m_bAlive boolean[]
+---@field m_iDeaths number[]
+---@field m_iPing number[]
+---@field m_iKills number[]
+---@field m_iAssists number[]
+---@field m_bConnected boolean[]
 
 local IClientEntityList = interface.new("client", "VClientEntityList003", {
     GetClientEntity = {3, "uintptr_t(__thiscall*)(void*, int)"},
@@ -340,6 +346,25 @@ entitylist.get_local_player_or_observed_player = function()
     else
         return lp.m_hObserverTarget
     end
+end
+---@return entity_t?
+entitylist.get_player_resource = function()
+    return entitylist.get_entities_by_class_name("CCSPlayerResource")[1]
+    -- for i = 0, entitylist.get_highest_entity_index() do
+    --     local entity = entitylist.get_entity_by_index(i)
+    --     if entity then
+    --         local client_class = entity:get_client_class()
+    --         if client_class then
+    --             if client_class.network_name == "CCSPlayerResource" then
+    --                 print(tostring(client_class.class_id))
+    --             end
+    --             -- print(tostring(client_class.network_name))
+    --         end
+    --         if client_class and client_class.class_id == 80 then
+    --             return entity
+    --         end
+    --     end
+    -- end
 end
 
 ---@param flag number
@@ -551,6 +576,13 @@ entity_t.is_grenade = function(self)
     return self:get_grenade_type() ~= nil
 end
 
+entity_t.is_player_alive = function(self)
+    local alive = self:is_alive()
+    local player_resource = entitylist.get_player_resource()
+    if not player_resource then return alive end
+    return alive and player_resource.m_bAlive[self:get_index()]
+end
+
 entity_t.can_shoot = function (self)
     local tickbase = self.m_nTickBase * globalvars.get_interval_per_tick()
     if self.m_flNextAttack > tickbase then
@@ -688,10 +720,15 @@ entity_t.get_animlayer = function(self, index)
 end
 
 ---@param attacker entity_t
-entity_t.is_hittable_by = function(self, attacker)
+---@param extrapolate_ticks? number
+entity_t.is_hittable_by = function(self, attacker, extrapolate_ticks)
     --!SELF IS THE VICTIM
-    --!ATTACKER IS USUALLY THE LOCAL PLAYER
-    local from = attacker:get_eye_pos() + v3(0, 0, 10)
+    --!IN BEST CASE ATTACKER SHOULD BE THE LOCAL PLAYER
+    if extrapolate_ticks == nil then
+        extrapolate_ticks = 0
+    end
+    local interval = globalvars.get_interval_per_tick() * extrapolate_ticks
+    local from = attacker:get_eye_pos() + attacker.m_vecVelocity * interval + v3(0, 0, 10)
     local to = self:get_player_hitbox_pos(0)
     if not to then return end
     local trace_result = trace.line(attacker:get_index(), 0x46004003, from, to)
@@ -1000,6 +1037,12 @@ local netvar_cache = {
     m_iMatchStats_EnemiesFlashed = { type = "table" },
     m_hMyWeapons = { type = "table" },
     m_nPersonaDataPublicLevel = { type = "table" },
+    m_bAlive = { type = "table" },
+    m_iDeaths = { type = "table" },
+    m_iPing = { type = "table" },
+    m_iKills = { type = "table" },
+    m_iAssists = { type = "table" },
+    m_bConnected = { type = "table" },
     m_vecViewOffset = {
         type = "vector",
         offset = 264
@@ -1018,6 +1061,13 @@ local netvar_types = {
     a = "angle",
     h = "entity",
     n = "int"
+}
+local netvar_offsets = {
+    bool = 1,
+    int = 4,
+    float = 4,
+    vector = 12,
+    angle = 12
 }
 
 ---@param netvar string
@@ -1061,7 +1111,7 @@ local netvar_table_mt = {
         if type(key) ~= "number" then
             error("netvar table index must be a number")
         end
-        local offset = self.netvar.offset + key * 4
+        local offset = self.netvar.offset + key * netvar_offsets[self.netvar.table_type]
         if self.netvar.table_type == "entity" then
             return entitylist.get_entity_from_handle(self.entity:get_prop_int(offset))
         end
@@ -1071,7 +1121,7 @@ local netvar_table_mt = {
         if type(key) ~= "number" then
             error("netvar table index must be a number")
         end
-        local offset = self.netvar.offset + key * 4
+        local offset = self.netvar.offset + key * netvar_offsets[self.netvar.table_type]
         return self.entity["set_prop_"..self.netvar.table_type](self.entity, offset, value)
     end
 }

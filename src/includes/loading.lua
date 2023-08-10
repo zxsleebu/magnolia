@@ -109,11 +109,13 @@ loading.draw = function()
                 gui.init()
             end
             once(function()
-                logger:add({{"magnolia", colors.magnolia}, {" by ", col.white}, {"lia", colors.magnolia}})
+                -- logger:add({{"magnolia", colors.magnolia}, {" by ", col.white}, {"lia", colors.magnolia}})
             end, "magnolia_start_log")
             local percentage = anims.progress(progress)
             if percentage == 100 then
                 once(function()
+                    logger:clean()
+                    logger:add({{"with ", col.white}, {"magnolia", colors.magnolia}, {" by ", col.white}, {"lia", colors.magnolia}})
                     logger:add({{"have", col.white}, {" fun!", colors.magnolia}})
                     print("")
                 end, "progress_done")
@@ -128,10 +130,10 @@ loading.draw = function()
             end
             local text_alpha = anims.text_alpha(255) * main_alpha
 
-            if alpha == 255 then
+            if alpha >= 100 then
                 once(function()
                     loading.do_security = true
-                    logger:clean()
+                    -- logger:clean()
                 end, "start_security")
             end
 

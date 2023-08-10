@@ -2,31 +2,32 @@ local cbs = require("libs.callbacks")
 local errors = require("libs.error_handler")
 local nixware = require("libs.nixware")
 local ffi = require("libs.protected_ffi")
-local hooks = require("libs.hooks")
-local create_move_fn = client.find_pattern("client.dll", "55 8B EC 83 E4 F8 81 EC ? ? ? ? 8B 45 08 89 0C 24")
-ffi.cdef[[
-    struct UserCmd {
-        void*       vmt;
-        int         commandNumber;
-        int         tickCount;
-        vector_t    viewangles;
-        vector_t    aimdirection;
-        float       forwardmove;
-        float       sidemove;
-        float       upmove;
-        int         buttons;
-        char        impulse;
-        int         weaponselect;
-        int         weaponsubtype;
-        int         randomSeed;
-        short       mousedx;
-        short       mousedy;
-        bool        hasbeenpredicted;
-        vector_t    viewanglesBackup;
-        int         buttonsBackup;
-    };
-]]
-local hook
+local v2, v3 = require("libs.vectors")()
+-- local hooks = require("libs.hooks")
+-- local create_move_fn = client.find_pattern("client.dll", "55 8B EC 83 E4 F8 81 EC ? ? ? ? 8B 45 08 89 0C 24")
+-- ffi.cdef[[
+--     struct UserCmd {
+--         void*       vmt;
+--         int         commandNumber;
+--         int         tickCount;
+--         vector_t    viewangles;
+--         vector_t    aimdirection;
+--         float       forwardmove;
+--         float       sidemove;
+--         float       upmove;
+--         int         buttons;
+--         char        impulse;
+--         int         weaponselect;
+--         int         weaponsubtype;
+--         int         randomSeed;
+--         short       mousedx;
+--         short       mousedy;
+--         bool        hasbeenpredicted;
+--         vector_t    viewanglesBackup;
+--         int         buttonsBackup;
+--     };
+-- ]]
+-- local hook
 require("libs.advanced math")
 
 gui.subtab("Builder")
@@ -34,8 +35,9 @@ local is_enabled = gui.checkbox("Enable")
 ---@alias anti_aim_condition_t "Shared"|"Stand"|"Move"|"Air"|"Air duck"|"Duck"|"Walk"|"Use"
 local conditions = {"Shared", "Stand", "Move", "Air", "Air duck", "Duck", "Walk", "Use"}
 local current_condition = gui.dropdown("Condition", conditions):master(is_enabled)
+local freestand = gui.checkbox("Freestand"):master(is_enabled)
 gui.column()
----@type table<anti_aim_condition_t, { enabled?: gui_checkbox_t, yaw_modifiers: gui_dropdown_t, yaw_offset: gui_slider_t, max_dormant_time: gui_slider_t, yaw_inverted: gui_slider_t, jitter_type: gui_dropdown_t, jitter_range: gui_slider_t, jitter_delay: gui_slider_t, spin_speed: gui_slider_t, spin_range: gui_slider_t, pitch: gui_dropdown_t, pitch_custom: gui_slider_t, desync_delay: gui_slider_t, desync_type: gui_dropdown_t, desync_length: gui_slider_t, inverted_desync_length: gui_slider_t}>
+---@type table<anti_aim_condition_t, { enabled?: gui_checkbox_t, yaw_modifiers: gui_dropdown_t, yaw_offset: gui_slider_t, inverted_yaw_offset: gui_slider_t, jitter_type: gui_dropdown_t, jitter_range: gui_slider_t, jitter_delay: gui_slider_t, spin_speed: gui_slider_t, spin_range: gui_slider_t, pitch: gui_dropdown_t, pitch_custom: gui_slider_t, desync_delay: gui_slider_t, desync_type: gui_dropdown_t, desync_length: gui_slider_t, inverted_desync_length: gui_slider_t}>
 local settings = {}
 for i = 1, #conditions do
     local condition = conditions[i]
@@ -53,11 +55,8 @@ for i = 1, #conditions do
     master_elements.yaw = gui.label(get_name("Yaw")):options(function ()
         setting.yaw_modifiers = gui.dropdown("Modifiers", {"At targets", "Inverted offset", "Jitter", "Spin"}, {})
         setting.yaw_offset = gui.slider("Yaw offset", -180, 180, false, 0)
-        setting.yaw_inverted = gui.slider("Inverted yaw offset", -180, 180, false, 0):master(function()
+        setting.inverted_yaw_offset = gui.slider("Inverted yaw offset", -180, 180, false, 0):master(function()
             return setting.yaw_modifiers:value("Inverted offset")
-        end)
-        setting.max_dormant_time = gui.slider("Max time in dormant", 0, 10, true, 3):master(function()
-            return setting.yaw_modifiers:value("At targets")
         end)
         gui.label("Jitter"):options(function()
             setting.jitter_type = gui.dropdown("Jitter type", {"Center", "Offset", "Random"})
@@ -102,15 +101,14 @@ local anti_aim = {
     last_target_index = -1,
     last_best_angle = nil,
     target_player_index = -1,
-    exploit_uncharged = false,
-    next_jitter_update = 0,
-    jitter_inverted = false,
-    next_desync_update = 0,
-    desync_inverted = false,
+    jitter_update_ticks = 0,
+    desync_update_ticks = 0,
+    sent_packets_count = 0
 }
----@param max_dormant_time number
+local menu_dormant_time = ui.get_slider_float("visuals_esp_enemy_dormant")
+local autopeek_bind = ui.get_key_bind("antihit_autopeek_bind")
 ---@param at_targets_enabled boolean
-local get_best_angle = function(max_dormant_time, at_targets_enabled)
+local get_target_best_angle = function(at_targets_enabled)
     if clientstate.get_choked_commands() > 0 then
         anti_aim.target_player_index = anti_aim.last_target_index
         return anti_aim.last_best_angle
@@ -120,16 +118,17 @@ local get_best_angle = function(max_dormant_time, at_targets_enabled)
     local lp = entitylist.get_local_player()
     local viewangles = engine.get_view_angles()
     if at_targets_enabled then
-        local lowest_fov = 2147483647
         local interval_per_tick = globalvars.get_interval_per_tick()
+        local max_dormant_ticks = menu_dormant_time:get_value() / interval_per_tick
+        local lowest_fov = 2147483647
         local origin = lp.m_vecOrigin + lp.m_vecVelocity * interval_per_tick
         local viewangles_vec = viewangles:to_vec()
-        local max_dormant_ticks = max_dormant_time / interval_per_tick
         for _, enemy in pairs(entitylist.get_players(0)) do
             errors.handle(function ()
                 if enemy:get_ticks_in_dormant() > max_dormant_ticks then
                     return
                 end
+                if not enemy:is_player_alive() then return end
                 local pos = enemy.m_vecOrigin + enemy.m_vecVelocity * interval_per_tick
                 local fov = #(origin:angle_to(pos):to_vec() - viewangles_vec)
                 if fov < lowest_fov then
@@ -154,6 +153,47 @@ local get_best_angle = function(max_dormant_time, at_targets_enabled)
     end
     anti_aim.last_best_angle = best_angle
     return best_angle
+end
+---@param cmd usercmd_t
+---@return number?
+local get_freestand_angle = function(cmd)
+    if not autopeek_bind:is_active() then return end
+    if not freestand:value() then return end
+    local lp = entitylist.get_local_player()
+    local lp_index = lp:get_index()
+    if anti_aim.target_player_index == -1 then
+        get_target_best_angle(true)
+    end
+    if anti_aim.target_player_index == -1 then
+        return
+    end
+    local targeted_player = entitylist.get_entity_by_index(anti_aim.target_player_index)
+    if not targeted_player or targeted_player:is_hittable_by(lp) then return end
+    local strength = 35
+    local pos, origin = lp.m_vecOrigin + lp.m_vecVelocity * globalvars.get_interval_per_tick() * 12, lp.m_vecOrigin
+    pos.z = lp:get_player_hitbox_pos(0).z
+    local yaw = anti_aim.last_best_angle
+    if yaw == nil then
+        yaw = cmd.viewangles.yaw
+    end
+    local fractions = {}
+    local player_origin = targeted_player.m_vecOrigin
+    player_origin.z = targeted_player:get_player_hitbox_pos(0).z
+    for i = yaw - 90, yaw + 90, 45 do
+        if i ~= yaw then
+            local rad = math.rad(i)
+            local cos, sin = math.cos(rad), math.sin(rad)
+            local new_head_pos = pos + v3(strength * cos, strength * sin, 0)
+            local dest = origin + v3(256 * cos, 256 * sin, 0)
+            local trace1 = trace.line(lp_index, 0x46004003, new_head_pos, player_origin)
+            local trace2 = trace.line(lp_index, 0x46004003, origin, dest)
+            fractions[#fractions+1] = {i, trace1.fraction / 2 + trace2.fraction / 2}
+        end
+    end
+    table.sort(fractions, function(a, b) return a[2] > b[2] end)
+    if fractions[1][2] - fractions[#fractions][2] < 0.5 then return end
+    if fractions[1][2] < 0.1 then return end
+    return fractions[1][1]
 end
 local right_yaw_offset_address = nixware.find_pattern("F3 0F 10 47 10 F3 0F 5C C1 F3 0F 11 47 10 E9 ? ? ? ? B8")
 if right_yaw_offset_address == 0 then
@@ -191,96 +231,117 @@ local pitch_settings = {
     Custom = 0,
     Random = 0,
 }
-local create_move_hk = function(original, this, cmd)
-    errors.handle(function()
-        if not is_enabled:value() then return end
-        set_yaw(180)
-        local lp = entitylist.get_local_player()
-        if not lp or not lp:is_alive() then return end
-        local condition = lp:get_condition() ---@type anti_aim_condition_t
-        local is_walking = accurate_walk_enabled:get_value() and accurate_walk:is_active()
-        if condition == "Move" and is_walking then
-            condition = "Walk"
-        end
-        if bit.band(cmd.buttons, 32) ~= 0 then
-            condition = "Use"
-        end
-        local setting = settings[condition]
-        if not setting then return end
-        if setting.enabled and not setting.enabled:value() then
-            condition = "Shared"
-            setting = settings[condition]
+cbs.create_move(function(cmd)
+    if not is_enabled:value() then return end
+    set_yaw(180)
+    local lp = entitylist.get_local_player()
+    if not lp or not lp:is_alive() then return end
+    local condition = lp:get_condition() ---@type anti_aim_condition_t
+    local is_walking = accurate_walk_enabled:get_value() and accurate_walk:is_active()
+    if condition == "Move" and is_walking then
+        condition = "Walk"
+    end
+    if bit.band(cmd.buttons, 32) ~= 0 then
+        condition = "Use"
+    end
+    local setting = settings[condition]
+    if not setting then return end
+    if setting.enabled and not setting.enabled:value() then
+        condition = "Shared"
+        setting = settings[condition]
+    end
+
+    cmd.buttons = bit.band(cmd.buttons, bit.bnot(32))
+
+    anti_aim_enabled:set_value(true)
+    yaw_jitter:set_value(0)
+    at_targets_enabled:set_value(false)
+
+    local at_targets_setting = setting.yaw_modifiers:value("At targets")
+    local yaw = 0
+
+    local pitch_setting = setting.pitch:value()
+    local pitch = pitch_settings[pitch_setting]
+    if pitch then
+        anti_aim_pitch:set_value(pitch)
+    end
+    if pitch_setting == "Custom" then
+        anti_aim_pitch:set_value(0)
+        pitch = setting.pitch_custom:value()
+        cmd.viewangles.pitch = pitch
+    end
+
+    local jitter_type, jitter_range = setting.jitter_type:value(), setting.jitter_range:value()
+    local jitter_angle = jitter_range
+
+    if clientstate.get_choked_commands() == 0 then
+        anti_aim.sent_packets_count = anti_aim.sent_packets_count + 1
+
+        if anti_aim.sent_packets_count % (setting.jitter_delay:value() + 1) == 0 then
+            anti_aim.jitter_update_ticks = anti_aim.jitter_update_ticks + 1
         end
 
-        cmd.buttons = bit.band(cmd.buttons, bit.bnot(32))
-
-        anti_aim_enabled:set_value(true)
-        yaw_jitter:set_value(0)
-        at_targets_enabled:set_value(false)
-
-        local at_targets_setting = setting.yaw_modifiers:value("At targets")
-        local yaw = get_best_angle(setting.max_dormant_time:value(), at_targets_setting) + setting.yaw_offset:value() + 180
-
-        local pitch_setting = setting.pitch:value()
-        local pitch = pitch_settings[pitch_setting]
-        if pitch then
-            anti_aim_pitch:set_value(pitch)
+        if anti_aim.sent_packets_count % (setting.desync_delay:value() + 1) == 0 then
+            anti_aim.desync_update_ticks = anti_aim.desync_update_ticks + 1
         end
-        if pitch_setting == "Custom" then
-            anti_aim_pitch:set_value(0)
-            pitch = setting.pitch_custom:value()
-            cmd.viewangles.pitch = pitch
-        end
+    end
 
-        local jitter_type, jitter_range, jitter_delay = setting.jitter_type:value(), setting.jitter_range:value(), setting.jitter_delay:value()
-        local choked = clientstate.get_choked_commands()
-        local jitter_angle = jitter_range
-        local desync_type = setting.desync_type:value()
-        if choked ~= 0 then
-            if anti_aim.next_jitter_update <= 0 then
-                anti_aim.next_jitter_update = jitter_delay
-                anti_aim.jitter_inverted = not anti_aim.jitter_inverted
-            else
-                anti_aim.next_jitter_update = anti_aim.next_jitter_update - 1
-            end
-            if anti_aim.jitter_inverted then
+    local desync_inverted = false
+    local current_desync = setting.desync_length:value()
+    local desync_type = setting.desync_type:value()
+    if desync_type == "Jitter" then
+        if anti_aim.desync_update_ticks % 2 == 1 then
+            desync_inverted = true
+        end
+    elseif desync_type == "Static" then
+
+    end
+
+    if desync_inverted then
+        current_desync = setting.inverted_desync_length:value()
+    end
+
+    desync_length:set_value(math.abs(current_desync))
+    menu_desync_type:set_value(0)
+    desync_inverter:set_type(current_desync > 0 and 1 or 0)
+    desync_inverter:set_key(0)
+
+    if desync_inverted and setting.yaw_modifiers:value("Inverted offset") then
+        yaw = yaw + setting.inverted_yaw_offset:value()
+    else
+        yaw = yaw + setting.yaw_offset:value()
+    end
+
+    if setting.yaw_modifiers:value("Jitter") then
+        if jitter_type == "Center" then
+            if anti_aim.jitter_update_ticks % 2 == 1 then
                 jitter_angle = -jitter_angle
             end
-
-            if desync_type == "Jitter" then
-                if anti_aim.next_desync_update <= 0 then
-                    anti_aim.next_desync_update = setting.desync_delay:value()
-                    anti_aim.desync_inverted = not anti_aim.desync_inverted
-                else
-                    anti_aim.next_desync_update = anti_aim.next_desync_update - 1
-                end
-            else
-                anti_aim.desync_inverted = false
-            end
-            local current_desync = anti_aim.desync_inverted and setting.inverted_desync_length:value() or setting.desync_length:value()
-            desync_length:set_value(math.abs(current_desync))
-            menu_desync_type:set_value(0)
-            desync_inverter:set_type(current_desync > 0 and 1 or 0)
-            desync_inverter:set_key(0)
-        end
-
-        if jitter_type == "Center" then
             yaw = yaw + jitter_angle / 2
+        elseif jitter_type == "Offset" then
+            if anti_aim.jitter_update_ticks % 2 == 1 then
+                jitter_angle = 0
+            end
+            yaw = yaw + jitter_angle
         end
+    end
 
-        local is_charged = ragebot.is_charged()
-        if is_charged then
-            anti_aim.exploit_uncharged = false
-        elseif not anti_aim.exploit_uncharged then
-            anti_aim.exploit_uncharged = true
-            at_targets_enabled:set_value(setting.yaw_modifiers:value("At targets"))
-        end
+    local at_targets_angle = get_target_best_angle(at_targets_setting and condition ~= "Use")
+    local freestand_angle
+    if condition ~= "Use" then
+        freestand_angle = get_freestand_angle(cmd)
+    end
+    if freestand_angle ~= nil then
+        yaw = yaw + freestand_angle
+    elseif at_targets_angle ~= nil then
+        yaw = yaw + at_targets_angle
+    end
 
-        set_yaw(yaw)
-    end, "anti_aim.create_move_hk")
-    return original(this, cmd)
-end
-hook = hooks.jmp2.new("int(__thiscall*)(void* this, struct UserCmd* a2)", create_move_hk, create_move_fn)
-client.register_callback("unload", function()
-    hook:unhook()
-end)
+    set_yaw(yaw + 180)
+end, "anti_aim.create_move_hk")
+    -- return original(this, cmd)
+-- hook = hooks.jmp2.new("int(__thiscall*)(void* this, struct UserCmd* a2)", create_move_hk, create_move_fn)
+-- client.register_callback("unload", function()
+--     if not hook then return end
+--     hook:unhook()
+-- end)

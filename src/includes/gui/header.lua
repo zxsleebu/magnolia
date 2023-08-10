@@ -116,16 +116,17 @@ end, "header.open")
 header.get_avatar = errors.handler(function ()
     -- if gui.anims.main_alpha() ~= 255 then return end
     if header.avatar_texture then return end
+    if not security.avatar_url then return end
     if security.debug then return end
     once(function ()
-        http.download("https://pleasant-build-r39zc.cloud.serverless.com/avatar_round/s/" .. client.get_username(), nil, function(path)
+        http.download(security.avatar_url, nil, function(path)
             header.avatar_texture = renderer.setup_texture(path)
         end)
     end, "get_avatar")
 end, "header.get_avatar")
-header.open_link = function()
-    win32.open_url("https://nixware.uk.ms/profile/" .. client.get_username())
-end
+-- header.open_link = function()
+--     win32.open_url("https://pleasant-build-r39zc.cloud.serverless.com/profile/" .. client.get_username())
+-- end
 
 ---@param pos vec2_t
 ---@param alpha number
