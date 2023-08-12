@@ -16,11 +16,10 @@ local samples_per_second = 30
 
 ---@class grenade_prediction_t
 ---@field tickcount number
----@field curtime number
 ---@field next_think_tick number
 ---@field collision_group number
 ---@field detonate_time number
----@field spawn_time number
+---@field throw_time number
 ---@field offset number
 ---@field bounces number
 ---@field grenade_type "flashbang"|"he"|"smoke"|"decoy"|"molotov"|nil
@@ -37,17 +36,13 @@ local samples_per_second = 30
 local grenade_prediction_mt = {}
 ---@param bounced boolean
 grenade_prediction_mt.update_path = function (self, bounced)
-    self.path[#self.path + 1] = { self.origin + v3(0, 0, 0), self.curtime }
+    self.path[#self.path + 1] = { self.origin + v3(0, 0, 0), self.tickcount }
     self.last_update_tick = self.tickcount
 end
 ---@param bounced boolean
 grenade_prediction_mt.detonate = function (self, bounced)
     self.detonated = true
     self:update_path(bounced)
-end
----@param time number
-grenade_prediction_mt.set_next_think = function (self, time)
-    self.next_think_tick = iengine.time_to_ticks(time)
 end
 grenade_prediction_mt.think = function (self)
     if self.grenade_type == "smoke" and #self.velocity <= 0.1 then
@@ -57,12 +52,12 @@ grenade_prediction_mt.think = function (self)
     elseif (self.grenade_type == "flashbang"
         or self.grenade_type == "he"
         or self.grenade_type == "molotov")
-        and (self.curtime >= (self.detonate_time + self.offset))
+        and (iengine.ticks_to_time(self.tickcount - self.offset) >= self.detonate_time)
     then
         self:detonate(false)
     end
 
-    self:set_next_think(self.curtime + 0.2)
+    self.next_think_tick = self.tickcount + iengine.time_to_ticks(0.2)
 end
 ---@param entity entity_t
 grenade_prediction_mt.is_broken = function (self, entity)
@@ -308,31 +303,30 @@ grenade_prediction_mt.physics_simulate = function(self)
 end
 grenade_prediction_mt.predict = function(self)
     -- self:throw_grenade(grenade, origin, throw_angle)
-    local interval_per_tick = globalvars.get_interval_per_tick()
-    local sample_tick = math.round(1 / samples_per_second / interval_per_tick)
+    local sample_tick = iengine.time_to_ticks(1 / samples_per_second)
     self.last_update_tick = -sample_tick
     self.path = {}
-    while self.curtime < 65 do
-        if self.curtime > 60 then
-            iengine.log("The grenade lives more than a minute. Too much time spent predicting!\n")
-            break
-        end
-        -- if self.tickcount >= self.offset then
+    while self.tickcount < iengine.time_to_ticks(60) do
+        if self.tickcount >= self.offset then
             errors.handler(function()
+                self:physics_simulate()
+
                 if self.last_update_tick + sample_tick < self.tickcount then
                     self:update_path(false)
                 end
-
-                self:physics_simulate()
             end, "grenade_prediction_t.predict.while_loop")()
-        -- end
+        end
         if self.detonated then
             break
         end
         self.tickcount = self.tickcount + 1
-        self.curtime = self.curtime + interval_per_tick
     end
-    self.expire_time = self.spawn_time + iengine.ticks_to_time(self.tickcount)
+
+    if self.last_update_tick + sample_tick < self.tickcount then
+        self:update_path(false)
+    end
+
+    self.expire_time = self.throw_time + iengine.ticks_to_time(self.tickcount)
 end
 
 
@@ -342,17 +336,16 @@ local grenade_prediction_t = {
     ---@param velocity vec3_t
     ---@param owner entity_t
     ---@param grenade_type "flashbang"|"he"|"smoke"|"decoy"|"molotov"|nil
-    ---@param spawn_time number
+    ---@param throw_time number
     ---@param offset number
     ---@return grenade_prediction_t
-    new = function (entity, origin, velocity, owner, grenade_type, spawn_time, offset)
+    new = function (entity, origin, velocity, owner, grenade_type, throw_time, offset)
         local detonate_time = 1.5
         if grenade_type == "molotov" then
             detonate_time = molotov_throw_detonate_time:get_float()
         end
         local s = setmetatable({
             tickcount = 0,
-            curtime = 0,
             next_think_tick = 0,
             collision_group = 13, --COLLISION_GROUP_PROJECTILE
             detonate_time = detonate_time,
@@ -366,7 +359,7 @@ local grenade_prediction_t = {
             offset = offset,
             owner_index = owner:get_index(),
             entity_index = entity:get_index(),
-            spawn_time = spawn_time,
+            throw_time = throw_time,
             broken = {},
         }, { __index = grenade_prediction_mt })
         s:predict()
@@ -402,8 +395,8 @@ cbs.paint(function()
                 list[handle] = nil
                 return
             end
-            local spawn_time = entity.m_nGrenadeSpawnTime
-            local offset = entity.m_flSimulationTime - globalvars.get_current_time()
+            local throw_time = entity.m_nGrenadeSpawnTime
+            local offset = iengine.time_to_ticks(entity.m_flSimulationTime - globalvars.get_current_time())
             if not list[handle] then
                 list[handle] = grenade_prediction_t.new(
                     entity,
@@ -411,12 +404,12 @@ cbs.paint(function()
                     entity.m_vecVelocity,
                     thrower,
                     grenade_type,
-                    spawn_time,
+                    throw_time,
                     offset
                 )
             else
                 list[handle].offset = offset
-                list[handle].spawn_time = spawn_time
+                list[handle].throw_time = throw_time
             end
         end, "grenade_prediction_t.loop")()
     end
@@ -424,6 +417,7 @@ cbs.paint(function()
     for _, grenade in pairs(list) do
         errors.handler(function()
             local current_time = globalvars.get_current_time()
+            local tick_count = globalvars.get_tick_count()
             if grenade.expire_time <= current_time then
                 list[_] = nil
                 return
@@ -432,8 +426,9 @@ cbs.paint(function()
                 return
             end
             local valid_index = 1
+            local throw_tick_count = iengine.time_to_ticks(grenade.throw_time)
             for i = #grenade.path, 1, -1 do
-                if grenade.path[i][2] + grenade.spawn_time < current_time then
+                if grenade.path[i][2] + throw_tick_count < tick_count then
                     break
                 end
                 valid_index = i

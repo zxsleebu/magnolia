@@ -32,8 +32,9 @@ ffi.cdef[[
         WORD     wFinderFlags;
     } WIN32_FIND_DATA;
     void* FindFirstFileA(const char*, WIN32_FIND_DATA*);
-    bool FindNextFileA(void* hFindFile, WIN32_FIND_DATA*);
-    bool FindClose(void* hFindFile);
+    bool FindNextFileA(void*, WIN32_FIND_DATA*);
+    bool FindClose(void*);
+    BOOL CreateDirectoryA(PCSTR, void*);
 ]]
 local win32 = {}
 win32.open_url = function(url)
@@ -106,6 +107,10 @@ win32.dir = function(path, only_dirs, extension, recursive)
     end
     kernel32.FindClose(handle)
     return files
+end
+
+win32.create_dir = function(path)
+    ffi.C.CreateDirectoryA(path, nil)
 end
 
 local vgui2 = interface.new("vgui2", "VGUI_System010", {

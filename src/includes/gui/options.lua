@@ -196,7 +196,7 @@ options_mt.get_dropdown = function (self, name)
 end
 
 ---@param element gui_checkbox_t|gui_label_t 
----@param options fun()
+---@param options fun(el: gui_options_t)
 ---@return gui_options_t
 options_t.new = errors.handler(function (element, options)
     local t = setmetatable({
@@ -216,7 +216,7 @@ options_t.new = errors.handler(function (element, options)
     element.inline[#element.inline+1] = t
     local old_options = gui.current_options
     gui.current_options = t
-    options()
+    options(t)
     gui.current_options = old_options
     return t
 end, "options_t.new")

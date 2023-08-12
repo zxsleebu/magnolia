@@ -336,10 +336,13 @@ dropdown_mt.new = errors.handler(function (name, values, defaults)
         el = ui.add_multi_combo_box(path, path, values, defaults_table)
         multi = true
     else
-        for i = 1, #values do
-            if values[i] == defaults then
-                def_value = i - 1
-                break
+        local def_value = 0
+        if defaults then
+            for i = 1, #values do
+                if values[i] == defaults then
+                    def_value = i - 1
+                    break
+                end
             end
         end
         el = ui.add_combo_box(path, path, values, def_value)

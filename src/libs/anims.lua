@@ -35,8 +35,11 @@ anims_mt.__newindex = function(s, k, v)
     return value
 end
 ---@alias __anims_mt { [string]: __anim_mt }
----@return __anims_mt
----@param values? { [string]: number }
+-- -@return __anims_mt
+-- -@param values? { [string]: number }
+---@generic T
+---@param values? T
+---@return T | __anims_mt
 anims.new = function(values)
     local t = { list = {} }
     setmetatable(t, anims_mt)

@@ -12,6 +12,7 @@ local inline_t = require("includes.gui.inline")
 local colors = require("includes.colors")
 local cbs = require("libs.callbacks")
 local options_t = require("includes.gui.options")
+local bind_t = require("includes.gui.bind")
 
 local checkbox_t = { }
 
@@ -23,7 +24,8 @@ local checkbox_t = { }
 ---@field callbacks table<string, fun()>
 local checkbox_mt = {
     master = element_t.master,
-    options = options_t.new
+    options = options_t.new,
+    bind = bind_t.new,
 }
 ---@param self gui_checkbox_t
 ---@param pos vec2_t

@@ -54,6 +54,7 @@ do
         end
     end)
 end
+gui.checkbox("Test"):bind()
 gui.column()
 -- gui.checkbox("Hitbox override")
 -- gui.checkbox("HP conditions")
@@ -167,7 +168,7 @@ do
     -- end
 end
 gui.subtab("Local")
-gui.checkbox("Custom model"):options(function ()
+gui.checkbox("Custom model"):options(function (el)
     local list = {
         {"Local T Agent", "tm_phoenix"},
     	{"Local CT Agent", "ctm_sas"},
@@ -335,6 +336,7 @@ gui.checkbox("Custom model"):options(function ()
     end, 300)
     cbs.frame_stage(function(stage)
         if stage ~= 2 then return end
+        if not el:value() then return end
         local lp = entitylist.get_local_player()
         if not lp then return end
         local ct_model = ct_agent:val_index()
@@ -354,6 +356,10 @@ gui.checkbox("Custom model"):options(function ()
         if not model_path then return end
         lp:set_model(model_path)
     end, "custom_model.frame_stage")
+end):update(function(el)
+    if not el:value() then
+        clientstate.force_full_update()
+    end
 end)
 
 require("features.animbreaker")

@@ -16,7 +16,7 @@ local set = require("libs.set")
 local security = {
     avatar_url = nil,
     debug_sockets = false,
-    debug = false,
+    debug = true,
     debug_logs = false,
     release_server = true,
     key = "",
@@ -328,27 +328,41 @@ do
     local download = function(list)
         for _, resource in pairs(list) do
             local path, to = resource[1], resource[2]
-            http.download(security.url .. "resources/" .. path, to, function (result)
-                if result then
-                    downloaded_count = downloaded_count + 1
-                    if downloaded_count == #list then
-                        downloaded = true
-                        security.logger:add({ { "downloaded resources" } })
+            if not security.is_file_exists(to) then
+                http.download(security.url .. "resources/" .. path, to, function (result)
+                    if result then
+                        downloaded_count = downloaded_count + 1
+                        if downloaded_count == #list then
+                            downloaded = true
+                            security.logger:add({ { "downloaded resources" } })
+                        end
+                    else
+                        security.logger:add({ { "failed to get resources", col.red } })
+                        security.error = true
                     end
-                else
-                    security.logger:add({ { "failed to get resources", col.red } })
-                    security.error = true
-                end
-            end)
+                end)
+            else
+                downloaded_count = downloaded_count + 1
+            end
+        end
+        if downloaded_count == #list then
+            downloaded = true
+            security.logger:add({ { "downloaded resources" } })
         end
     end
     local csgo = iengine.get_csgo_folder()
     security.download_resources = function ()
-        if not security.authorized then return false end
         once(function()
-            download({
-                {"level2244.png", csgo .. "/csgo/materials/panorama/images/icons/xp/level2244.png"}
-            })
+            local resources = {}
+            for i = 2244, 2257 do
+                local name = "xp/level"..tostring(i)..".png"
+                resources[#resources + 1] = {name, csgo .. "/csgo/materials/panorama/images/icons/"..name}
+            end
+            win32.create_dir(csgo .. "/nix")
+            win32.create_dir(csgo .. "/nix/magnolia/")
+            resources[#resources + 1] = {"magnolia/csgo.ttf", csgo .. "/nix/magnolia/csgo.ttf"}
+            resources[#resources + 1] = {"magnolia/icon.ttf", csgo .. "/nix/magnolia/icon.ttf"}
+            download(resources)
         end, "download_resources")
         return downloaded
     end
@@ -361,11 +375,11 @@ do
         }
     end
     security.steps = {
+        step("download_resources"),
         step("get_sockets"),
         step("connect"),
         step("wait_for_handshake"),
         step("wait_for_auth"),
-        step("download_resources"),
     }
 end
 local is_fn_hooked = function(f)
