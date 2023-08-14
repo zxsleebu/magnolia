@@ -40,6 +40,7 @@ gui.column()
 ---@type table<anti_aim_condition_t, { enabled?: gui_checkbox_t, yaw_modifiers: gui_dropdown_t, yaw_offset: gui_slider_t, inverted_yaw_offset: gui_slider_t, jitter_type: gui_dropdown_t, jitter_range: gui_slider_t, jitter_delay: gui_slider_t, spin_speed: gui_slider_t, spin_range: gui_slider_t, pitch: gui_dropdown_t, pitch_custom: gui_slider_t, desync_delay: gui_slider_t, desync_type: gui_dropdown_t, desync_length: gui_slider_t, inverted_desync_length: gui_slider_t}>
 local settings = {}
 for i = 1, #conditions do
+    ---@type anti_aim_condition_t
     local condition = conditions[i]
     local setting = {}
     local get_name = function(name)
@@ -52,26 +53,28 @@ for i = 1, #conditions do
         setting.enabled = gui.checkbox("Enable " .. condition):master(main_master_fn)
     end
     local master_elements = {}
-    master_elements.yaw = gui.label(get_name("Yaw")):options(function ()
-        setting.yaw_modifiers = gui.dropdown("Modifiers", {"At targets", "Inverted offset", "Jitter", "Spin"}, {})
-        setting.yaw_offset = gui.slider("Yaw offset", -180, 180, false, 0)
-        setting.inverted_yaw_offset = gui.slider("Inverted yaw offset", -180, 180, false, 0):master(function()
-            return setting.yaw_modifiers:value("Inverted offset")
+    if condition ~= "Use" then
+        master_elements.yaw = gui.label(get_name("Yaw")):options(function ()
+            setting.yaw_modifiers = gui.dropdown("Modifiers", {"At targets", "Inverted offset", "Jitter", "Spin"}, {})
+            setting.yaw_offset = gui.slider("Yaw offset", -180, 180, false, 0)
+            setting.inverted_yaw_offset = gui.slider("Inverted yaw offset", -180, 180, false, 0):master(function()
+                return setting.yaw_modifiers:value("Inverted offset")
+            end)
+            gui.label("Jitter"):options(function()
+                setting.jitter_type = gui.dropdown("Jitter type", {"Center", "Offset", "Random"})
+                setting.jitter_range = gui.slider("Jitter range", -90, 90, false, 0)
+                setting.jitter_delay = gui.slider("Jitter delay", 0, 10)
+            end):master(function()
+                return setting.yaw_modifiers:value("Jitter")
+            end)
+            gui.label("Spin"):options(function ()
+                setting.spin_speed = gui.slider("Spin speed", 1, 10)
+                setting.spin_range = gui.slider("Spin range", 0, 360)
+            end):master(function()
+                return setting.yaw_modifiers:value("Spin")
+            end)
         end)
-        gui.label("Jitter"):options(function()
-            setting.jitter_type = gui.dropdown("Jitter type", {"Center", "Offset", "Random"})
-            setting.jitter_range = gui.slider("Jitter range", -90, 90, false, 0)
-            setting.jitter_delay = gui.slider("Jitter delay", 0, 10)
-        end):master(function()
-            return setting.yaw_modifiers:value("Jitter")
-        end)
-        gui.label("Spin"):options(function ()
-            setting.spin_speed = gui.slider("Spin speed", 1, 10)
-            setting.spin_range = gui.slider("Spin range", 0, 360)
-        end):master(function()
-            return setting.yaw_modifiers:value("Spin")
-        end)
-    end)
+    end
     master_elements.desync = gui.label(get_name("Desync")):options(function ()
         setting.desync_type = gui.dropdown("Desync type", {"Static", "Jitter", "Random"})
         setting.desync_length = gui.slider("Desync length", -60, 60, false, 60)
@@ -80,15 +83,17 @@ for i = 1, #conditions do
             return setting.desync_type:value("Jitter")
         end)
     end)
-    master_elements.pitch = gui.label(get_name("Pitch")):options(function ()
-        setting.pitch = gui.dropdown("Pitch", {"Off", "Down", "Up", "Zero", "Random", "Custom"}, "Down")
-        setting.pitch_custom = gui.slider("Custom pitch", -89, 89, false, 0):master(function()
-            return setting.pitch:value("Custom")
+    if condition ~= "Use" then
+        master_elements.pitch = gui.label(get_name("Pitch")):options(function ()
+            setting.pitch = gui.dropdown("Pitch", {"Off", "Down", "Up", "Zero"}, "Down") --, "Random", "Custom"
+            setting.pitch_custom = gui.slider("Custom pitch", -89, 89, false, 0):master(function()
+                return setting.pitch:value("Custom")
+            end)
         end)
-    end)
-    master_elements.defensive_aa = gui.label(get_name("Defensive AA")):options(function ()
+        master_elements.defensive_aa = gui.label(get_name("Defensive AA")):options(function ()
 
-    end)
+        end)
+    end
     local master_fn = function()
         return main_master_fn() and (setting.enabled and setting.enabled:value() or not setting.enabled)
     end
@@ -103,7 +108,8 @@ local anti_aim = {
     target_player_index = -1,
     jitter_update_ticks = 0,
     desync_update_ticks = 0,
-    sent_packets_count = 0
+    sent_packets_count = 0,
+    use_pressed = false
 }
 local menu_dormant_time = ui.get_slider_float("visuals_esp_enemy_dormant")
 local autopeek_bind = ui.get_key_bind("antihit_autopeek_bind")
@@ -242,7 +248,25 @@ cbs.create_move(function(cmd)
         condition = "Walk"
     end
     if bit.band(cmd.buttons, 32) ~= 0 then
-        condition = "Use"
+        errors.handle(function()
+            if anti_aim.use_pressed then
+                cmd.buttons = bit.band(cmd.buttons, bit.bnot(32))
+            end
+            condition = "Use"
+            local C4 = entitylist.get_entities_by_class_name("CPlantedC4")
+            local origin = lp.m_vecOrigin
+            if lp:get_weapon().group == "c4" or (C4[1] and C4[1].m_vecOrigin:dist_to(origin) <= 75) then
+                return
+            end
+            local hostages = entitylist.get_entities_by_class_name("CHostage")
+            if lp.m_hCarriedHostage then return end
+            for i = 1, #hostages do
+                if hostages[i].m_vecOrigin:dist_to(origin) <= 75 then return end
+            end
+            anti_aim.use_pressed = true
+        end, "anti_aim.check_use_condition")
+    else
+        anti_aim.use_pressed = false
     end
     local setting = settings[condition]
     if not setting then return end
@@ -251,34 +275,19 @@ cbs.create_move(function(cmd)
         setting = settings[condition]
     end
 
-    cmd.buttons = bit.band(cmd.buttons, bit.bnot(32))
-
     anti_aim_enabled:set_value(true)
     yaw_jitter:set_value(0)
     at_targets_enabled:set_value(false)
 
-    local at_targets_setting = setting.yaw_modifiers:value("At targets")
     local yaw = 0
-
-    local pitch_setting = setting.pitch:value()
-    local pitch = pitch_settings[pitch_setting]
-    if pitch then
-        anti_aim_pitch:set_value(pitch)
-    end
-    if pitch_setting == "Custom" then
-        anti_aim_pitch:set_value(0)
-        pitch = setting.pitch_custom:value()
-        cmd.viewangles.pitch = pitch
-    end
-
-    local jitter_type, jitter_range = setting.jitter_type:value(), setting.jitter_range:value()
-    local jitter_angle = jitter_range
 
     if clientstate.get_choked_commands() == 0 then
         anti_aim.sent_packets_count = anti_aim.sent_packets_count + 1
 
-        if anti_aim.sent_packets_count % (setting.jitter_delay:value() + 1) == 0 then
-            anti_aim.jitter_update_ticks = anti_aim.jitter_update_ticks + 1
+        if condition ~= "Use" then
+            if anti_aim.sent_packets_count % (setting.jitter_delay:value() + 1) == 0 then
+                anti_aim.jitter_update_ticks = anti_aim.jitter_update_ticks + 1
+            end
         end
 
         if anti_aim.sent_packets_count % (setting.desync_delay:value() + 1) == 0 then
@@ -306,6 +315,26 @@ cbs.create_move(function(cmd)
     desync_inverter:set_type(current_desync > 0 and 1 or 0)
     desync_inverter:set_key(0)
 
+    if condition == "Use" then
+        anti_aim_pitch:set_value(0)
+        set_yaw(engine.get_view_angles().yaw)
+        return
+    end
+
+    local jitter_type, jitter_range = setting.jitter_type:value(), setting.jitter_range:value()
+    local jitter_angle = jitter_range
+
+    local at_targets_setting = setting.yaw_modifiers:value("At targets")
+    local pitch_setting = setting.pitch:value()
+    local pitch = pitch_settings[pitch_setting]
+    if pitch then
+        anti_aim_pitch:set_value(pitch)
+    end
+    -- if pitch_setting == "Custom" then
+    --     anti_aim_pitch:set_value(0)
+    --     pitch = setting.pitch_custom:value()
+    --     cmd.viewangles.pitch = pitch
+    -- end
     if desync_inverted and setting.yaw_modifiers:value("Inverted offset") then
         yaw = yaw + setting.inverted_yaw_offset:value()
     else
@@ -326,7 +355,7 @@ cbs.create_move(function(cmd)
         end
     end
 
-    local at_targets_angle = get_target_best_angle(at_targets_setting and condition ~= "Use")
+    local at_targets_angle = get_target_best_angle(at_targets_setting)
     local freestand_angle
     if condition ~= "Use" then
         freestand_angle = get_freestand_angle(cmd)
