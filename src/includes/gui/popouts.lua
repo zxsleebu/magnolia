@@ -12,8 +12,8 @@ popouts_t.draw_columns = function(columns, alpha)
             end
             for i = 1, #(element.inline or {}) do
                 local inline = element.inline[i]
+                inline:draw(alpha)
                 if inline.columns then
-                    inline:draw(alpha)
                     popouts_t.draw_columns(inline.columns, alpha)
                 end
             end

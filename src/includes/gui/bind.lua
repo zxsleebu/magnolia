@@ -22,12 +22,13 @@ local bind_t = {}
 ---@field changing boolean
 ---@field parent gui_checkbox_t|gui_label_t
 ---@field key_anims __anims_mt[]
+---@field type_anims __anims_mt[]
 local bind_mt = {
 
 }
 
 local bind_names = {
-    [-1] = "...", [0] = "none",
+    [-2] = "on", [-1] = "...", [0] = "none",
     'm1','m2',0,'m3','m4','m5',0,'bsp','tab',0,0,0,'enter',0,0,'shift','ctrl','alt',
     'brk','caps',0,0,0,0,0,0,'esc',0,0,0,0,'space','pg up','pg dn','end',
     'home','<-','^','->','v',0,0,0,0,'ins','del',0,'0','1','2','3','4','5',
@@ -55,9 +56,15 @@ bind_mt.inline_draw = errors.handler(function(self, pos, alpha, input_allowed)
     if self.changing then
         active_key = -1
     end
+    if self.el:get_type() == 0 then
+        active_key = -2
+    end
     for key, name in pairs(bind_names) do
         if self.changing then
             if key ~= 0 and input.is_key_clicked(key) then
+                if key == 27 then
+                    key = 0
+                end
                 active_key = key
                 self.el:set_key(key)
                 self.changing = false
@@ -86,7 +93,7 @@ bind_mt.inline_draw = errors.handler(function(self, pos, alpha, input_allowed)
     local size = self.size
     local hovered = input_allowed and drag.hover_absolute(pos, pos + size)
     local hover_anim = self.anims.hover((hovered or self.changing or self.open) and 255 or 0)
-    -- local active_anim = self.anims.alpha((self.changing or self.open) and 255 or 0)
+    self.anims.alpha(self.open and 255 or 0)
     renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:alpha(alpha))
     render.smoothed_rect(pos, pos + size, colors.magnolia_tinted:fade(colors.magnolia, hover_anim / 255):alpha(alpha), false)
     for key, anim in pairs(self.key_anims) do
@@ -97,74 +104,70 @@ bind_mt.inline_draw = errors.handler(function(self, pos, alpha, input_allowed)
         if input.is_key_clicked(1) then
             click_effect.add()
             self.changing = true
-            -- if not self.open then
-            --     self.pos = renderer.get_cursor_pos()
-            -- end
-            -- self.open = true
+        end
+        if input.is_key_clicked(2) then
+            click_effect.add()
+            if not self.open then
+                self.pos = renderer.get_cursor_pos()
+            end
+            self.open = true
         end
     end
 end, "bind_mt.inline_draw")
 local container_t
--- ---@param self gui_options_t
--- ---@param alpha number
--- options_mt.draw = errors.handler(function(self, alpha)
---     if not container_t then
---         container_t = require("includes.gui.container")
---     end
---     local alpha_anim = self.anims.alpha()
---     local open_alpha = alpha_anim * (alpha / 255)
---     if open_alpha > 0 then
---         local input_allowed = self.open and not gui.is_another_dragging()
---         local size = v2((#self.columns + 1) * gui.paddings.options_container_padding, 0)
---         if self.columns then
---             for _, column in pairs(self.columns) do
---                 local col_size = column:get_size()
---                 if col_size.x < 100 then
---                     col_size.x = 100
---                 end
---                 size.x = size.x + col_size.x
---                 if col_size.y > size.y then
---                     size.y = col_size.y
---                 end
---                 for _, element in pairs(column.elements) do
---                     if element.size.x == 0 then
---                         --*HACK: this is a hack to make the options menu wait for the element to calculate its size before drawing it
---                         open_alpha = 0.01
---                     end
---                 end
---                 input_allowed = input_allowed and column:input_allowed()
---             end
---         end
---         size = v2(size.x + 1, gui.paddings.options_container_padding * 2 + size.y + 1)
+local bind_types = {
+    "Always",
+    "Hold on",
+    "Hold off",
+    "Toggle on",
+    "Toggle off",
+}
+---@param self gui_bind_t
+---@param alpha number
+bind_mt.draw = errors.handler(function(self, alpha)
+    if not container_t then
+        container_t = require("includes.gui.container")
+    end
+    local alpha_anim = self.anims.alpha()
+    local open_alpha = alpha_anim * (alpha / 255)
+    if open_alpha > 0 then
+        local input_allowed = self.open and not gui.is_another_dragging()
 
---         local pos = self.pos - v2(size.x / 2, 0)
---         local to = pos + size
+        local size = v2(80, 108)
+        local pos = self.pos - v2(size.x / 2, 0)
+        local to = pos + size
 
---         local hovered = drag.hover_absolute(pos, to)
---         if hovered and alpha_anim > 127 then
---             gui.hovered = true
---         end
---         if input_allowed and alpha_anim > 127 and not hovered and input.is_key_clicked(1) then
---             self.open = false
---         end
+        local hovered = drag.hover_absolute(pos, to)
+        if hovered and alpha_anim > 127 then
+            gui.hovered = true
+        end
+        if input_allowed and alpha_anim > 127 and not hovered and input.is_key_clicked(1) then
+            self.open = false
+        end
 
---         container_t.draw_background(pos, to, open_alpha, 253)
+        container_t.draw_background(pos, to, open_alpha, 253)
 
---         if self.columns then
---             local add_pos = v2(gui.paddings.options_container_padding + 1, gui.paddings.options_container_padding + 1)
---             for i = 1, #self.columns do
---                 local column = self.columns[i]
---                 container_t.draw_elements(column.elements, pos + add_pos, math.round(column.size.x), open_alpha, input_allowed)
+        local padding = 20
 
---                 --!DEBUG
---                 -- renderer.rect(s.pos + add_pos, s.pos + add_pos + column.size, col.black:alpha(open_alpha))
---                 --!DEBUG
-
---                 add_pos.x = column.size.x + add_pos.x + gui.paddings.options_container_padding
---             end
---         end
---     end
--- end, "options_mt.draw")
+        local text_color = col.white:alpha(open_alpha)
+        local active_text_color = col(colors.magnolia.r + 10, colors.magnolia.g + 10, colors.magnolia.b + 10, open_alpha)
+        local active_type = self.el:get_type()
+        for i = 1, #bind_types do
+            local type = bind_types[i]
+            local type_pos = pos + v2(0, padding * (i - 1) + 2)
+            local type_hovered = input_allowed and drag.hover_absolute(type_pos, type_pos + v2(size.x, padding))
+            local type_active_alpha = self.type_anims[i].active(i == active_type and 255 or 0)
+            local type_alpha = self.type_anims[i].alpha((type_hovered or i == active_type) and 255 or 0)
+            local text_pos = type_pos + v2(7, 4)
+            local cur_text_color = text_color:fade(active_text_color, type_active_alpha / 255)
+            render.text(type, fonts.menu, text_pos, cur_text_color:alpha_anim(type_alpha, 127, 255), render.flags.SHADOW)
+            if type_hovered and input.is_key_clicked(1) then
+                click_effect.add()
+                self.el:set_type(i)
+            end
+        end
+    end
+end, "bind_mt.draw")
 
 
 ---@param element gui_checkbox_t|gui_label_t 
@@ -181,15 +184,21 @@ bind_t.new = errors.handler(function (element, default_key, default_mode)
             hover = 0,
             alpha = 0,
             width = 0,
-            active = 0,
         }),
         key_anims = {},
+        type_anims = {},
         path = gui.get_path(element.name),
         pos = v2(0, 0),
         open = false,
         size = v2(0, 18),
         el = bind,
     }, { __index = bind_mt })
+    for i = 1, #bind_types do
+        t.type_anims[i] = anims.new({
+            alpha = 0,
+            active = 0,
+        })
+    end
     element.inline[#element.inline+1] = t
     return t
 end, "bind_t.new")

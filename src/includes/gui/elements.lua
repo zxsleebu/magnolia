@@ -54,7 +54,7 @@ do
         end
     end)
 end
-gui.checkbox("Test"):bind()
+-- gui.checkbox("Test"):bind()
 gui.column()
 -- gui.checkbox("Hitbox override")
 -- gui.checkbox("HP conditions")
@@ -371,9 +371,9 @@ gui.subtab("Widgets")
 do
     local logs = gui.checkbox("Ragebot logs"):options(function ()
         gui.checkbox("Under crosshair"):options(function ()
-            gui.dropdown("Type", {"Text", "Box"})
+            -- gui.dropdown("Type", {"Text", "Box"})
             gui.dropdown("Sort", {"Newest at top", "Oldest at top"})
-            gui.dropdown("Appear position", {"Top", "Bottom"})
+            -- gui.dropdown("Appear position", {"Top", "Bottom"})
         end)
     end)
     local unfiltred_other_events = {}
@@ -413,21 +413,57 @@ do
         end
     end
     local logs_drag = drag.new("rage_logs", v2(0.5, 0.6), true)
+    local preview_events = { }
+    do
+        local create_preview = function(text, color)
+            return {
+                short_text = text,
+                anims = anims.new({
+                    alpha = 255,
+                    active = 255
+                }),
+                color = color
+            }
+        end
+        preview_events = {
+            create_preview({
+                {"lia", col.white},
+                {" stomach ", colors.magnolia},
+                {"-", col.white},
+                {"78", colors.magnolia},
+            }, colors.magnolia),
+            create_preview({
+                {"lia", col.white},
+                {" head ", col.red},
+                {"[", col.white},
+                {"spread", col.red},
+                {"]", col.white},
+            }, col.red),
+            create_preview({
+                {"lia", col.white},
+                {" head ", col.green},
+                {"-", col.white},
+                {"112", col.green},
+            }, col.green),
+        }
+    end
     local under_crosshair = logs:get_options("Under crosshair"):paint(function (el)
         local drag_size = v2(250, 100)
         local pos, highlight = logs_drag:run(drag.hover_fn(drag_size, true), function (pos, alpha)
             drag.highlight(pos - v2(drag_size.x / 2, 0), drag_size, alpha)
         end)
+        local preview = ui.is_visible()
+        local event_list = preview and preview_events or events
         -- render.dot(pos, col.red, 10)
         -- local type = el:get_dropdown("Type")
         local sort = el:get_dropdown("Sort")
         local reverse_sort = sort:value() ~= "Newest at top"
-        local start_i = reverse_sort and 1 or #events
-        local end_i = not reverse_sort and 1 or #events
+        local start_i = reverse_sort and 1 or #event_list
+        local end_i = not reverse_sort and 1 or #event_list
         local loop_step = reverse_sort and 1 or -1
         local y = 0
         for i = start_i, end_i, loop_step do
-            local event = events[i]
+            local event = event_list[i]
             if event then
                 local alpha = event.anims.alpha()
                 local active_anim = event.anims.active()
