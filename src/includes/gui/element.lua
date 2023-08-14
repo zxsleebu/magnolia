@@ -8,9 +8,12 @@
 ---@field master_object? { el?: checkbox_t, fn: fun(): boolean }
 local element_t = {}
 
----@param s gui_element_t
+---@generic T
+---@param s T
 ---@param master gui_checkbox_t|fun(): boolean
+---@return T
 element_t.master = function(s, master)
+    ---@cast s gui_checkbox_t
     s.master_object = {}
     if type(master) == "function" then
         s.master_object.fn = master

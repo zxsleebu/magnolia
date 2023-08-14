@@ -35,7 +35,7 @@ local is_enabled = gui.checkbox("Enable")
 ---@alias anti_aim_condition_t "Shared"|"Stand"|"Move"|"Air"|"Air duck"|"Duck"|"Walk"|"Use"
 local conditions = {"Shared", "Stand", "Move", "Air", "Air duck", "Duck", "Walk", "Use"}
 local current_condition = gui.dropdown("Condition", conditions):master(is_enabled)
-local freestand = gui.checkbox("Freestand"):master(is_enabled)
+local freestand = gui.checkbox("Freestand"):master(is_enabled):bind()
 gui.column()
 ---@type table<anti_aim_condition_t, { enabled?: gui_checkbox_t, yaw_modifiers: gui_dropdown_t, yaw_offset: gui_slider_t, inverted_yaw_offset: gui_slider_t, jitter_type: gui_dropdown_t, jitter_range: gui_slider_t, jitter_delay: gui_slider_t, spin_speed: gui_slider_t, spin_range: gui_slider_t, pitch: gui_dropdown_t, pitch_custom: gui_slider_t, desync_delay: gui_slider_t, desync_type: gui_dropdown_t, desync_length: gui_slider_t, inverted_desync_length: gui_slider_t}>
 local settings = {}
@@ -163,7 +163,6 @@ end
 ---@param cmd usercmd_t
 ---@return number?
 local get_freestand_angle = function(cmd)
-    if not autopeek_bind:is_active() then return end
     if not freestand:value() then return end
     local lp = entitylist.get_local_player()
     local lp_index = lp:get_index()

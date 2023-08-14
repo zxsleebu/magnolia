@@ -10,6 +10,7 @@ local column_t = require("includes.gui.column")
 local click_effect = require("includes.gui.click_effect")
 local cbs = require("libs.callbacks")
 local colors = require("includes.colors")
+local element_t = require("includes.gui.element")
 
 local bind_t = {}
 
@@ -24,7 +25,7 @@ local bind_t = {}
 ---@field key_anims __anims_mt[]
 ---@field type_anims __anims_mt[]
 local bind_mt = {
-
+    master = element_t.master,
 }
 
 local bind_names = {
@@ -154,21 +155,34 @@ bind_mt.draw = errors.handler(function(self, alpha)
         local active_type = self.el:get_type()
         for i = 1, #bind_types do
             local type = bind_types[i]
+            local active = self.el:get_type() == (i - 1)
             local type_pos = pos + v2(0, padding * (i - 1) + 2)
             local type_hovered = input_allowed and drag.hover_absolute(type_pos, type_pos + v2(size.x, padding))
-            local type_active_alpha = self.type_anims[i].active(i == active_type and 255 or 0)
-            local type_alpha = self.type_anims[i].alpha((type_hovered or i == active_type) and 255 or 0)
+            local type_active_alpha = self.type_anims[i].active(active and 255 or 0)
+            local type_alpha = self.type_anims[i].alpha((type_hovered or active) and 255 or 0)
             local text_pos = type_pos + v2(7, 4)
             local cur_text_color = text_color:fade(active_text_color, type_active_alpha / 255)
             render.text(type, fonts.menu, text_pos, cur_text_color:alpha_anim(type_alpha, 127, 255), render.flags.SHADOW)
             if type_hovered and input.is_key_clicked(1) then
                 click_effect.add()
-                self.el:set_type(i)
+                self.el:set_type(i - 1)
             end
         end
     end
 end, "bind_mt.draw")
 
+bind_mt.type = function (self)
+    return self.el:get_type()
+end
+
+bind_mt.value = function (self)
+    local active = self.el:is_active()
+    return self.parent.value and (self.parent:value() and active) or active
+end
+
+bind_mt.key = function (self)
+    return self.el:get_key()
+end
 
 ---@param element gui_checkbox_t|gui_label_t 
 ---@param default_key? number
