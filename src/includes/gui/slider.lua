@@ -193,7 +193,7 @@ end, "slider_t.new")
 ---@param max number
 ---@param float? number|boolean
 ---@param value? number
----@return gui_checkbox_t
+---@return gui_slider_t
 gui.slider = function(name, min, max, float, value)
     return gui.add_element(slider_t.new(name, min, max, float, value))
 end

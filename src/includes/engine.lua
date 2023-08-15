@@ -123,57 +123,118 @@ lib_engine.add_line_overlay = function (from, to, time, color)
     d.x, d.y, d.z = to.x, to.y, to.z
     IDebugOverlay:AddLineOverlay(p, d, color.r, color.g, color.b, true, time)
 end
-
+lib_engine.hitgroups = {
+    generic = 0,
+    head = 1,
+    chest = 2,
+    stomach = 3,
+    left_arm = 4,
+    right_arm = 5,
+    left_leg = 6,
+    right_leg = 7,
+    gear = 8
+}
+lib_engine.hitboxes = {
+    head = 0,
+    neck = 1,
+    pelvis = 2,
+    belly = 3,
+    thorax = 4,
+    lower_chest = 5,
+    upper_chest = 6,
+    right_thigh = 7,
+    left_thigh = 8,
+    right_calf = 9,
+    left_calf = 10,
+    right_foot = 11,
+    left_foot = 12,
+    right_hand = 13,
+    left_hand = 14,
+    right_upper_arm = 15,
+    right_forearm = 16,
+    left_upper_arm = 17,
+    left_forearm = 18,
+    max = 19
+}
 do
     local hitboxes = {
-        [0] = "head", "head",
-        "pelvis", "stomach",
-        "lower chest", "chest", "upper chest",
-        "left leg", "right leg",
-        "left leg", "right leg",
-        "left foot", "right foot",
-        "left arm", "right arm",
-        "left arm", "left arm",
-        "right arm", "right arm",
-        "wtf"
+        [lib_engine.hitboxes.head] = "head",
+        [lib_engine.hitboxes.neck] = "neck",
+        [lib_engine.hitboxes.pelvis] = "pelvis",
+        [lib_engine.hitboxes.belly] = "belly",
+        [lib_engine.hitboxes.thorax] = "thorax",
+        [lib_engine.hitboxes.lower_chest] = "lower chest",
+        [lib_engine.hitboxes.upper_chest] = "upper chest",
+        [lib_engine.hitboxes.right_thigh] = "right thigh",
+        [lib_engine.hitboxes.left_thigh] = "left thigh",
+        [lib_engine.hitboxes.right_calf] = "right calf",
+        [lib_engine.hitboxes.left_calf] = "left calf",
+        [lib_engine.hitboxes.right_foot] = "right foot",
+        [lib_engine.hitboxes.left_foot] = "left foot",
+        [lib_engine.hitboxes.right_hand] = "right hand",
+        [lib_engine.hitboxes.left_hand] = "left hand",
+        [lib_engine.hitboxes.right_upper_arm] = "right upper arm",
+        [lib_engine.hitboxes.right_forearm] = "right forearm",
+        [lib_engine.hitboxes.left_upper_arm] = "left upper arm",
+        [lib_engine.hitboxes.left_forearm] = "left forearm",
+        [lib_engine.hitboxes.max] = "max",
     }
     ---@param index number
-    ---@return "head"|"pelvis"|"stomach"|"lower chest"|"chest"|"upper chest"|"left leg"|"right leg"|"left foot"|"right foot"|"left arm"|"right arm"|"wtf"
+    ---@return "head"|"neck"|"pelvis"|"belly"|"thorax"|"lower chest"|"upper chest"|"right thigh"|"left thigh"|"right calf"|"left calf"|"right foot"|"left foot"|"right hand"|"left hand"|"right upper arm"|"right forearm"|"left upper arm"|"left forearm"|"max"
     lib_engine.get_hitbox_name = function(index)
         return hitboxes[index]
     end
     local hitgroups = {
-        [0] = "generic",
-        "head",
-        "chest", "stomach",
-        "left arm", "right arm",
-        "left leg", "right leg",
-        "wtf"
+        [lib_engine.hitgroups.generic] = "generic",
+        [lib_engine.hitgroups.head] = "head",
+        [lib_engine.hitgroups.chest] = "chest",
+        [lib_engine.hitgroups.stomach] = "stomach",
+        [lib_engine.hitgroups.left_arm] = "left arm",
+        [lib_engine.hitgroups.right_arm] = "right arm",
+        [lib_engine.hitgroups.left_leg] = "left leg",
+        [lib_engine.hitgroups.right_leg] = "right leg",
+        [lib_engine.hitgroups.gear] = "gear",
     }
     ---@param index number
-    ---@return "generic"|"head"|"chest"|"stomach"|"left arm"|"right arm"|"left leg"|"right leg"|"wtf"
+    ---@return "generic"|"head"|"chest"|"stomach"|"left arm"|"right arm"|"left leg"|"right leg"|"gear"
     lib_engine.get_hitgroup_name = function (index)
         return hitgroups[index]
     end
     local hitgroup_to_hitbox = {
-        [0] = 5, --generic
-        0, --head
-        6, --chest
-        4, --stomach
-        16, --left arm
-        18, --right arm
-        7, --left leg,
-        8, --right leg
-        3 -- gear (wtf)
+        [lib_engine.hitgroups.generic] = lib_engine.hitboxes.lower_chest,
+        [lib_engine.hitgroups.head] = lib_engine.hitboxes.head,
+        [lib_engine.hitgroups.chest] = lib_engine.hitboxes.lower_chest,
+        [lib_engine.hitgroups.stomach] = lib_engine.hitboxes.belly,
+        [lib_engine.hitgroups.left_arm] = lib_engine.hitboxes.left_upper_arm,
+        [lib_engine.hitgroups.right_arm] = lib_engine.hitboxes.right_upper_arm,
+        [lib_engine.hitgroups.left_leg] = lib_engine.hitboxes.left_thigh,
+        [lib_engine.hitgroups.right_leg] = lib_engine.hitboxes.right_thigh,
+        [lib_engine.hitgroups.gear] = lib_engine.hitboxes.lower_chest
     }
     lib_engine.hitgroup_to_hitbox = function(i)
         return hitgroup_to_hitbox[i] or 5
     end
     local hitbox_to_hitgroup = {
-        [0] = 1,
-        2, 3, 2, 2, 2,
-        6, 7, 6, 7, 6, 7,
-        4, 5, 4, 4, 5, 5
+        [lib_engine.hitboxes.head] = lib_engine.hitgroups.head,
+        [lib_engine.hitboxes.neck] = lib_engine.hitgroups.chest,
+        [lib_engine.hitboxes.pelvis] = lib_engine.hitgroups.stomach,
+        [lib_engine.hitboxes.belly] = lib_engine.hitgroups.stomach,
+        [lib_engine.hitboxes.thorax] = lib_engine.hitgroups.stomach,
+        [lib_engine.hitboxes.lower_chest] = lib_engine.hitgroups.chest,
+        [lib_engine.hitboxes.upper_chest] = lib_engine.hitgroups.chest,
+        [lib_engine.hitboxes.right_thigh] = lib_engine.hitgroups.right_leg,
+        [lib_engine.hitboxes.left_thigh] = lib_engine.hitgroups.left_leg,
+        [lib_engine.hitboxes.right_calf] = lib_engine.hitgroups.right_leg,
+        [lib_engine.hitboxes.left_calf] = lib_engine.hitgroups.left_leg,
+        [lib_engine.hitboxes.right_foot] = lib_engine.hitgroups.right_leg,
+        [lib_engine.hitboxes.left_foot] = lib_engine.hitgroups.left_leg,
+        [lib_engine.hitboxes.right_hand] = lib_engine.hitgroups.right_arm,
+        [lib_engine.hitboxes.left_hand] = lib_engine.hitgroups.left_arm,
+        [lib_engine.hitboxes.right_upper_arm] = lib_engine.hitgroups.right_arm,
+        [lib_engine.hitboxes.right_forearm] = lib_engine.hitgroups.right_arm,
+        [lib_engine.hitboxes.left_upper_arm] = lib_engine.hitgroups.left_arm,
+        [lib_engine.hitboxes.left_forearm] = lib_engine.hitgroups.left_arm,
+        [lib_engine.hitboxes.max] = 0,
     }
     lib_engine.hitbox_to_hitgroup = function(i)
         return hitbox_to_hitgroup[i] or 0

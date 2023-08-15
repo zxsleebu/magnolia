@@ -54,6 +54,67 @@ do
         end
     end)
 end
+do
+    local hitbox_overrides, safe_points ---@type gui_dropdown_t, gui_dropdown_t
+    local override_damage, damage_value ---@type gui_checkbox_t, gui_slider_t
+    gui.checkbox("Condition on lethal"):options(function ()
+        hitbox_overrides = gui.dropdown("Hitbox overrides", {"Disable head", "Disable limbs"}, {})
+        safe_points = gui.dropdown("Safe points", {"Same", "Default", "Prefer", "Force"})
+        override_damage = gui.checkbox("Override min damage")
+        damage_value = gui.slider("Min damage HP + ?", 0, 20):master(override_damage)
+    end):create_move(function(cmd)
+        local lp = entitylist.get_local_player()
+        if not lp or not lp:is_alive() then return end
+        local weapon = lp:get_weapon()
+        if not weapon then return end
+        local disable_head = hitbox_overrides:value("Disable head")
+        local disable_limbs = hitbox_overrides:value("Disable limbs")
+        local safe_point = safe_points:value()
+        local safe_point_value = 0
+        if safe_point == "Prefer" then
+            safe_point_value = 1
+        elseif safe_point == "Force" then
+            safe_point_value = 2
+        end
+        local override = override_damage:value()
+        local mindmg = damage_value:value()
+        for _, enemy in pairs(entitylist.get_players(0)) do
+            if enemy:is_alive() then
+                local index = enemy:get_index()
+                local stomach_damage = enemy:get_max_damage(lp, iengine.hitgroups.stomach, weapon)
+                local leg_damage = enemy:get_max_damage(lp, iengine.hitgroups.left_leg, weapon)
+                local health = enemy.m_iHealth
+                if stomach_damage > health or leg_damage > health then
+                    if disable_head then
+                        ragebot.override_hitscan(index, iengine.hitboxes.head, false)
+                    end
+                    if disable_limbs then
+                        ragebot.override_hitscan(index, iengine.hitboxes.left_leg, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.right_leg, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.left_foot, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.right_foot, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.left_hand, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.right_hand, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.left_upper_arm, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.right_upper_arm, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.left_forearm, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.right_forearm, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.left_thigh, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.right_thigh, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.left_calf, false)
+                        ragebot.override_hitscan(index, iengine.hitboxes.right_calf, false)
+                    end
+                    if safe_point ~= "Same" then
+                        ragebot.override_safe_point(index, safe_point_value)
+                    end
+                    if override then
+                        ragebot.override_min_damage(index, health + mindmg)
+                    end
+                end
+            end
+        end
+    end)
+end
 -- gui.checkbox("Test"):bind()
 gui.column()
 -- gui.checkbox("Hitbox override")
@@ -726,7 +787,7 @@ do
     local buybot = gui.checkbox("Buybot"):options(function()
         primary = gui.dropdown("Primary", {"None", "Scout", "AWP", "Auto", "AK47 / M4A1", "Nova", "XM1014", "MAG-7", "MAC10 / MP9", "MP7", "UMP45", "P90", "Bizon"})
         secondary = gui.dropdown("Secondary", {"None", "Deagle / R8", "Dualies", "P250", "Tec-9 / Five-SeveN", "Glock-18 / USP-S"})
-        other = gui.dropdown("Other", {"Armor", "HE", "Molotov", "Smoke", "Flashbang", "Zeus", "Defuse kit"}, {})
+        other = gui.dropdown("Other", {"Armor", "Helmet", "HE", "Molotov", "Smoke", "Flashbang", "Zeus", "Defuse kit"}, {})
     end)
     local buybot_fn = function()
         if not buybot:value() then return end
@@ -747,7 +808,7 @@ do
             ".mp7", ".ump45", ".p90", ".bizon"
         }
         local other_list = {
-            ".vesthelm",
+            ".vest", ".vesthelm",
             ".hegrenade", ".molotov;.incgrenade", ".smokegrenade", ".flashbang",
             ".taser", ".defuser"
         }

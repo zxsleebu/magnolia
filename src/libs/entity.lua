@@ -4,259 +4,260 @@ local errors = require("libs.error_handler")
 local interface, class = require("libs.interfaces")()
 -- local hooks = require("libs.hooks")
 local ffi = require("libs.protected_ffi")
+local iengine = require("includes.engine")
 
 ---@class entity_t
----@field m_bEligibleForScreenHighlight number 
----@field m_flMaxFallVelocity number 
----@field m_flLastMadeNoiseTime number 
----@field m_flUseLookAtAngle number 
----@field m_flFadeScale number 
----@field m_fadeMaxDist number 
----@field m_fadeMinDist number 
----@field m_bIsAutoaimTarget number 
----@field m_bSpottedByMask table 
----@field m_bSpottedBy table 
----@field m_bSpotted number 
----@field m_bAlternateSorting number 
----@field m_bAnimatedEveryTick number 
----@field m_bSimulatedEveryTick number 
----@field m_iTextureFrameIndex number 
+---@field m_bEligibleForScreenHighlight boolean
+---@field m_flMaxFallVelocity number
+---@field m_flLastMadeNoiseTime number
+---@field m_flUseLookAtAngle number
+---@field m_flFadeScale number
+---@field m_fadeMaxDist number
+---@field m_fadeMinDist number
+---@field m_bIsAutoaimTarget boolean
+---@field m_bSpottedByMask boolean
+---@field m_bSpottedBy boolean
+---@field m_bSpotted boolean
+---@field m_bAlternateSorting boolean
+---@field m_bAnimatedEveryTick boolean
+---@field m_bSimulatedEveryTick boolean
+---@field m_iTextureFrameIndex number
 ---@field m_Collision table
 ---@field m_flPoseParameter table
----@field m_vecSpecifiedSurroundingMaxs vec3_t 
----@field m_vecSpecifiedSurroundingMins vec3_t 
----@field m_triggerBloat number 
----@field m_nSurroundType number 
----@field m_usSolidFlags number 
----@field m_nSolidType number 
----@field m_vecMaxs vec3_t 
----@field m_vecMins vec3_t 
----@field movetype number 
----@field m_iName string 
----@field m_iParentAttachment number 
----@field m_hEffectEntity entity_t 
----@field m_hOwnerEntity entity_t 
----@field m_CollisionGroup number 
----@field m_iPendingTeamNum number 
----@field m_iTeamNum number 
----@field m_clrRender number 
----@field m_nRenderFX number 
----@field m_nRenderMode number 
----@field m_fEffects number 
----@field m_nModelIndex number 
----@field m_angRotation vec3_t 
----@field m_vecOrigin vec3_t 
----@field m_cellZ number 
----@field m_cellY number 
----@field m_cellX number 
----@field m_cellbits number 
----@field m_flSimulationTime number 
----@field m_flAnimTime number 
----@field m_viewtarget vec3_t 
----@field m_blinktoggle number 
----@field m_flexWeight table 
----@field m_nWaterLevel number 
----@field m_flDuckSpeed number 
----@field m_flDuckAmount number 
----@field m_bShouldDrawPlayerWhileUsingViewEntity number 
----@field m_hViewEntity entity_t 
----@field m_vphysicsCollisionState number 
----@field m_hColorCorrectionCtrl entity_t 
----@field m_hPostProcessCtrl entity_t 
----@field m_ladderSurfaceProps number 
----@field m_vecLadderNormal vec3_t 
----@field m_szLastPlaceName string 
----@field m_iCoachingTeam number 
----@field m_hObserverTarget entity_t 
----@field m_iDeathPostEffect number 
----@field m_uCameraManGraphs number 
----@field m_bCameraManScoreBoard number 
----@field m_bCameraManOverview number 
----@field m_bCameraManXRay number 
----@field m_bActiveCameraMan number 
----@field m_iObserverMode number 
----@field m_fFlags number 
----@field m_flMaxspeed number 
----@field m_iBonusChallenge number 
----@field m_iBonusProgress number 
----@field m_iAmmo table 
----@field m_lifeState number 
----@field m_iHealth number 
----@field m_hGroundEntity entity_t 
----@field m_hUseEntity entity_t 
+---@field m_vecSpecifiedSurroundingMaxs vec3_t
+---@field m_vecSpecifiedSurroundingMins vec3_t
+---@field m_triggerBloat number
+---@field m_nSurroundType number
+---@field m_usSolidFlags number
+---@field m_nSolidType number
+---@field m_vecMaxs vec3_t
+---@field m_vecMins vec3_t
+---@field movetype number
+---@field m_iName string
+---@field m_iParentAttachment number
+---@field m_hEffectEntity entity_t
+---@field m_hOwnerEntity entity_t
+---@field m_CollisionGroup number
+---@field m_iPendingTeamNum number
+---@field m_iTeamNum number
+---@field m_clrRender number
+---@field m_nRenderFX number
+---@field m_nRenderMode number
+---@field m_fEffects number
+---@field m_nModelIndex number
+---@field m_angRotation vec3_t
+---@field m_vecOrigin vec3_t
+---@field m_cellZ number
+---@field m_cellY number
+---@field m_cellX number
+---@field m_cellbits number
+---@field m_flSimulationTime number
+---@field m_flAnimTime number
+---@field m_viewtarget vec3_t
+---@field m_blinktoggle boolean
+---@field m_flexWeight table
+---@field m_nWaterLevel number
+---@field m_flDuckSpeed number
+---@field m_flDuckAmount number
+---@field m_bShouldDrawPlayerWhileUsingViewEntity boolean
+---@field m_hViewEntity entity_t
+---@field m_vphysicsCollisionState number
+---@field m_hColorCorrectionCtrl entity_t
+---@field m_hPostProcessCtrl entity_t
+---@field m_ladderSurfaceProps number
+---@field m_vecLadderNormal vec3_t
+---@field m_szLastPlaceName string
+---@field m_iCoachingTeam number
+---@field m_hObserverTarget entity_t
+---@field m_iDeathPostEffect number
+---@field m_uCameraManGraphs number
+---@field m_bCameraManScoreBoard boolean
+---@field m_bCameraManOverview boolean
+---@field m_bCameraManXRay boolean
+---@field m_bActiveCameraMan boolean
+---@field m_iObserverMode number
+---@field m_fFlags number
+---@field m_flMaxspeed number
+---@field m_iBonusChallenge number
+---@field m_iBonusProgress number
+---@field m_iAmmo table
+---@field m_lifeState number
+---@field m_iHealth number
+---@field m_hGroundEntity entity_t
+---@field m_hUseEntity entity_t
 ---@field m_hVehicle entity_t
----@field m_afPhysicsFlags number 
----@field m_hZoomOwner entity_t 
----@field m_iDefaultFOV number 
----@field m_flFOVTime number 
----@field m_iFOVStart number 
----@field m_iFOV number 
----@field m_hTonemapController number 
----@field m_flLaggedMovementValue number 
----@field m_fForceTeam number 
----@field m_flNextDecalTime number 
----@field m_flDeathTime number 
----@field m_bConstraintPastRadius number 
----@field m_flConstraintSpeedFactor number 
----@field m_flConstraintWidth number 
----@field m_flConstraintRadius number 
----@field m_vecConstraintCenter vec3_t 
----@field m_hConstraintEntity entity_t 
----@field m_vecBaseVelocity vec3_t 
----@field m_vecVelocity vec3_t 
+---@field m_afPhysicsFlags number
+---@field m_hZoomOwner entity_t
+---@field m_iDefaultFOV number
+---@field m_flFOVTime number
+---@field m_iFOVStart number
+---@field m_iFOV number
+---@field m_hTonemapController number
+---@field m_flLaggedMovementValue number
+---@field m_fForceTeam number
+---@field m_flNextDecalTime number
+---@field m_flDeathTime number
+---@field m_bConstraintPastRadius boolean
+---@field m_flConstraintSpeedFactor number
+---@field m_flConstraintWidth number
+---@field m_flConstraintRadius number
+---@field m_vecConstraintCenter vec3_t
+---@field m_hConstraintEntity entity_t
+---@field m_vecBaseVelocity vec3_t
+---@field m_vecVelocity vec3_t
 ---@field m_hLastWeapon entity_t
----@field m_nNextThinkTick number 
----@field m_nTickBase number 
----@field m_fOnTarget number 
----@field m_flFriction number 
+---@field m_nNextThinkTick number
+---@field m_nTickBase number
+---@field m_fOnTarget number
+---@field m_flFriction number
 ---@field m_vecViewOffset vec3_t
----@field m_bAllowAutoMovement number 
----@field m_flStepSize number 
----@field m_bPoisoned number 
----@field m_bWearingSuit number 
----@field m_bDrawViewmodel number 
----@field m_aimPunchAngleVel vec3_t 
----@field m_aimPunchAngle vec3_t 
----@field m_viewPunchAngle vec3_t 
----@field m_flFallVelocity number 
----@field m_nJumpTimeMsecs number 
----@field m_nDuckJumpTimeMsecs number 
----@field m_nDuckTimeMsecs number 
----@field m_bInDuckJump number 
----@field m_flLastDuckTime number 
----@field m_bDucking number 
----@field m_bDucked number 
----@field m_flFOVRate number 
----@field m_iHideHUD number 
----@field m_chAreaPortalBits table 
----@field m_chAreaBits table 
+---@field m_bAllowAutoMovement boolean
+---@field m_flStepSize number
+---@field m_bPoisoned boolean
+---@field m_bWearingSuit boolean
+---@field m_bDrawViewmodel boolean
+---@field m_aimPunchAngleVel vec3_t
+---@field m_aimPunchAngle vec3_t
+---@field m_viewPunchAngle vec3_t
+---@field m_flFallVelocity number
+---@field m_nJumpTimeMsecs number
+---@field m_nDuckJumpTimeMsecs number
+---@field m_nDuckTimeMsecs number
+---@field m_bInDuckJump boolean
+---@field m_flLastDuckTime number
+---@field m_bDucking boolean
+---@field m_bDucked boolean
+---@field m_flFOVRate number
+---@field m_iHideHUD number
+---@field m_chAreaPortalBits table
+---@field m_chAreaBits table
 ---@field m_hMyWearables entity_t[]
 ---@field m_hMyWeapons entity_t[]
----@field m_nRelativeDirectionOfLastInjury number 
----@field m_flTimeOfLastInjury number 
+---@field m_nRelativeDirectionOfLastInjury number
+---@field m_flTimeOfLastInjury number
 ---@field m_hActiveWeapon entity_t
----@field m_LastHitGroup number 
----@field m_flNextAttack number 
----@field m_flLastExoJumpTime number 
----@field m_flHealthShotBoostExpirationTime number 
----@field m_hSurvivalAssassinationTarget entity_t 
----@field m_nSurvivalTeam number 
----@field m_vecSpawnRappellingRopeOrigin vec3_t 
----@field m_bIsSpawnRappelling number 
----@field m_bHideTargetID number 
----@field m_flThirdpersonRecoil number 
----@field m_bStrafing number 
----@field m_flLowerBodyYawTarget number 
----@field m_unTotalRoundDamageDealt number 
----@field m_iNumRoundKillsHeadshots number 
----@field m_bIsLookingAtWeapon number 
----@field m_bIsHoldingLookAtWeapon number 
----@field m_nDeathCamMusic number 
----@field m_nLastConcurrentKilled number 
----@field m_nLastKillerIndex number 
----@field m_bHud_RadarHidden number 
----@field m_bHud_MiniScoreHidden number 
----@field m_bIsAssassinationTarget number 
----@field m_flAutoMoveTargetTime number 
----@field m_flAutoMoveStartTime number 
----@field m_vecAutomoveTargetEnd vec3_t 
----@field m_iControlledBotEntIndex number 
----@field m_bCanControlObservedBot number 
----@field m_bHasControlledBotThisRound number 
----@field m_bIsControllingBot number 
----@field m_unFreezetimeEndEquipmentValue number 
----@field m_unRoundStartEquipmentValue number 
----@field m_unCurrentEquipmentValue number 
----@field m_cycleLatch number 
----@field m_hPlayerPing number 
+---@field m_LastHitGroup number
+---@field m_flNextAttack number
+---@field m_flLastExoJumpTime number
+---@field m_flHealthShotBoostExpirationTime number
+---@field m_hSurvivalAssassinationTarget entity_t
+---@field m_nSurvivalTeam number
+---@field m_vecSpawnRappellingRopeOrigin vec3_t
+---@field m_bIsSpawnRappelling boolean
+---@field m_bHideTargetID boolean
+---@field m_flThirdpersonRecoil number
+---@field m_bStrafing boolean
+---@field m_flLowerBodyYawTarget number
+---@field m_unTotalRoundDamageDealt number
+---@field m_iNumRoundKillsHeadshots number
+---@field m_bIsLookingAtWeapon boolean
+---@field m_bIsHoldingLookAtWeapon boolean
+---@field m_nDeathCamMusic number
+---@field m_nLastConcurrentKilled number
+---@field m_nLastKillerIndex number
+---@field m_bHud_RadarHidden boolean
+---@field m_bHud_MiniScoreHidden boolean
+---@field m_bIsAssassinationTarget boolean
+---@field m_flAutoMoveTargetTime number
+---@field m_flAutoMoveStartTime number
+---@field m_vecAutomoveTargetEnd vec3_t
+---@field m_iControlledBotEntIndex number
+---@field m_bCanControlObservedBot boolean
+---@field m_bHasControlledBotThisRound boolean
+---@field m_bIsControllingBot boolean
+---@field m_unFreezetimeEndEquipmentValue number
+---@field m_unRoundStartEquipmentValue number
+---@field m_unCurrentEquipmentValue number
+---@field m_cycleLatch number
+---@field m_hPlayerPing number
 ---@field m_hRagdoll entity_t
----@field m_flProgressBarStartTime number 
----@field m_iProgressBarDuration number 
----@field m_flFlashMaxAlpha number 
----@field m_flFlashDuration number 
----@field m_nHeavyAssaultSuitCooldownRemaining number 
----@field m_bHasHeavyArmor number 
----@field m_bHasHelmet number 
----@field m_unMusicID number 
----@field m_bHasParachute number 
----@field m_passiveItems table 
----@field m_rank table 
----@field m_iMatchStats_EnemiesFlashed table 
----@field m_iMatchStats_UtilityDamage table 
----@field m_iMatchStats_CashEarned table 
----@field m_iMatchStats_Objective table 
----@field m_iMatchStats_HeadShotKills table 
----@field m_iMatchStats_Assists table 
----@field m_iMatchStats_Deaths table 
----@field m_iMatchStats_LiveTime table 
----@field m_iMatchStats_KillReward table 
----@field m_iMatchStats_MoneySaved table 
----@field m_iMatchStats_EquipmentValue table 
+---@field m_flProgressBarStartTime number
+---@field m_iProgressBarDuration number
+---@field m_flFlashMaxAlpha number
+---@field m_flFlashDuration number
+---@field m_nHeavyAssaultSuitCooldownRemaining number
+---@field m_bHasHeavyArmor boolean
+---@field m_bHasHelmet boolean
+---@field m_unMusicID number
+---@field m_bHasParachute boolean
+---@field m_passiveItems table
+---@field m_rank table
+---@field m_iMatchStats_EnemiesFlashed table
+---@field m_iMatchStats_UtilityDamage table
+---@field m_iMatchStats_CashEarned table
+---@field m_iMatchStats_Objective table
+---@field m_iMatchStats_HeadShotKills table
+---@field m_iMatchStats_Assists table
+---@field m_iMatchStats_Deaths table
+---@field m_iMatchStats_LiveTime table
+---@field m_iMatchStats_KillReward table
+---@field m_iMatchStats_MoneySaved table
+---@field m_iMatchStats_EquipmentValue table
 ---@field m_nPersonaDataPublicLevel table
----@field m_iMatchStats_Damage table 
----@field m_iMatchStats_Kills table 
----@field m_bIsPlayerGhost number 
----@field m_flDetectedByEnemySensorTime number 
----@field m_flGuardianTooFarDistFrac number 
----@field m_isCurrentGunGameTeamLeader number 
----@field m_isCurrentGunGameLeader number 
----@field m_bCanMoveDuringFreezePeriod number 
----@field m_flGroundAccelLinearFracLastTime number 
----@field m_bIsRescuing number 
----@field m_hCarriedHostageProp entity_t 
----@field m_hCarriedHostage entity_t 
----@field m_szArmsModel string 
----@field m_fMolotovDamageTime number 
----@field m_fMolotovUseTime number 
----@field m_iNumRoundKills number 
----@field m_iNumGunGameKillsWithCurrentWeapon number 
----@field m_iNumGunGameTRKillPoints number 
----@field m_iGunGameProgressiveWeaponIndex number 
----@field m_bMadeFinalGunGameProgressiveKill number 
----@field m_bHasMovedSinceSpawn number 
----@field m_bGunGameImmunity number 
----@field m_fImmuneToGunGameDamageTime number 
----@field m_bResumeZoom number 
----@field m_nIsAutoMounting number 
----@field m_bIsWalking number 
----@field m_bIsScoped number 
----@field m_iBlockingUseActionInProgress number 
----@field m_bIsGrabbingHostage number 
----@field m_bIsDefusing number 
----@field m_bInHostageRescueZone number 
----@field m_bHasNightVision number 
----@field m_bNightVisionOn number 
----@field m_bHasDefuser number 
----@field m_angEyeAngles vec3_t 
----@field m_ArmorValue number 
----@field m_iClass number 
----@field m_iMoveState number 
----@field m_bKilledByTaser number 
----@field m_bInNoDefuseArea number 
----@field m_bInBuyZone number 
----@field m_bInBombZone number 
----@field m_totalHitsOnServer number 
----@field m_iStartAccount number 
----@field m_iAccount number 
----@field m_iPlayerState number 
----@field m_bIsRespawningForDMBonus number 
----@field m_bWaitForNoAttack number 
----@field m_iThrowGrenadeCounter number 
----@field m_iSecondaryAddon number 
----@field m_iPrimaryAddon number 
----@field m_iAddonBits number 
----@field m_iWeaponPurchasesThisMatch table 
----@field m_nQuestProgressReason number 
----@field m_unActiveQuestId number 
----@field m_iWeaponPurchasesThisRound table 
----@field m_bPlayerDominatingMe table 
----@field m_bPlayerDominated table 
----@field m_flVelocityModifier number 
----@field m_bDuckOverride number 
----@field m_nNumFastDucks number 
----@field m_iShotsFired number 
----@field m_iDirection number 
----@field m_flStamina number 
+---@field m_iMatchStats_Damage table
+---@field m_iMatchStats_Kills table
+---@field m_bIsPlayerGhost boolean
+---@field m_flDetectedByEnemySensorTime number
+---@field m_flGuardianTooFarDistFrac number
+---@field m_isCurrentGunGameTeamLeader number
+---@field m_isCurrentGunGameLeader number
+---@field m_bCanMoveDuringFreezePeriod boolean
+---@field m_flGroundAccelLinearFracLastTime number
+---@field m_bIsRescuing boolean
+---@field m_hCarriedHostageProp entity_t
+---@field m_hCarriedHostage entity_t
+---@field m_szArmsModel string
+---@field m_fMolotovDamageTime number
+---@field m_fMolotovUseTime number
+---@field m_iNumRoundKills number
+---@field m_iNumGunGameKillsWithCurrentWeapon number
+---@field m_iNumGunGameTRKillPoints number
+---@field m_iGunGameProgressiveWeaponIndex number
+---@field m_bMadeFinalGunGameProgressiveKill boolean
+---@field m_bHasMovedSinceSpawn boolean
+---@field m_bGunGameImmunity boolean
+---@field m_fImmuneToGunGameDamageTime number
+---@field m_bResumeZoom boolean
+---@field m_nIsAutoMounting number
+---@field m_bIsWalking boolean
+---@field m_bIsScoped boolean
+---@field m_iBlockingUseActionInProgress number
+---@field m_bIsGrabbingHostage boolean
+---@field m_bIsDefusing boolean
+---@field m_bInHostageRescueZone boolean
+---@field m_bHasNightVision boolean
+---@field m_bNightVisionOn boolean
+---@field m_bHasDefuser boolean
+---@field m_angEyeAngles vec3_t
+---@field m_ArmorValue number
+---@field m_iClass number
+---@field m_iMoveState number
+---@field m_bKilledByTaser boolean
+---@field m_bInNoDefuseArea boolean
+---@field m_bInBuyZone boolean
+---@field m_bInBombZone boolean
+---@field m_totalHitsOnServer number
+---@field m_iStartAccount number
+---@field m_iAccount number
+---@field m_iPlayerState number
+---@field m_bIsRespawningForDMBonus boolean
+---@field m_bWaitForNoAttack boolean
+---@field m_iThrowGrenadeCounter number
+---@field m_iSecondaryAddon number
+---@field m_iPrimaryAddon number
+---@field m_iAddonBits number
+---@field m_iWeaponPurchasesThisMatch table
+---@field m_nQuestProgressReason number
+---@field m_unActiveQuestId number
+---@field m_iWeaponPurchasesThisRound table
+---@field m_bPlayerDominatingMe boolean
+---@field m_bPlayerDominated boolean
+---@field m_flVelocityModifier number
+---@field m_bDuckOverride boolean
+---@field m_nNumFastDucks number
+---@field m_iShotsFired number
+---@field m_iDirection number
+---@field m_flStamina number
 ---@field m_flNextPrimaryAttack number
 ---@field m_flNextSecondaryAttack number
 ---@field m_fLastShotTime number
@@ -272,22 +273,22 @@ local ffi = require("libs.protected_ffi")
 ---@field m_bConnected boolean[]
 
 local IClientEntityList = interface.new("client", "VClientEntityList003", {
-    GetClientEntity = {3, "uintptr_t(__thiscall*)(void*, int)"},
+    GetClientEntity = { 3, "uintptr_t(__thiscall*)(void*, int)" },
 })
 local CBaseEntity = class.new({
-    GetCollideable = {3, "uintptr_t(__thiscall*)(void*)"},
-    GetNetworkable = {4, "uintptr_t(__thiscall*)(void*)"},
-    GetClientRenderable = {5, "uintptr_t(__thiscall*)(void*)"},
-    GetClientEntity = {6, "uintptr_t(__thiscall*)(void*)"},
-    GetBaseEntity = {7, "uintptr_t(__thiscall*)(void*)"},
-    GetClientThinkable = {8, "uintptr_t(__thiscall*)(void*)"},
-    SetModelIndex = {75, "void(__thiscall*)(void*,int)"},
-    IsPlayer = {158, "bool(__thiscall*)(void*)"},
-    IsWeapon = {166, "bool(__thiscall*)(void*)"},
+    GetCollideable = { 3, "uintptr_t(__thiscall*)(void*)" },
+    GetNetworkable = { 4, "uintptr_t(__thiscall*)(void*)" },
+    GetClientRenderable = { 5, "uintptr_t(__thiscall*)(void*)" },
+    GetClientEntity = { 6, "uintptr_t(__thiscall*)(void*)" },
+    GetBaseEntity = { 7, "uintptr_t(__thiscall*)(void*)" },
+    GetClientThinkable = { 8, "uintptr_t(__thiscall*)(void*)" },
+    SetModelIndex = { 75, "void(__thiscall*)(void*,int)" },
+    IsPlayer = { 158, "bool(__thiscall*)(void*)" },
+    IsWeapon = { 166, "bool(__thiscall*)(void*)" },
 })
 --check if clientclass struct exists
 if not pcall(ffi.typeof, "struct ClientClass") then
-    ffi.cdef[[
+    ffi.cdef [[
         struct ClientClass {
             void*   m_pCreateFn;
             void*   m_pCreateEventFn;
@@ -310,7 +311,7 @@ entitylist.get_client_entity = function(index)
     return IClientEntityList:GetClientEntity(index)
 end
 local entitylist_get_players_o = entitylist.get_players
-entitylist.get_players = function (type)
+entitylist.get_players = function(type)
     local players = entitylist_get_players_o(type)
     local new = {}
     for i = 1, #players do
@@ -320,7 +321,7 @@ entitylist.get_players = function (type)
 end
 ---@param steam_id string
 ---@return entity_t?
-entitylist.get_entity_by_steam_id = function (steam_id)
+entitylist.get_entity_by_steam_id = function(steam_id)
     for _, player in pairs(entitylist.get_players(2)) do
         if player:get_info().steam_id64 == steam_id then
             return player
@@ -329,7 +330,7 @@ entitylist.get_entity_by_steam_id = function (steam_id)
 end
 ---@param userid number
 ---@return entity_t?
-entitylist.get_entity_by_userid = function (userid)
+entitylist.get_entity_by_userid = function(userid)
     for _, player in pairs(entitylist.get_players(2)) do
         local info = player:get_info()
         if info and info.user_id == userid then
@@ -368,12 +369,12 @@ entitylist.get_player_resource = function()
 end
 
 ---@param flag number
-entity_t.get_flag = function (self, flag)
+entity_t.get_flag = function(self, flag)
     return bit.band(self.m_fFlags, flag) ~= 0
 end
 
 ---@return boolean
-entity_t.is_on_ground = function (self)
+entity_t.is_on_ground = function(self)
     return self:get_flag(1)
 end
 
@@ -391,7 +392,7 @@ entity_t.update = function(self)
     return entitylist.get_entity_by_index(self:get_index())
 end
 
-entity_t.get_info = function (self)
+entity_t.get_info = function(self)
     return engine.get_player_info(self:get_index())
 end
 
@@ -430,7 +431,8 @@ do
         if not info then return 0 end
         local id = info.user_id
         if not ticks[id] then
-            ticks[id] = 0 end
+            ticks[id] = 0
+        end
         return ticks[id]
     end
     cbs.create_move(function()
@@ -451,18 +453,18 @@ do
             end
         end
     end)
-    cbs.event("round_prestart", function ()
+    cbs.event("round_prestart", function()
         for k, _ in pairs(ticks) do
             ticks[k] = math.huge
         end
     end)
 end
 
-entity_t.get_class = function (self)
+entity_t.get_class = function(self)
     return CBaseEntity(self[0])
 end
 
-entity_t.get_networkable = function (self)
+entity_t.get_networkable = function(self)
     return ffi.cast("uintptr_t*", self[0] + 8)[0]
 end
 
@@ -473,7 +475,7 @@ entity_t.get_studio_hdr = function(self)
 end
 
 if not pcall(ffi.typeof, "m_flposeparameter_t") then
-    ffi.cdef[[
+    ffi.cdef [[
         typedef struct {
             char pad[8];
 	        float m_start;
@@ -540,7 +542,7 @@ do
 end
 
 ---@return { network_name: string, class_id: number }?
-entity_t.get_client_class = function (self)
+entity_t.get_client_class = function(self)
     local networkable = self:get_networkable()
     if not networkable then return end
     local client_class = ffi.cast("struct ClientClass**", ffi.cast("uintptr_t*", networkable + 2 * 4)[0] + 1)[0]
@@ -551,7 +553,8 @@ entity_t.get_client_class = function (self)
     }
 end
 
-local is_breakable_fn = ffi.cast("bool(__thiscall*)(void*)", client.find_pattern("client.dll", "55 8B EC 51 56 8B F1 85 F6 74 68")) or error("can't find is_breakable")
+local is_breakable_fn = ffi.cast("bool(__thiscall*)(void*)",
+    client.find_pattern("client.dll", "55 8B EC 51 56 8B F1 85 F6 74 68")) or error("can't find is_breakable")
 entity_t.is_breakable = function(self)
     local ptr = ffi.cast("void*", self[0])
     if is_breakable_fn(ptr) then
@@ -583,7 +586,7 @@ entity_t.is_player_alive = function(self)
     return alive and player_resource.m_bAlive[self:get_index()]
 end
 
-entity_t.can_shoot = function (self)
+entity_t.can_shoot = function(self)
     local tickbase = self.m_nTickBase * globalvars.get_interval_per_tick()
     if self.m_flNextAttack > tickbase then
         return false
@@ -601,10 +604,11 @@ end
 
 do
     local ccsplayer = ffi.cast("int*",
-        (client.find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C") or error("wrong ccsplayer sig")) + 0x47)
+        (client.find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C") or error("wrong ccsplayer sig")) +
+        0x47)
     local raw_get_abs_origin = ffi.cast("float*(__thiscall*)(void*)", ffi.cast("int*", ccsplayer[0] + 0x28)[0])
     ---@return vec3_t?
-    entity_t.get_abs_origin = function (self)
+    entity_t.get_abs_origin = function(self)
         local address = self[0]
         if address == 0 then return end
         local origin = raw_get_abs_origin(ffi.cast("void*", address))
@@ -617,7 +621,7 @@ entity_t.get_eye_pos = function(self)
 end
 
 if not pcall(ffi.typeof, "model_t") then
-    ffi.cdef[[
+    ffi.cdef [[
         typedef struct{
             void*       handle;
             char        name[260];
@@ -628,19 +632,19 @@ if not pcall(ffi.typeof, "model_t") then
             vector_t    mins;
             vector_t    maxs;
             float       radius;
-            char        pad[28];  
+            char        pad[28];
         } model_t;
     ]]
 end
 local IModelInfoClient = interface.new("engine", "VModelInfoClient004", {
-    GetModelIndex = {2, "int(__thiscall*)(void*, PCSTR)"},
-    FindOrLoadModel = {39, "const model_t(__thiscall*)(void*, PCSTR)"}
+    GetModelIndex = { 2, "int(__thiscall*)(void*, PCSTR)" },
+    FindOrLoadModel = { 39, "const model_t(__thiscall*)(void*, PCSTR)" }
 })
 local IEngineServerStringTable = interface.new("engine", "VEngineClientStringTable001", {
-    FindTable = {3, "void*(__thiscall*)(void*, PCSTR)"}
+    FindTable = { 3, "void*(__thiscall*)(void*, PCSTR)" }
 })
 local PrecachedTableClass = class.new({
-    AddString = {8, "int(__thiscall*)(void*, bool, PCSTR, int, const void*)"}
+    AddString = { 8, "int(__thiscall*)(void*, bool, PCSTR, int, const void*)" }
 })
 -- local imdlcache_raw = se.create_interface("datacache.dll", "MDLCache004") or error("couldn't find MDLCache004")
 -- local imdlcache_vmt = hooks.vmt.new(imdlcache_raw)
@@ -655,7 +659,8 @@ local PrecachedTableClass = class.new({
 ---@param path string
 ---@return number
 local precache_model = errors.handler(function(path)
-    local rawprecache_table = IEngineServerStringTable:FindTable("modelprecache") or error("couldnt find modelprecache", 2)
+    local rawprecache_table = IEngineServerStringTable:FindTable("modelprecache") or
+        error("couldnt find modelprecache", 2)
     if rawprecache_table and rawprecache_table ~= nil then
         local precache_table = PrecachedTableClass(rawprecache_table)
         if precache_table then
@@ -696,7 +701,7 @@ end
 
 
 if not pcall(ffi.typeof, "animlayer_t") then
-    ffi.cdef[[
+    ffi.cdef [[
         typedef struct {
             char pad0x0[ 20 ];
             int	order;
@@ -760,7 +765,7 @@ entity_t.set_rank = function(self, rank)
         playerresource.m_nPersonaDataPublicLevel[index] = rank
     end
 end
-client.register_callback("paint", function ()
+client.register_callback("paint", function()
     if not engine.is_connected() then
         cached_ranks = {}
         return
@@ -775,7 +780,7 @@ client.register_callback("paint", function ()
         end
     end
 end)
-client.register_callback("unload", function ()
+client.register_callback("unload", function()
     if not engine.is_connected() then
         cached_ranks = {}
         return
@@ -795,24 +800,41 @@ entity_t.is_shooting = function(self, cmd)
 end
 
 if not pcall(ffi.typeof, "struct WeaponInfo_t") then
-    ffi.cdef[[
+    ffi.cdef [[
         struct WeaponInfo_t{
             char pad1[6];
             uint8_t class;
             char pad2[13];
-            int max_clip;	
+            int max_clip;
             char pad3[12];
             int max_ammo;
             char pad4[96];
-            char* hud_name;			
-            char* name;		
+            char* hud_name;
+            char* name;
             char pad5[56];
             int type;
+            char pad6[4];
+            int price;
+	        char pad7[8];
+	        float cycle_time;
+            char pad8[12];
+	        bool fullAuto;
+	        char pad9[3];
+	        int damage;
+            float headshot_multiplier;
+            float armor_ratio;
+            int bullets;
+            float penetration;
+	        char pad10[8];
+            float range;
+            float range_modifier;
         };
     ]]
 end
 do
-    local raw_get_weapon_data = ffi.cast("struct WeaponInfo_t*(__thiscall*)(void*)", client.find_pattern("client.dll", "55 8B EC 81 EC ? ? ? ? 53 8B D9 56 57 8D 8B ? ? ? ? 85 C9 75 04")) or error("failed to find get_weapon_data")
+    local raw_get_weapon_data = ffi.cast("struct WeaponInfo_t*(__thiscall*)(void*)",
+            client.find_pattern("client.dll", "55 8B EC 81 EC ? ? ? ? 53 8B D9 56 57 8D 8B ? ? ? ? 85 C9 75 04")) or
+        error("failed to find get_weapon_data")
     local weapon_groups = {
         "knife",
         "pistols",
@@ -835,9 +857,10 @@ do
         taser = "taser",
         c4 = "c4"
     }
+    ---@alias weapon_t { entity: entity_t, class: number, name: string, type: number, group: "knife"|"pistols"|"smg"|"rifle"|"shotguns"|"sniper"|"awp"|"auto"|"deagle"|"taser"|"scout"|"rifle"|"c4"|"placeholder"|"grenade"|"revolver"|"unknown", damage: number, bullets: number, price: number, armor_ratio: number, range: number, range_modifier: number }
     ---@param index? number
-    ---@return { entity: entity_t, class: number, name: string, type: number, group: "knife"|"pistols"|"smg"|"rifle"|"shotguns"|"sniper"|"awp"|"auto"|"deagle"|"taser"|"scout"|"rifle"|"c4"|"placeholder"|"grenade"|"revolver"|"unknown" }?
-    entity_t.get_weapon = function (self, index)
+    ---@return weapon_t?
+    entity_t.get_weapon = function(self, index)
         local weapon
         if index ~= nil then
             weapon = self.m_hMyWeapons[index]
@@ -849,16 +872,82 @@ do
         local name = ffi.string(data.name):gsub("weapon_", "")
         local group = weapon_groups[data.type + 1]
         if group_by_name[name] then
-            group = group_by_name[name] end
+            group = group_by_name[name]
+        end
         if ffi.string(data.hud_name):find("REVOLVER") then
-            group = "revolver" end
+            group = "revolver"
+        end
         return {
             entity = weapon,
             class = data.class,
             name = name,
             type = data.type,
             group = group,
+            damage = data.damage,
+            bullets = data.bullets,
+            price = data.price,
+            armor_ratio = data.armor_ratio,
+            range = data.range,
+            range_modifier = data.range_modifier,
         }
+    end
+end
+
+do
+    ---@param hitgroup number
+    local get_damage_multiplier = function(hitgroup)
+        if hitgroup == iengine.hitgroups.head then
+            return 4
+        end
+        if hitgroup == iengine.hitgroups.stomach then
+            return 1.25
+        end
+        if hitgroup == iengine.hitgroups.left_leg or hitgroup == iengine.hitgroups.right_leg then
+            return 0.75
+        end
+        return 1
+    end
+    ---@param hitgroup number
+    ---@param helmet boolean
+    local is_armored = function(hitgroup, helmet)
+        if hitgroup == iengine.hitgroups.head then
+            return helmet
+        end
+        if hitgroup == iengine.hitgroups.chest
+            or hitgroup == iengine.hitgroups.stomach
+            or hitgroup == iengine.hitgroups.left_arm
+            or hitgroup == iengine.hitgroups.right_arm then
+            return true
+        end
+        return false
+    end
+    ---@param hitgroup number
+    ---@param attacker entity_t
+    ---@param weapon weapon_t
+    ---@return number?
+    entity_t.get_max_damage = function(self, attacker, hitgroup, weapon)
+        if not weapon or not hitgroup then return end
+        local start_pos = attacker:get_eye_pos()
+        local hitbox_pos = self:get_player_hitbox_pos(iengine.hitgroup_to_hitbox(hitgroup))
+        if not hitbox_pos then return end
+        local end_pos = start_pos + start_pos:angle_to(hitbox_pos):to_vec() * weapon.range
+        local trace_info = trace.line(attacker:get_index(), 0x46004003, start_pos, end_pos)
+        local is_taser = weapon.group == "taser"
+        local range = math.pow(weapon.range_modifier, trace_info.fraction * weapon.range / 500)
+        local multiplier = (not is_taser) and get_damage_multiplier(hitgroup) or 1
+        local damage = weapon.damage * multiplier * range
+        local armor_ratio = weapon.armor_ratio / 2
+        if not is_taser and is_armored(hitgroup, self.m_bHasHelmet) then
+            local armor_value = self.m_ArmorValue
+            local armor
+            if armor_value < damage * armor_ratio / 2 then
+                armor = armor_value * 4
+            else
+                armor = damage
+            end
+            damage = damage - armor * (1 - armor_ratio)
+        end
+        return damage
     end
 end
 
@@ -1043,6 +1132,7 @@ local netvar_cache = {
     m_iKills = { type = "table" },
     m_iAssists = { type = "table" },
     m_bConnected = { type = "table" },
+    m_ArmorValue = { type = "int" },
     m_vecViewOffset = {
         type = "vector",
         offset = 264
@@ -1115,18 +1205,18 @@ local netvar_table_mt = {
         if self.netvar.table_type == "entity" then
             return entitylist.get_entity_from_handle(self.entity:get_prop_int(offset))
         end
-        return self.entity["get_prop_"..self.netvar.table_type](self.entity, offset)
+        return self.entity["get_prop_" .. self.netvar.table_type](self.entity, offset)
     end, "netvar_table_t.__index"),
-    __newindex = function (self, key, value)
+    __newindex = function(self, key, value)
         if type(key) ~= "number" then
             error("netvar table index must be a number")
         end
         local offset = self.netvar.offset + key * netvar_offsets[self.netvar.table_type]
-        return self.entity["set_prop_"..self.netvar.table_type](self.entity, offset, value)
+        return self.entity["set_prop_" .. self.netvar.table_type](self.entity, offset, value)
     end
 }
 local netvar_table_t = {
-    new = function (entity, netvar)
+    new = function(entity, netvar)
         return setmetatable({
             netvar = netvar,
             entity = entity,
@@ -1146,7 +1236,7 @@ entity_t.__get_prop = errors.handler(function(self, prop)
     if netvar.type == "entity" then
         return entitylist.get_entity_from_handle(self:get_prop_int(netvar.offset))
     end
-    return self["get_prop_"..netvar.type](self, netvar.offset)
+    return self["get_prop_" .. netvar.type](self, netvar.offset)
 end, "entity_t.__get_prop")
 ---@param prop string
 ---@param value any
@@ -1158,7 +1248,7 @@ entity_t.__set_prop = errors.handler(function(self, prop, value)
     if netvar.type == "table" then
         error("cannot set netvar table")
     end
-    return self["set_prop_"..netvar.type](self, netvar.offset, value)
+    return self["set_prop_" .. netvar.type](self, netvar.offset, value)
 end, "entity_t.__set_prop")
 local entity_mt
 local initialize_entity_mt = function()
@@ -1166,14 +1256,14 @@ local initialize_entity_mt = function()
     if not lp then return end
     entity_mt = getmetatable(lp)
     ---@param self entity_t
-    entity_mt.__index = function (self, key)
+    entity_mt.__index = function(self, key)
         if key == 0 then return entitylist.get_client_entity(self:get_index()) end
         local result = entity_t[key]
         if result then return result end
         return entity_t.__get_prop(self, key)
     end
     ---@param self entity_t
-    entity_mt.__newindex = function (self, key, value)
+    entity_mt.__newindex = function(self, key, value)
         if key == 0 then error("cannot set entity index") end
         local result = entity_t[key]
         if result then error("cannot set entity property") end
@@ -1184,7 +1274,7 @@ end
 if not entity_mt then
     initialize_entity_mt()
     if not entity_mt then
-        cbs.frame_stage(function (stage)
+        cbs.frame_stage(function(stage)
             if not entity_mt then initialize_entity_mt() end
         end)
     end
