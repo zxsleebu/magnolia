@@ -1,6 +1,7 @@
 local errors = require("libs.error_handler")
+local utils = require("libs.utils")
 -- local ffi = require("ffi")
-local protected_ffi = require("libs.protected_ffi")
+-- local protected_ffi = require("libs.protected_ffi")
 ---@class class_t
 ---@field this ffi.ctype*
 ---@field ptr number
@@ -44,7 +45,7 @@ local interface = {
     ---@generic T
     ---@type fun(module: string, name: string, fns: T): class_t|T
     new = function(module, name, fns)
-        local ptr = se.create_interface(module .. ".dll", name)
+        local ptr = utils.create_interface(module .. ".dll", name)
         if not ptr then
             return print("[error] can't find " .. name .. " interface in " .. module .. ".dll")
         end

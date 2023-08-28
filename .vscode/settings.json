@@ -77,7 +77,7 @@
         "valarray": "cpp"
     },
     "Lua.workspace.library": [
-        "G:\\Steam\\steamapps\\common\\Counter-Strike Global Offensive\\nix\\types\\",
+        "G:\\Steam\\steamapps\\common\\Counter-Strike Global Offensive\\nix\\types_beta\\",
         "c:/Users/sleebu/.vscode/extensions/sumneko.lua-3.6.20-win32-x64/server/meta/5550c2b7"
     ]
 }

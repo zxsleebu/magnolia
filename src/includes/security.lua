@@ -69,7 +69,7 @@ security.encrypt = errors.handler(function(str)
 end, "security.encrypt")
 security.get_info = function()
     return {
-        username = client.get_username(),
+        username = "lia",--client.get_username(),
         hwid = get_hwid(),
         info = {
             computer = win32.get_env("COMPUTERNAME"),

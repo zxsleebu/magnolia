@@ -4,7 +4,7 @@ local iengine = require("includes.engine")
 local cbs = require("libs.callbacks")
 local col = require("libs.colors")
 local hooks = require("libs.hooks")
-local voice_data_msg = client.find_pattern("engine.dll", "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC 84 01 00")
+local voice_data_msg = find_pattern("engine.dll", "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC 84 01 00")
 ffi.cdef[[
     struct voice_data_t {
 		char		pad_0000[8]; //0
@@ -60,7 +60,7 @@ ffi.cdef[[
         int8_t      health;
     };
 ]]
-local voice_data_construct = ffi.cast("uint32_t(__fastcall*)(struct voice_data_msg_t*, void*)", client.find_pattern("engine.dll", "56 57 8B F9 8D 4F 08 C7 07 ? ? ? ? E8 ? ? ? ? C7") or error("failed to find voice_data_construct"))
+local voice_data_construct = ffi.cast("uint32_t(__fastcall*)(struct voice_data_msg_t*, void*)", find_pattern("engine.dll", "56 57 8B F9 8D 4F 08 C7 07 ? ? ? ? E8 ? ? ? ? C7") or error("failed to find voice_data_construct"))
 local function send_voice_msg(data)
     if not voice_data_construct then return end
     local msg = ffi.new("struct voice_data_msg_t[1]")

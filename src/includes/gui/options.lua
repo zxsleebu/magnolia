@@ -44,7 +44,7 @@ options_mt.inline_draw = errors.handler(function(self, pos, alpha, input_allowed
         if input.is_key_clicked(1) then
             click_effect.add()
             if not self.open then
-                self.pos = renderer.get_cursor_pos()
+                self.pos = input.cursor_pos()
             end
             self.open = true
         end

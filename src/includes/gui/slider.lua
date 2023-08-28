@@ -1,4 +1,4 @@
-local render = require("libs.render")
+local irender = require("libs.render")
 local col = require("libs.colors")
 local v2 = require("libs.vectors")()
 local fonts = require("includes.gui.fonts")
@@ -43,10 +43,10 @@ slider_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed
     local clamped_x = math.max(from.x + progress_offset.x - 1, from.x + 1)
 
     if self.size.x == 0 then
-        local max_width = 28 + render.text_size(fonts.menu, self.name).x
+        local max_width = 28 + irender.text_size(fonts.menu, self.name).x
         local longest_value = math.max(math.abs(self.min), math.abs(self.max))
         local numbers_count = #tostring(longest_value)
-        max_width = max_width + render.text_size(fonts.menu, string.rep("0", numbers_count)).x
+        max_width = max_width + irender.text_size(fonts.menu, string.rep("0", numbers_count)).x
         self.size.x = max_width
     end
 
@@ -55,39 +55,39 @@ slider_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed
 
 
     --borders of slider progress
-    renderer.rect_filled(v2(clamped_x, from.y), v2(to.x - 1, from.y + 1), border_color)
-    renderer.rect_filled(v2(clamped_x, to.y - 1), v2(to.x - 1, to.y), border_color)
+    render.rect_filled(v2(clamped_x, from.y), v2(to.x - 1, from.y + 1), border_color)
+    render.rect_filled(v2(clamped_x, to.y - 1), v2(to.x - 1, to.y), border_color)
 
     --slider progress
-    renderer.rect_filled(v2(from.x, from.y + 1), v2(from.x + progress_offset.x, to.y - 1), active_color)
+    render.rect_filled(v2(from.x, from.y + 1), v2(from.x + progress_offset.x, to.y - 1), active_color)
 
     local left_color, right_color = colors.magnolia:alpha(alpha), colors.magnolia:alpha(alpha)
 
     if progress_offset.x > 0 then
         --top and bottom borders of slider progress
-        renderer.rect_filled(v2(from.x + 1, from.y), v2(clamped_x, from.y + 1), active_color)
-        renderer.rect_filled(v2(from.x + 1, to.y - 1), v2(clamped_x, to.y), active_color)
+        render.rect_filled(v2(from.x + 1, from.y), v2(clamped_x, from.y + 1), active_color)
+        render.rect_filled(v2(from.x + 1, to.y - 1), v2(clamped_x, to.y), active_color)
     else
         left_color = border_color
         --left slider progress border
-        renderer.rect_filled(v2(from.x, from.y + 1), v2(from.x + 1, to.y - 1), border_color)
+        render.rect_filled(v2(from.x, from.y + 1), v2(from.x + 1, to.y - 1), border_color)
     end
 
     if progress_offset.x < width then
         right_color = border_color
         --slider background
-        renderer.rect_filled(v2(math.max(from.x + progress_offset.x, from.x + 1), from.y + 1), to - v2(1, 1), col.gray:alpha(alpha))
+        render.rect_filled(v2(math.max(from.x + progress_offset.x, from.x + 1), from.y + 1), to - v2(1, 1), col.gray:alpha(alpha))
         --right slider progress border
-        renderer.rect_filled(v2(to.x - 1, from.y + 1), to - v2(0, 1), border_color)
+        render.rect_filled(v2(to.x - 1, from.y + 1), to - v2(0, 1), border_color)
     end
 
     --antialias dots on each corner of the slider
     left_color = left_color:salpha(127)
     right_color = right_color:salpha(127)
-    renderer.rect_filled(v2(from.x, from.y), v2(from.x + 1, from.y + 1), left_color)
-    renderer.rect_filled(v2(to.x - 1, from.y), v2(to.x, from.y + 1), right_color)
-    renderer.rect_filled(v2(from.x, to.y - 1), v2(from.x + 1, to.y), left_color)
-    renderer.rect_filled(v2(to.x - 1, to.y - 1), v2(to.x, to.y), right_color)
+    render.rect_filled(v2(from.x, from.y), v2(from.x + 1, from.y + 1), left_color)
+    render.rect_filled(v2(to.x - 1, from.y), v2(to.x, from.y + 1), right_color)
+    render.rect_filled(v2(from.x, to.y - 1), v2(from.x + 1, to.y), left_color)
+    render.rect_filled(v2(to.x - 1, to.y - 1), v2(to.x, to.y), right_color)
 
     local text_padding_anim = math.round(1 * (active_anim / 255))
     local text_padding = v2(4 - text_padding_anim, 1 - text_padding_anim)
@@ -95,16 +95,16 @@ slider_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed
     local font_size = fonts.menu.size - (active_anim / 255 * 1.6)
 
     local outline_color = col.black:alpha(75)
-    render.sized_text(function()
-        render.outline_text(self.name, fonts.slider, from + text_padding, col.white:alpha(alpha), 0, outline_color)
-        return render.outline_text(value_str, fonts.slider, v2(to.x, from.y) - v2(text_padding.x, -text_padding.y),
-        col.white:alpha(alpha), render.flags.RIGHT_ALIGN, outline_color)
+    irender.sized_text(function()
+        irender.outline_text(self.name, fonts.slider, from + text_padding, col.white:alpha(alpha), 0, outline_color)
+        return irender.outline_text(value_str, fonts.slider, v2(to.x, from.y) - v2(text_padding.x, -text_padding.y),
+        col.white:alpha(alpha), irender.flags.RIGHT_ALIGN, outline_color)
     end, fonts.slider, font_size)
 
     if active_anim > 0 then
         local color = col.white:alpha(alpha):salpha(active_anim)
-        render.outline_text(tostring(self.min), fonts.slider_small, v2(from.x + 3, to.y - 10), color, 0, outline_color)
-        render.outline_text(tostring(self.max), fonts.slider_small, v2(to.x - 3, to.y - 10), color, render.flags.RIGHT_ALIGN, outline_color)
+        irender.outline_text(tostring(self.min), fonts.slider_small, v2(from.x + 3, to.y - 10), color, 0, outline_color)
+        irender.outline_text(tostring(self.max), fonts.slider_small, v2(to.x - 3, to.y - 10), color, irender.flags.RIGHT_ALIGN, outline_color)
     end
 
     local hovered = input_allowed and drag.hover_absolute(from, to)
@@ -119,10 +119,10 @@ slider_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed
             change_value = 0.1
         end
         if input.is_key_clicked(37) then
-            self.el:set_value(math.max(self.min, value - change_value))
+            self.el:set(math.max(self.min, value - change_value))
         end
         if input.is_key_clicked(39) then
-            self.el:set_value(math.min(self.max, value + change_value))
+            self.el:set(math.min(self.max, value + change_value))
         end
     end
     local is_pressed = input.is_key_pressed(1)
@@ -142,19 +142,21 @@ slider_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed
             click_effect.add()
         end
         self.active = true
-        local mouse_pos = renderer.get_cursor_pos()
+        local mouse_pos = input.cursor_pos()
         local new_progress = (mouse_pos.x - from.x - 1) / (to.x - from.x - 2)
         local new_value = math.clamp(self.min + (self.max - self.min) * new_progress, self.min, self.max)
         if self.float then
             local accuracy = math.pow(10, self.float_accuracy)
             new_value = math.round(new_value * accuracy) / accuracy
+        else
+            new_value = math.round(new_value)
         end
-        self.el:set_value(new_value)
+        self.el:set(new_value)
     end
 end, "slider_t.draw")
 
 slider_mt.value = function (self)
-    return self.el:get_value()
+    return self.el:get()
 end
 
 slider_t.new = errors.handler(function (name, min, max, float_accuracy, value)
@@ -170,8 +172,8 @@ slider_t.new = errors.handler(function (name, min, max, float_accuracy, value)
         name = name,
         default_value = value,
         el = float_accuracy > 0
-            and ui.add_slider_float(path, path, min, max, value)
-            or ui.add_slider_int(path, path, min, max, value),
+            and menu.add_slider_float(path, "magnolia", min, max, value)
+            or menu.add_slider_int(path, "magnolia", min, max, value),
         float = float_accuracy > 0 or false,
         float_accuracy = float_accuracy,
         min = min,
@@ -185,7 +187,7 @@ slider_t.new = errors.handler(function (name, min, max, float_accuracy, value)
         active = false,
         size = v2(0, 18),
     }, { __index = slider_mt })
-    c.el:set_visible(false)
+    -- c.el:set_visible(false)
     return c
 end, "slider_t.new")
 ---@param name string

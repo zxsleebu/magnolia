@@ -1,14 +1,14 @@
 require("libs.entity")
-require("libs.ragebot_lib")
-local ffi = require("libs.protected_ffi")
-local render = require("libs.render")
+
+-- require("libs.ragebot_lib")
+-- local ffi = require("libs.protected_ffi")
+-- local render = require("libs.render")
 local col = require("libs.colors")
 local input = require("libs.input")
 local fonts = require("includes.gui.fonts")
 local v2, v3 = require("libs.vectors")()
--- local shared = require("features.shared")
 local cbs = require("libs.callbacks")
-local iengine = require("includes.engine")
+-- local iengine = require("includes.engine")
 local anims = require("libs.anims")
 local hooks = require("libs.hooks")
 local win32 = require("libs.win32")
@@ -17,9 +17,12 @@ local colors = require("includes.colors")
 local errors = require("libs.error_handler")
 local drag = require("libs.drag")
 local delay = require("libs.delay")
-require("features.create_move_hk")
-require("features.revealer")
-require("features.grenade_prediction")
+-- require("features.create_move_hk")
+-- require("features.revealer")
+
+-- local shared = require("features.shared")
+
+-- require("features.grenade_prediction")
 -- local feature_animbreaker = require("features.animbreaker")
 
 gui.tab("Aimbot", "B")
@@ -29,29 +32,29 @@ do
         gui.slider("Jumpscout hitchance", 40, 100, false, 60)
         gui.checkbox("Autostop in air")
     end):create_move(function (cmd, el)
-        ui.get_key_bind("antihit_accurate_walk_bind"):set_type(1)
-        local lp = entitylist.get_local_player()
-        if not lp or not lp:is_alive() or lp:is_on_ground() then return end
-        local weapon = lp:get_weapon()
-        if not weapon then return end
-        if weapon.group ~= "scout" then return end
-        local hitchance = el:get_slider("Jumpscout hitchance"):value()
-        ragebot.override_hitchance(hitchance)
-        local autostop = el:get_checkbox("Autostop in air"):value()
-        if not autostop or input.is_key_pressed(32) then return end
-        if not lp:can_shoot() then return end
-        local max_distance = 350 / (hitchance / 100)
-        for _, entity in pairs(entitylist.get_players(0)) do
-            if entity:is_alive() and entity:is_hittable_by(lp) then
-                local distance = lp.m_vecOrigin:dist_to(entity.m_vecOrigin)
-                if distance > max_distance then
-                    return
-                end
-                ui.get_key_bind("antihit_accurate_walk_bind"):set_type(0)
-                ui.get_check_box("antihit_accurate_walk"):set_value(true)
-                return
-            end
-        end
+        -- ui.get_key_bind("antihit_accurate_walk_bind"):set_type(1)
+        -- local lp = entitylist.get_local_player()
+        -- if not lp or not lp:is_alive() or lp:is_on_ground() then return end
+        -- local weapon = lp:get_weapon()
+        -- if not weapon then return end
+        -- if weapon.group ~= "scout" then return end
+        -- local hitchance = el:get_slider("Jumpscout hitchance"):value()
+        -- ragebot.override_hitchance(hitchance)
+        -- local autostop = el:get_checkbox("Autostop in air"):value()
+        -- if not autostop or input.is_key_pressed(32) then return end
+        -- if not lp:can_shoot() then return end
+        -- local max_distance = 350 / (hitchance / 100)
+        -- for _, entity in pairs(entitylist.get_players(0)) do
+        --     if entity:is_alive() and entity:is_hittable_by(lp) then
+        --         local distance = lp.m_vecOrigin:dist_to(entity.m_vecOrigin)
+        --         if distance > max_distance then
+        --             return
+        --         end
+        --         ui.get_key_bind("antihit_accurate_walk_bind"):set_type(0)
+        --         ui.get_check_box("antihit_accurate_walk"):set_value(true)
+        --         return
+        --     end
+        -- end
     end)
 end
 do
@@ -63,56 +66,56 @@ do
         override_damage = gui.checkbox("Override min damage")
         damage_value = gui.slider("Min damage HP + ?", 0, 20):master(override_damage)
     end):create_move(function(cmd)
-        local lp = entitylist.get_local_player()
-        if not lp or not lp:is_alive() then return end
-        local weapon = lp:get_weapon()
-        if not weapon then return end
-        local disable_head = hitbox_overrides:value("Disable head")
-        local disable_limbs = hitbox_overrides:value("Disable limbs")
-        local safe_point = safe_points:value()
-        local safe_point_value = 0
-        if safe_point == "Prefer" then
-            safe_point_value = 1
-        elseif safe_point == "Force" then
-            safe_point_value = 2
-        end
-        local override = override_damage:value()
-        local mindmg = damage_value:value()
-        for _, enemy in pairs(entitylist.get_players(0)) do
-            if enemy:is_alive() then
-                local index = enemy:get_index()
-                local stomach_damage = enemy:get_max_damage(lp, iengine.hitgroups.stomach, weapon)
-                local leg_damage = enemy:get_max_damage(lp, iengine.hitgroups.left_leg, weapon)
-                local health = enemy.m_iHealth
-                if stomach_damage > health or leg_damage > health then
-                    if disable_head then
-                        ragebot.override_hitscan(index, iengine.hitboxes.head, false)
-                    end
-                    if disable_limbs then
-                        ragebot.override_hitscan(index, iengine.hitboxes.left_leg, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.right_leg, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.left_foot, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.right_foot, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.left_hand, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.right_hand, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.left_upper_arm, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.right_upper_arm, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.left_forearm, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.right_forearm, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.left_thigh, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.right_thigh, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.left_calf, false)
-                        ragebot.override_hitscan(index, iengine.hitboxes.right_calf, false)
-                    end
-                    if safe_point ~= "Same" then
-                        ragebot.override_safe_point(index, safe_point_value)
-                    end
-                    if override then
-                        ragebot.override_min_damage(index, health + mindmg)
-                    end
-                end
-            end
-        end
+        -- local lp = entitylist.get_local_player()
+        -- if not lp or not lp:is_alive() then return end
+        -- local weapon = lp:get_weapon()
+        -- if not weapon then return end
+        -- local disable_head = hitbox_overrides:value("Disable head")
+        -- local disable_limbs = hitbox_overrides:value("Disable limbs")
+        -- local safe_point = safe_points:value()
+        -- local safe_point_value = 0
+        -- if safe_point == "Prefer" then
+        --     safe_point_value = 1
+        -- elseif safe_point == "Force" then
+        --     safe_point_value = 2
+        -- end
+        -- local override = override_damage:value()
+        -- local mindmg = damage_value:value()
+        -- for _, enemy in pairs(entitylist.get_players(0)) do
+        --     if enemy:is_alive() then
+        --         local index = enemy:get_index()
+        --         local stomach_damage = enemy:get_max_damage(lp, iengine.hitgroups.stomach, weapon)
+        --         local leg_damage = enemy:get_max_damage(lp, iengine.hitgroups.left_leg, weapon)
+        --         local health = enemy.m_iHealth
+        --         if stomach_damage > health or leg_damage > health then
+        --             if disable_head then
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.head, false)
+        --             end
+        --             if disable_limbs then
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.left_leg, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.right_leg, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.left_foot, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.right_foot, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.left_hand, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.right_hand, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.left_upper_arm, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.right_upper_arm, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.left_forearm, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.right_forearm, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.left_thigh, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.right_thigh, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.left_calf, false)
+        --                 ragebot.override_hitscan(index, iengine.hitboxes.right_calf, false)
+        --             end
+        --             if safe_point ~= "Same" then
+        --                 ragebot.override_safe_point(index, safe_point_value)
+        --             end
+        --             if override then
+        --                 ragebot.override_min_damage(index, health + mindmg)
+        --             end
+        --         end
+        --     end
+        -- end
     end)
 end
 -- gui.checkbox("Test"):bind()
@@ -127,7 +130,7 @@ gui.subtab("Exploits")
 gui.subtab("Misc")
 gui.tab("Anti-Aim", "C")
 gui.subtab("General")
-require("features.antiaim")
+-- require("features.antiaim")
 
 gui.tab("Visuals", "D")
 gui.subtab("Players")
@@ -137,26 +140,26 @@ do
     local tracers = gui.checkbox("Bullet tracers"):options(function()
         gui.slider("Time", 1, 10, 1, 4)
     end):update(function(el)
-        ui.get_check_box("visuals_esp_local_enable"):set_value(el:value())
-        ui.get_check_box("visuals_esp_local_tracers"):set_value(el:value())
+        -- ui.get_check_box("visuals_esp_local_enable"):set_value(el:value())
+        -- ui.get_check_box("visuals_esp_local_tracers"):set_value(el:value())
     end)
     local impacts = gui.checkbox("Bullet impacts"):options(function()
         gui.slider("Time", 1, 10, 1, 4)
     end)
     gui.column()
-    cbs.event("bullet_impact", function(event)
-        if not impacts:value() then return end
-        local lp = entitylist.get_local_player()
-        if not lp or not lp:is_alive() then return end
-        local userid = lp:get_info().user_id
-        if event:get_int("userid", 0) ~= userid then return end
-        local pos = v3(event:get_float("x", 0), event:get_float("y", 0), event:get_float("z", 0))
-        iengine.add_box_overlay(pos, impacts:get_slider("Time"):value(), col.blue:alpha(127))
-    end)
-    client.register_callback("shot_fired", function (shot_info)
-        if not impacts:value() then return end
-        iengine.add_box_overlay(shot_info.aim_point, impacts:get_slider("Time"):value(), col.red:alpha(127))
-    end)
+    -- cbs.event("bullet_impact", function(event)
+        -- if not impacts:value() then return end
+        -- local lp = entitylist.get_local_player()
+        -- if not lp or not lp:is_alive() then return end
+        -- local userid = lp:get_info().user_id
+        -- if event:get_int("userid", 0) ~= userid then return end
+        -- local pos = v3(event:get_float("x", 0), event:get_float("y", 0), event:get_float("z", 0))
+        -- iengine.add_box_overlay(pos, impacts:get_slider("Time"):value(), col.blue:alpha(127))
+    -- end)
+    -- register_callback("shot_fired", function (shot_info)
+    --     if not impacts:value() then return end
+    --     iengine.add_box_overlay(shot_info.aim_point, impacts:get_slider("Time"):value(), col.red:alpha(127))
+    -- end)
     bullet_tracers.callback = function(from, to)
         if tracers:value() then
             iengine.add_line_overlay(from, to, tracers:get_slider("Time"):value(), col.white:alpha(255))
@@ -204,8 +207,8 @@ do
     --     if not animlayer then return end
     --     -- animlayer.weight = 1 
     -- end)
-    -- local offset = client.find_pattern("client.dll", "? ? ? ? F8 81 ? ? ? ? ? 53 56 8B F1 57 89 74 24 1C")
-    -- local offset = client.find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B")
+    -- local offset = find_pattern("client.dll", "? ? ? ? F8 81 ? ? ? ? ? 53 56 8B F1 57 89 74 24 1C")
+    -- local offset = find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B")
     -- if offset ~= 0 then
     --     print("found")
     --     local bytes = ffi.cast("unsigned char*", offset)
@@ -366,61 +369,61 @@ gui.checkbox("Custom model"):options(function (el)
     gui.label("You can use down and up arrow keys to change")
     gui.label("All default models are in the bottom")
     local ct_agent = gui.dropdown("CT agent", model_names)
-    local ct_agent_textinput = ui.add_text_input("ct_agent_textinput", "ct_agent_textinput", "")
-    ct_agent_textinput:set_visible(false)
+    -- local ct_agent_textinput = menu.add_text_input("ct_agent_textinput", "ct_agent_textinput", "")
+    -- ct_agent_textinput:set_visible(false)
     local t_agent = gui.dropdown("T agent", model_names)
-    local t_agent_textinput = ui.add_text_input("t_agent_textinput", "t_agent_textinput", "")
-    t_agent_textinput:set_visible(false)
-    cbs.frame_stage(function()
-        if not ui.is_visible() then return end
-        local ct_agent_value, t_agent_value = ct_agent_textinput:get_value(), t_agent_textinput:get_value()
-        if name_index_list[ct_agent_value] then
-            local val = name_index_list[ct_agent_value] - 1
-            if val ~= ct_agent:val_index() then
-                ct_agent.el:set_value(val)
-            end
-        end
-        if name_index_list[t_agent_value] then
-            local val = name_index_list[t_agent_value] - 1
-            if val ~= t_agent:val_index() then
-                t_agent.el:set_value(val)
-            end
-        end
-    end)
-    delay.add(function()
-        ct_agent:update(function(el)
-            ct_agent_textinput:set_value(el:value())
-        end)
-        t_agent:update(function(el)
-            t_agent_textinput:set_value(el:value())
-        end)
-    end, 300)
-    cbs.frame_stage(function(stage)
-        if stage ~= 2 then return end
-        if not el:value() then return end
-        local lp = entitylist.get_local_player()
-        if not lp then return end
-        local ct_model = ct_agent:val_index()
-        local t_model = t_agent:val_index()
-        if ct_model < 0 and t_model < 0 then return end
-        local ct_model_name = list[ct_model][2]
-        local t_model_name = list[t_model][2]
-        local ct_model_path = custom_models_path_relative .. ct_model_name .. ext
-        local t_model_path = custom_models_path_relative .. t_model_name .. ext
-        local teamnum = lp.m_iTeamNum
-        local model_path
-        if teamnum == 2 then
-            model_path = t_model_path
-        elseif teamnum == 3 then
-            model_path = ct_model_path
-        end
-        if not model_path then return end
-        lp:set_model(model_path)
-    end, "custom_model.frame_stage")
+    -- local t_agent_textinput = ui.add_text_input("t_agent_textinput", "t_agent_textinput", "")
+    -- t_agent_textinput:set_visible(false)
+    -- cbs.frame_stage(function()
+    --     if not ui.is_visible() then return end
+    --     local ct_agent_value, t_agent_value = ct_agent_textinput:get_value(), t_agent_textinput:get_value()
+    --     if name_index_list[ct_agent_value] then
+    --         local val = name_index_list[ct_agent_value] - 1
+    --         if val ~= ct_agent:val_index() then
+    --             ct_agent.el:set_value(val)
+    --         end
+    --     end
+    --     if name_index_list[t_agent_value] then
+    --         local val = name_index_list[t_agent_value] - 1
+    --         if val ~= t_agent:val_index() then
+    --             t_agent.el:set_value(val)
+    --         end
+    --     end
+    -- end)
+    -- delay.add(function()
+    --     ct_agent:update(function(el)
+    --         ct_agent_textinput:set(el:value())
+    --     end)
+    --     t_agent:update(function(el)
+    --         t_agent_textinput:set(el:value())
+    --     end)
+    -- end, 300)
+    -- cbs.frame_stage(function(stage)
+    --     if stage ~= 2 then return end
+    --     if not el:value() then return end
+    --     local lp = entitylist.get_local_player()
+    --     if not lp then return end
+    --     local ct_model = ct_agent:val_index()
+    --     local t_model = t_agent:val_index()
+    --     if ct_model < 0 and t_model < 0 then return end
+    --     local ct_model_name = list[ct_model][2]
+    --     local t_model_name = list[t_model][2]
+    --     local ct_model_path = custom_models_path_relative .. ct_model_name .. ext
+    --     local t_model_path = custom_models_path_relative .. t_model_name .. ext
+    --     local teamnum = lp.m_iTeamNum
+    --     local model_path
+    --     if teamnum == 2 then
+    --         model_path = t_model_path
+    --     elseif teamnum == 3 then
+    --         model_path = ct_model_path
+    --     end
+    --     if not model_path then return end
+    --     lp:set_model(model_path)
+    -- end, "custom_model.frame_stage")
 end):update(function(el)
-    if not el:value() then
-        clientstate.force_full_update()
-    end
+    -- if not el:value() then
+    --     clientstate.force_full_update()
+    -- end
 end)
 
 require("features.animbreaker")
@@ -458,19 +461,19 @@ do
         local width = margin + (size.x - margin) * active_anim / 255
         do
             local from = pos + v2(radius + 1, 0)
-            renderer.rect_filled_fade(from, from + v2(width, 1), accent_color, accent_color:alpha(0), accent_color:alpha(0), accent_color)
+            render.rect_filled_fade(from, from + v2(width, 1), accent_color, accent_color:alpha(0), accent_color:alpha(0), accent_color)
         end
         do
             local from = pos + size - v2(radius, 0)
-            renderer.rect_filled_fade(from, from - v2(width, 1), accent_color, accent_color:alpha(0), accent_color:alpha(0), accent_color)
+            render.rect_filled_fade(from, from - v2(width, 1), accent_color, accent_color:alpha(0), accent_color:alpha(0), accent_color)
         end
         do
             local from = pos + v2(0, radius)
-            renderer.rect_filled_fade(from, from + v2(1, size.y - radius * 2 - 1), accent_color, accent_color, accent_color:alpha(0), accent_color:alpha(0))
+            render.rect_filled_fade(from, from + v2(1, size.y - radius * 2 - 1), accent_color, accent_color, accent_color:alpha(0), accent_color:alpha(0))
         end
         do
             local from = pos + v2(size.x - 1, radius + 1)
-            renderer.rect_filled_fade(from, from + v2(1, size.y - radius * 2 - 1), accent_color:alpha(0), accent_color:alpha(0), accent_color, accent_color)
+            render.rect_filled_fade(from, from + v2(1, size.y - radius * 2 - 1), accent_color:alpha(0), accent_color:alpha(0), accent_color, accent_color)
         end
     end
     local logs_drag = drag.new("rage_logs", v2(0.5, 0.6), true)
@@ -508,50 +511,50 @@ do
             }, col.green),
         }
     end
-    local under_crosshair = logs:get_options("Under crosshair"):paint(function (el)
-        local drag_size = v2(250, 100)
-        local pos, highlight = logs_drag:run(drag.hover_fn(drag_size, true), function (pos, alpha)
-            drag.highlight(pos - v2(drag_size.x / 2, 0), drag_size, alpha)
-        end)
-        local preview = ui.is_visible()
-        local event_list = preview and preview_events or events
-        -- render.dot(pos, col.red, 10)
-        -- local type = el:get_dropdown("Type")
-        local sort = el:get_dropdown("Sort")
-        local reverse_sort = sort:value() ~= "Newest at top"
-        local start_i = reverse_sort and 1 or #event_list
-        local end_i = not reverse_sort and 1 or #event_list
-        local loop_step = reverse_sort and 1 or -1
-        local y = 0
-        for i = start_i, end_i, loop_step do
-            local event = event_list[i]
-            if event then
-                local alpha = event.anims.alpha()
-                local active_anim = event.anims.active()
-                local text_size = render.multi_text_size(event.short_text, fonts.gamesense) + v2(20, 0)
-                render_container(pos + v2(-text_size.x / 2, y), v2(text_size.x, 26), event.color, alpha, active_anim)
-                render.multi_color_text(event.short_text, fonts.gamesense, pos + v2(0, y + 7), render.flags.X_ALIGN + render.flags.SHADOW, alpha)
+    -- local under_crosshair = logs:get_options("Under crosshair"):paint(function (el)
+    --     local drag_size = v2(250, 100)
+    --     local pos, highlight = logs_drag:run(drag.hover_fn(drag_size, true), function (pos, alpha)
+    --         drag.highlight(pos - v2(drag_size.x / 2, 0), drag_size, alpha)
+    --     end)
+    --     local preview = ui.is_visible()
+    --     local event_list = preview and preview_events or events
+    --     -- render.dot(pos, col.red, 10)
+    --     -- local type = el:get_dropdown("Type")
+    --     local sort = el:get_dropdown("Sort")
+    --     local reverse_sort = sort:value() ~= "Newest at top"
+    --     local start_i = reverse_sort and 1 or #event_list
+    --     local end_i = not reverse_sort and 1 or #event_list
+    --     local loop_step = reverse_sort and 1 or -1
+    --     local y = 0
+    --     for i = start_i, end_i, loop_step do
+    --         local event = event_list[i]
+    --         if event then
+    --             local alpha = event.anims.alpha()
+    --             local active_anim = event.anims.active()
+    --             local text_size = render.multi_text_size(event.short_text, fonts.gamesense) + v2(20, 0)
+    --             render_container(pos + v2(-text_size.x / 2, y), v2(text_size.x, 26), event.color, alpha, active_anim)
+    --             render.multi_color_text(event.short_text, fonts.gamesense, pos + v2(0, y + 7), render.flags.X_ALIGN + render.flags.SHADOW, alpha)
 
-                y = y + math.round(30 * alpha / 255)
-            end
-        end
-        highlight()
-    end)
-    cbs.paint(function ()
-        local realtime = globalvars.get_real_time()
-        local timeout = 2
-        for i = 1, #events do
-            local event = events[i]
-            if event then
-                local fading_out = #events - i > 9 or event.time + timeout < realtime
-                event.anims.active(math.clamp(event.time + timeout - realtime, 0, timeout) / timeout * 255)
-                local alpha = event.anims.alpha(not fading_out and 255 or 0)
-                if alpha <= 0 then
-                    table.remove(events, i)
-                end
-            end
-        end
-    end)
+    --             y = y + math.round(30 * alpha / 255)
+    --         end
+    --     end
+    --     highlight()
+    -- end)
+    -- cbs.paint(function ()
+    --     local realtime = globalvars.get_real_time()
+    --     local timeout = 2
+    --     for i = 1, #events do
+    --         local event = events[i]
+    --         if event then
+    --             local fading_out = #events - i > 9 or event.time + timeout < realtime
+    --             event.anims.active(math.clamp(event.time + timeout - realtime, 0, timeout) / timeout * 255)
+    --             local alpha = event.anims.alpha(not fading_out and 255 or 0)
+    --             if alpha <= 0 then
+    --                 table.remove(events, i)
+    --             end
+    --         end
+    --     end
+    -- end)
     local human_readable = {
         hegrenade = "explosion",
         smokegrenade = "grenade punch (lol)",
@@ -562,86 +565,86 @@ do
         knife = "knife",
         molotov = "molotov punch (lol)"
     }
-    cbs.event("player_hurt", function (event)
-        local lp = entitylist.get_local_player()
-        if entitylist.get_entity_by_userid(event:get_int("attacker", 0)) ~= lp then return end
-        local killed = event:get_int("health", 0) < 1
-        local uid = event:get_int("userid", 0)
-        local entity = entitylist.get_entity_by_userid(uid)
-        if not entity then return end
-        if entity == lp then return end
-        local color = colors.magnolia
-        if killed then color = col.green end
-        local weapon = event:get_string("weapon", "")
-        local human_readable_weapon = human_readable[weapon]
-        if not human_readable_weapon then return end
-        local dmg = event:get_int("dmg_health", 0)
-        local entity_name = entity:get_info().name
-        local short_text = {
-            {entity_name, col.white},
-            {" -", color},
-            {tostring(dmg), color},
-        }
-        local tickcount = globalvars.get_tick_count()
-        unfiltred_other_events[tickcount] = unfiltred_other_events[tickcount] or {}
-        unfiltred_other_events[tickcount][uid] = unfiltred_other_events[tickcount][uid] or {}
-        if unfiltred_other_events[tickcount][uid][weapon] then
-            unfiltred_other_events[tickcount][uid][weapon].dmg = unfiltred_other_events[tickcount][uid][weapon].dmg + dmg
-            if killed then
-                unfiltred_other_events[tickcount][uid][weapon].killed = true
-            end
-        else
-            unfiltred_other_events[tickcount][uid][weapon] = {
-                entity = event:get_int("userid", 0),
-                type = weapon,
-                short_text = short_text,
-                time = globalvars.get_real_time(),
-                tickcount = tickcount,
-                dmg = dmg,
-                killed = killed,
-                color = color,
-            }
-        end
-    end)
-    cbs.frame_stage(function(stage)
-        if stage ~= 5 then return end
-        if not logs:value() then return end
-        for _, entities in pairs(unfiltred_other_events) do
-            for _, types in pairs(entities) do
-                for _, event in pairs(types) do
-                    local entity_name = entitylist.get_entity_by_userid(event.entity):get_info().name
-                    local human_readable_weapon = human_readable[event.type]
-                    local color = colors.magnolia
-                    if event.killed then color = col.green end
-                    local text = {
-                        {event.killed and "killed " or "hit ", col.white},
-                        {entity_name, color},
-                        {" for ", col.white},
-                        {tostring(event.dmg), color},
-                        {" with ", col.white},
-                        {human_readable_weapon, color},
-                    }
-                    local short_text = {
-                        {entity_name, col.white},
-                        {" -", col.white},
-                        {tostring(event.dmg), color},
-                    }
-                    events[#events+1] = {
-                        short_text = short_text,
-                        text = text,
-                        time = globalvars.get_real_time(),
-                        anims = anims.new({
-                            alpha = 0,
-                            active = 255,
-                        }),
-                        color = color,
-                    }
-                    iengine.log(text)
-                end
-            end
-        end
-        unfiltred_other_events = {}
-    end)
+    -- cbs.event("player_hurt", function (event)
+    --     local lp = entitylist.get_local_player()
+    --     if entitylist.get_entity_by_userid(event:get_int("attacker", 0)) ~= lp then return end
+    --     local killed = event:get_int("health", 0) < 1
+    --     local uid = event:get_int("userid", 0)
+    --     local entity = entitylist.get_entity_by_userid(uid)
+    --     if not entity then return end
+    --     if entity == lp then return end
+    --     local color = colors.magnolia
+    --     if killed then color = col.green end
+    --     local weapon = event:get_string("weapon", "")
+    --     local human_readable_weapon = human_readable[weapon]
+    --     if not human_readable_weapon then return end
+    --     local dmg = event:get_int("dmg_health", 0)
+    --     local entity_name = entity:get_info().name
+    --     local short_text = {
+    --         {entity_name, col.white},
+    --         {" -", color},
+    --         {tostring(dmg), color},
+    --     }
+    --     local tickcount = globalvars.get_tick_count()
+    --     unfiltred_other_events[tickcount] = unfiltred_other_events[tickcount] or {}
+    --     unfiltred_other_events[tickcount][uid] = unfiltred_other_events[tickcount][uid] or {}
+    --     if unfiltred_other_events[tickcount][uid][weapon] then
+    --         unfiltred_other_events[tickcount][uid][weapon].dmg = unfiltred_other_events[tickcount][uid][weapon].dmg + dmg
+    --         if killed then
+    --             unfiltred_other_events[tickcount][uid][weapon].killed = true
+    --         end
+    --     else
+    --         unfiltred_other_events[tickcount][uid][weapon] = {
+    --             entity = event:get_int("userid", 0),
+    --             type = weapon,
+    --             short_text = short_text,
+    --             time = globalvars.get_real_time(),
+    --             tickcount = tickcount,
+    --             dmg = dmg,
+    --             killed = killed,
+    --             color = color,
+    --         }
+    --     end
+    -- end)
+    -- cbs.frame_stage(function(stage)
+    --     if stage ~= 5 then return end
+    --     if not logs:value() then return end
+    --     for _, entities in pairs(unfiltred_other_events) do
+    --         for _, types in pairs(entities) do
+    --             for _, event in pairs(types) do
+    --                 local entity_name = entitylist.get_entity_by_userid(event.entity):get_info().name
+    --                 local human_readable_weapon = human_readable[event.type]
+    --                 local color = colors.magnolia
+    --                 if event.killed then color = col.green end
+    --                 local text = {
+    --                     {event.killed and "killed " or "hit ", col.white},
+    --                     {entity_name, color},
+    --                     {" for ", col.white},
+    --                     {tostring(event.dmg), color},
+    --                     {" with ", col.white},
+    --                     {human_readable_weapon, color},
+    --                 }
+    --                 local short_text = {
+    --                     {entity_name, col.white},
+    --                     {" -", col.white},
+    --                     {tostring(event.dmg), color},
+    --                 }
+    --                 events[#events+1] = {
+    --                     short_text = short_text,
+    --                     text = text,
+    --                     time = globalvars.get_real_time(),
+    --                     anims = anims.new({
+    --                         alpha = 0,
+    --                         active = 255,
+    --                     }),
+    --                     color = color,
+    --                 }
+    --                 iengine.log(text)
+    --             end
+    --         end
+    --     end
+    --     unfiltred_other_events = {}
+    -- end)
     local prepend_info = function (info, text, color)
         if #info > 0 then
             text[#text + 1] = {" ["}
@@ -656,126 +659,126 @@ do
         return text
     end
     local percent_symbol = loadstring("return '⁒'")()
-    ---@param shot_info shot_info_t
-    client.register_callback("shot_fired", errors.handler(function (shot_info)
-        if shot_info.manual then return end
-        local entity = entitylist.get_entity_by_index(shot_info.target_index)
-        local name = entity:get_info().name
-        local additional_info = {}
-        local short_text, text
-        local color
-        if shot_info.result ~= "hit" then
-            local target_hitbox = iengine.get_hitbox_name(shot_info.hitbox)
-            ---@type string
-            local reason = shot_info.result
-            if reason == "unk" then
-                reason = "?"
-            elseif reason == "spread" then
-                additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. percent_symbol
-            elseif reason == "desync" then
-                reason = "resolver"
-                if shot_info.safe_point then
-                    additional_info[#additional_info + 1] = "safe"
-                end
-            end
-            additional_info[#additional_info + 1] = tostring(shot_info.client_damage) .. "dmg"
-            additional_info[#additional_info + 1] = tostring(shot_info.backtrack) .. "t"
-            color = col.red
-            text = {
-                {"missed ", col.white},
-                {name, color},
-                {"'s ", col.white},
-                {target_hitbox, color},
-                {" due to ", col.white},
-                {reason, color}
-            }
-            short_text = {
-                {name, col.white},
-                {" ", col.white},
-                {target_hitbox, color},
-                {" [", col.white},
-                {reason,color},
-                {"]", col.white}
-            }
-            text = prepend_info(additional_info, text)
-            iengine.log(text)
-        else
-            if shot_info.server_hitgroup == 0 then return end
-            local mismatch_info = {}
-            local killed = entity.m_iHealth < 1
-            color = killed and col.green or colors.magnolia
-            local client_hitgroup = iengine.hitbox_to_hitgroup(shot_info.hitbox)
-            local damage_mismatch = not killed and (shot_info.client_damage - shot_info.server_damage > 3)
-            local hitgroup_mismatch = client_hitgroup ~= shot_info.server_hitgroup
-            if damage_mismatch then
-                mismatch_info[#mismatch_info + 1] = tostring(shot_info.client_damage) .. " dmg"
-            end
-            if hitgroup_mismatch then
-                mismatch_info[#mismatch_info + 1] = iengine.get_hitgroup_name(client_hitgroup)
-            end
-            if damage_mismatch or hitgroup_mismatch then
-                additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. percent_symbol
-                if shot_info.safe_point then
-                    additional_info[#additional_info + 1] = "safe"
-                end
-            end
-            local server_hitgroup = iengine.get_hitgroup_name(shot_info.server_hitgroup)
-            additional_info[#additional_info + 1] = tostring(shot_info.backtrack) .. "t"
-            text = {
-                {killed and "killed " or "hit ", col.white},
-                {name, color},
-                {" in ", col.white},
-                {server_hitgroup, color},
-                {" for ", col.white},
-                {tostring(shot_info.server_damage), color},
-            }
-            text = prepend_info(additional_info, text)
-            if #mismatch_info > 0 then
-                text[#text+1] = {" mismatch:", col.red}
-                text = prepend_info(mismatch_info, text, col.red)
-            end
-            short_text = {
-                {name, col.white},
-                {" ", col.white},
-                {server_hitgroup, color},
-                {" -", col.white},
-                {tostring(shot_info.server_damage), color},
-            }
-            iengine.log(text)
-        end
-        events[#events+1] = {
-            short_text = short_text,
-            text = text,
-            time = globalvars.get_real_time(),
-            color = color,
-            anims = anims.new({
-                alpha = 0,
-                active = 255,
-            })
-        }
-    end, "rage_logs.shot_fired"))
+    -- ---@param shot_info shot_info_t
+    -- client.register_callback("shot_fired", errors.handler(function (shot_info)
+    --     if shot_info.manual then return end
+    --     local entity = entitylist.get_entity_by_index(shot_info.target_index)
+    --     local name = entity:get_info().name
+    --     local additional_info = {}
+    --     local short_text, text
+    --     local color
+    --     if shot_info.result ~= "hit" then
+    --         local target_hitbox = iengine.get_hitbox_name(shot_info.hitbox)
+    --         ---@type string
+    --         local reason = shot_info.result
+    --         if reason == "unk" then
+    --             reason = "?"
+    --         elseif reason == "spread" then
+    --             additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. percent_symbol
+    --         elseif reason == "desync" then
+    --             reason = "resolver"
+    --             if shot_info.safe_point then
+    --                 additional_info[#additional_info + 1] = "safe"
+    --             end
+    --         end
+    --         additional_info[#additional_info + 1] = tostring(shot_info.client_damage) .. "dmg"
+    --         additional_info[#additional_info + 1] = tostring(shot_info.backtrack) .. "t"
+    --         color = col.red
+    --         text = {
+    --             {"missed ", col.white},
+    --             {name, color},
+    --             {"'s ", col.white},
+    --             {target_hitbox, color},
+    --             {" due to ", col.white},
+    --             {reason, color}
+    --         }
+    --         short_text = {
+    --             {name, col.white},
+    --             {" ", col.white},
+    --             {target_hitbox, color},
+    --             {" [", col.white},
+    --             {reason,color},
+    --             {"]", col.white}
+    --         }
+    --         text = prepend_info(additional_info, text)
+    --         iengine.log(text)
+    --     else
+    --         if shot_info.server_hitgroup == 0 then return end
+    --         local mismatch_info = {}
+    --         local killed = entity.m_iHealth < 1
+    --         color = killed and col.green or colors.magnolia
+    --         local client_hitgroup = iengine.hitbox_to_hitgroup(shot_info.hitbox)
+    --         local damage_mismatch = not killed and (shot_info.client_damage - shot_info.server_damage > 3)
+    --         local hitgroup_mismatch = client_hitgroup ~= shot_info.server_hitgroup
+    --         if damage_mismatch then
+    --             mismatch_info[#mismatch_info + 1] = tostring(shot_info.client_damage) .. " dmg"
+    --         end
+    --         if hitgroup_mismatch then
+    --             mismatch_info[#mismatch_info + 1] = iengine.get_hitgroup_name(client_hitgroup)
+    --         end
+    --         if damage_mismatch or hitgroup_mismatch then
+    --             additional_info[#additional_info + 1] = tostring(shot_info.hitchance) .. percent_symbol
+    --             if shot_info.safe_point then
+    --                 additional_info[#additional_info + 1] = "safe"
+    --             end
+    --         end
+    --         local server_hitgroup = iengine.get_hitgroup_name(shot_info.server_hitgroup)
+    --         additional_info[#additional_info + 1] = tostring(shot_info.backtrack) .. "t"
+    --         text = {
+    --             {killed and "killed " or "hit ", col.white},
+    --             {name, color},
+    --             {" in ", col.white},
+    --             {server_hitgroup, color},
+    --             {" for ", col.white},
+    --             {tostring(shot_info.server_damage), color},
+    --         }
+    --         text = prepend_info(additional_info, text)
+    --         if #mismatch_info > 0 then
+    --             text[#text+1] = {" mismatch:", col.red}
+    --             text = prepend_info(mismatch_info, text, col.red)
+    --         end
+    --         short_text = {
+    --             {name, col.white},
+    --             {" ", col.white},
+    --             {server_hitgroup, color},
+    --             {" -", col.white},
+    --             {tostring(shot_info.server_damage), color},
+    --         }
+    --         iengine.log(text)
+    --     end
+    --     events[#events+1] = {
+    --         short_text = short_text,
+    --         text = text,
+    --         time = globalvars.get_real_time(),
+    --         color = color,
+    --         anims = anims.new({
+    --             alpha = 0,
+    --             active = 255,
+    --         })
+    --     }
+    -- end, "rage_logs.shot_fired"))
 end
 gui.subtab("Misc")
 do
-    local cvar = se.get_convar("fov_cs_debug")
-    gui.checkbox("Viewmodel in scope"):paint(function (el)
-        local value = el:value() and 90 or 0
-        if cvar:get_int() ~= value then
-            cvar:set_int(value)
-        end
-    end)
+    -- local cvar = se.get_convar("fov_cs_debug")
+    -- gui.checkbox("Viewmodel in scope"):paint(function (el)
+    --     local value = el:value() and 90 or 0
+    --     if cvar:get_int() ~= value then
+    --         cvar:set_int(value)
+    --     end
+    -- end)
 end
 do
-    local cvar = se.get_convar("cam_idealdist")
-    local distance
-    gui.checkbox("Thirdperson"):options(function ()
-        distance = gui.slider("Distance", 0, 200, 0, 50)
-    end):paint(function(el)
-        local value = distance:value()
-        if ui.get_key_bind("visuals_thirdperson_bind"):is_active() and cvar:get_int() ~=  value then
-            cvar:set_int(value)
-        end
-    end)
+    -- local cvar = se.get_convar("cam_idealdist")
+    -- local distance
+    -- gui.checkbox("Thirdperson"):options(function ()
+    --     distance = gui.slider("Distance", 0, 200, 0, 50)
+    -- end):paint(function(el)
+    --     local value = distance:value()
+    --     if ui.get_key_bind("visuals_thirdperson_bind"):is_active() and cvar:get_int() ~=  value then
+    --         cvar:set_int(value)
+    --     end
+    -- end)
 end
 
 gui.column()
@@ -825,21 +828,21 @@ do
         local cmd = table.concat(cmd_table, ";"):gsub("%.", "buy ")
         engine.execute_client_cmd(cmd)
     end
-    cbs.event("round_prestart", buybot_fn)
-    cbs.event("round_start", buybot_fn)
+    -- cbs.event("round_prestart", buybot_fn)
+    -- cbs.event("round_start", buybot_fn)
 end
 gui.checkbox("Console filter"):update(function (el)
     local value = el:value()
-    se.get_convar("con_filter_enable"):set_int(value and 1 or 0)
-    se.get_convar("con_filter_text"):set_string(value and "magnoliamagnoliamagnolia" or "")
+    -- se.get_convar("con_filter_enable"):set_int(value and 1 or 0)
+    -- se.get_convar("con_filter_text"):set_string(value and "magnoliamagnoliamagnolia" or "")
 end)
 gui.column()
 gui.checkbox("Autostrafer+"):create_move(function ()
-    local lp = entitylist.get_local_player()
-    if not lp or not lp:is_alive() then return end
-    if ui.is_visible() then
-        return ui.get_check_box("misc_autostrafer"):set_value(true)
-    end
-    local velocity = lp.m_vecVelocity
-    ui.get_check_box("misc_autostrafer"):set_value(#v2(velocity.x, velocity.y) > 10)
+    -- local lp = entitylist.get_local_player()
+    -- if not lp or not lp:is_alive() then return end
+    -- if ui.is_visible() then
+    --     return ui.get_check_box("misc_autostrafer"):set_value(true)
+    -- end
+    -- local velocity = lp.m_vecVelocity
+    -- ui.get_check_box("misc_autostrafer"):set_value(#v2(velocity.x, velocity.y) > 10)
 end)

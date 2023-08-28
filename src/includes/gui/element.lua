@@ -5,7 +5,7 @@
 ---@field path string
 ---@field anims __anims_mt
 ---@field size vec2_t
----@field master_object? { el?: checkbox_t, fn: fun(): boolean }
+---@field master_object? { el?: check_box_t, fn: fun(): boolean }
 local element_t = {}
 
 ---@generic T
@@ -29,7 +29,7 @@ element_t.animate_master = function(s)
 
     local value = false
     if s.master_object.el then
-        value = s.master_object.el:get_value()
+        value = s.master_object.el:get()
     elseif s.master_object.fn then
         value = s.master_object.fn()
     end

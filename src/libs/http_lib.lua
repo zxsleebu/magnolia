@@ -118,7 +118,7 @@ function e(E, v)
     SteamAPI_RegisterCallback(G, E)
 end
 local function H(I, J, K, L, M)
-    local N = client.find_pattern(I, J) or error("signature not found", 2)
+    local N = find_pattern(I, J) or error("signature not found", 2)
     local O = a.cast("uintptr_t", N)
     if L ~= nil and L ~= 0 then
         O = O + L
@@ -158,7 +158,7 @@ local T = Q(S, 12, "int(__thiscall*)(void*, SteamAPICall_t)")
 function GetAPICallFailureReason(U)
     return T(S, U)
 end
-client.register_callback(
+register_callback(
     "unload",
     function()
         for u, V in pairs(n) do

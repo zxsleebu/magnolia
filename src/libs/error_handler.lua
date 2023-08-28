@@ -1,7 +1,8 @@
 require("libs.types")
 local col = require("libs.colors")
+local utils = require("libs.utils")
 
-local IEngineCVar = ffi.cast("void***", se.create_interface("vstdlib.dll", "VEngineCvar007"))
+local IEngineCVar = ffi.cast("void***", utils.create_interface("vstdlib.dll", "VEngineCvar007"))
 local print_color_native = ffi.cast("void(__cdecl*)(void*, const color_t&, PCSTR, ...)", IEngineCVar[0][25])
 local print_color = function (text, clr, ...)
     local c = ffi.new("color_t")

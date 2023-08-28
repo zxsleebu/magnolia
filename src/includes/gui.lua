@@ -116,7 +116,7 @@ end, "gui.draw")
 
 cbs.paint(errors.handler(function()
     if not gui or not gui.initialized or not gui.can_be_visible then return end
-    local main_alpha = gui.anims.main_alpha(ui.is_visible() and 255 or 0, 20)
+    local main_alpha = gui.anims.main_alpha(menu.is_visible() and 255 or 0, 20)
     if main_alpha == 0 then return end
     local input_allowed = gui.is_input_allowed()
     local is_hovered

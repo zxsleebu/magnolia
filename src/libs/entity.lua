@@ -485,7 +485,7 @@ if not pcall(ffi.typeof, "m_flposeparameter_t") then
     ]]
 end
 do
-    local get_poseparam_sig = client.find_pattern('client.dll', '55 8B EC 8B 45 08 57 8B F9 8B 4F 04 85 C9 75 15')
+    local get_poseparam_sig = find_pattern('client.dll', '55 8B EC 8B 45 08 57 8B F9 8B 4F 04 85 C9 75 15')
     local native_get_poseparam = ffi.cast('m_flposeparameter_t*(__thiscall*)(void*, int)', get_poseparam_sig)
     if not get_poseparam_sig or not native_get_poseparam then error('failed to find get_poseparam_sig') end
     ---@param index number
@@ -554,7 +554,7 @@ entity_t.get_client_class = function(self)
 end
 
 local is_breakable_fn = ffi.cast("bool(__thiscall*)(void*)",
-    client.find_pattern("client.dll", "55 8B EC 51 56 8B F1 85 F6 74 68")) or error("can't find is_breakable")
+    find_pattern("client.dll", "55 8B EC 51 56 8B F1 85 F6 74 68")) or error("can't find is_breakable")
 entity_t.is_breakable = function(self)
     local ptr = ffi.cast("void*", self[0])
     if is_breakable_fn(ptr) then
@@ -567,27 +567,27 @@ entity_t.is_breakable = function(self)
     return false
 end
 
-entity_t.is_player = function(self)
-    return self:get_client_class().class_id == 40
-end
+-- entity_t.is_player = function(self)
+--     return self:get_client_class().class_id == 40
+-- end
 
-entity_t.is_weapon = function(self)
-    return self:get_class():IsWeapon()
-end
+-- entity_t.is_weapon = function(self)
+--     return self:get_class():IsWeapon()
+-- end
 
 entity_t.is_grenade = function(self)
     return self:get_grenade_type() ~= nil
 end
 
-entity_t.is_player_alive = function(self)
-    local alive = self:is_alive()
+entity_t.is_alive = function(self)
+    local alive = self.m_iHealth > 0
     local player_resource = entitylist.get_player_resource()
     if not player_resource then return alive end
     return alive and player_resource.m_bAlive[self:get_index()]
 end
 
 entity_t.can_shoot = function(self)
-    local tickbase = self.m_nTickBase * globalvars.get_interval_per_tick()
+    local tickbase = self.m_nTickBase * globals.interval_per_tick
     if self.m_flNextAttack > tickbase then
         return false
     end
@@ -603,9 +603,7 @@ entity_t.can_shoot = function(self)
 end
 
 do
-    local ccsplayer = ffi.cast("int*",
-        (client.find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C") or error("wrong ccsplayer sig")) +
-        0x47)
+    local ccsplayer = ffi.cast("int*", find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C", 0x47) or error("wrong ccsplayer sig"))
     local raw_get_abs_origin = ffi.cast("float*(__thiscall*)(void*)", ffi.cast("int*", ccsplayer[0] + 0x28)[0])
     ---@return vec3_t?
     entity_t.get_abs_origin = function(self)
@@ -732,7 +730,7 @@ entity_t.is_hittable_by = function(self, attacker, extrapolate_ticks)
     if extrapolate_ticks == nil then
         extrapolate_ticks = 0
     end
-    local interval = globalvars.get_interval_per_tick() * extrapolate_ticks
+    local interval = globals.interval_per_tick * extrapolate_ticks
     local from = attacker:get_eye_pos() + attacker.m_vecVelocity * interval + v3(0, 0, 10)
     local to = self:get_player_hitbox_pos(0)
     if not to then return end
@@ -765,7 +763,7 @@ entity_t.set_rank = function(self, rank)
         playerresource.m_nPersonaDataPublicLevel[index] = rank
     end
 end
-client.register_callback("paint", function()
+register_callback("paint", function()
     if not engine.is_connected() then
         cached_ranks = {}
         return
@@ -780,7 +778,7 @@ client.register_callback("paint", function()
         end
     end
 end)
-client.register_callback("unload", function()
+register_callback("unload", function()
     if not engine.is_connected() then
         cached_ranks = {}
         return
@@ -833,7 +831,7 @@ if not pcall(ffi.typeof, "struct WeaponInfo_t") then
 end
 do
     local raw_get_weapon_data = ffi.cast("struct WeaponInfo_t*(__thiscall*)(void*)",
-            client.find_pattern("client.dll", "55 8B EC 81 EC ? ? ? ? 53 8B D9 56 57 8D 8B ? ? ? ? 85 C9 75 04")) or
+            find_pattern("client.dll", "55 8B EC 81 EC ? ? ? ? 53 8B D9 56 57 8D 8B ? ? ? ? 85 C9 75 04")) or
         error("failed to find get_weapon_data")
     local weapon_groups = {
         "knife",
@@ -1140,7 +1138,7 @@ local netvar_cache = {
     m_fLastShotTime = { type = "float" },
     m_nGrenadeSpawnTime = {
         type = "float",
-        offset = se.get_netvar("DT_BaseCSGrenadeProjectile", "m_vecExplodeEffectOrigin") + 12
+        offset = engine.get_netvar_offset("DT_BaseCSGrenadeProjectile", "m_vecExplodeEffectOrigin") + 12
     }
 }
 local netvar_types = {
@@ -1167,7 +1165,7 @@ local initialize_netvar = function(netvar)
         return netvar_cache[netvar]
     end
     for _, table_name in pairs(netvar_table_list) do
-        local offset = se.get_netvar(table_name, netvar)
+        local offset = engine.get_netvar_offset(table_name, netvar)
         if offset and offset ~= 0 then
             local netvar_type = netvar_types[netvar:sub(3, 3)]
             if netvar_type == "float" and netvar:sub(3, 4) ~= "fl" then

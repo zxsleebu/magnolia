@@ -24,7 +24,7 @@ require("libs.types")
 --     } ModelRenderInfo_t;
 -- ]]
 
-local leg_movement = ui.get_combo_box("antihit_leg_movement")
+local leg_movement = menu.find_combo_box("Leg movement", "Movement/Movement")
 local menu_walk_legs, menu_air_legs
 gui.label("Animbreaker"):options(function ()
     menu_walk_legs = gui.dropdown("Walking legs", {"Default", "Slide", "Walking"})
@@ -32,15 +32,16 @@ gui.label("Animbreaker"):options(function ()
 end):create_move(function(cmd)
     local move_legs = menu_walk_legs:value()
     if move_legs == "Slide" then
-        local choked = clientstate.get_choked_commands() > 0
-        leg_movement:set_value(choked and 2 or 1)
+        local choked = globals.choked_commands > 0
+        leg_movement:set(choked and 2 or 1)
     elseif move_legs == "Walking" then
-        leg_movement:set_value(1)
+        leg_movement:set(1)
     end
 end)
 
 local function animbreaker()
     local lp = entitylist.get_local_player()
+    if not lp or not lp:is_alive() then return end
     local in_air = not lp:is_on_ground()
     local walk_legs, air_legs = menu_walk_legs:value(), menu_air_legs:value()
     local MOVEMENT_MOVE = lp:get_animlayer(6)
@@ -59,10 +60,10 @@ local function animbreaker()
 end
 
 local ready_to_unhook = true
--- local offset = client.find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B")
+-- local offset = find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B")
 
 -- local CCSPlayer = hooks.vmt.new(ffi.cast("int*",
--- (client.find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C") or error("wrong ccsplayer sig")) + 0x47))
+-- (find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C") or error("wrong ccsplayer sig")) + 0x47))
 -- local update_client_side_animations_orig
 -- local update_client_side_animations_hk = function(this)
 --     ready_to_unhook = false
@@ -108,12 +109,12 @@ local ready_to_unhook = true
 -- end
 -- draw_model_execute_orig = IVEngineModel:hookMethod("void(__thiscall*)(void*, void*, void*, const ModelRenderInfo_t&, void*)", draw_model_execute_hk, 21)
 
--- local setup_bones_addr = client.find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B") --SetupBones 55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B
+-- local setup_bones_addr = find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B") --SetupBones 55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B
 -- if setup_bones_addr == 0 then return end
 -- local setup_bones_jmp_addr = hooks.jmp2.rel_jmp(setup_bones_addr)
 -- if not setup_bones_addr then return end
 
-local setup_bones_addr = client.find_pattern("client.dll", "55 8B EC 57 8B F9 8B ? ? ? ? ? 8B 01 8B ? ? ? ? ? FF")
+local setup_bones_addr = find_pattern("client.dll", "55 8B EC 57 8B F9 8B ? ? ? ? ? 8B 01 8B ? ? ? ? ? FF")
 if setup_bones_addr == 0 then error("couldn't find setup_bones") end
 
 local setup_bones_hk = function(original, ccsplayer, edx, bone_to_world_out, max_bones, bone_mask, current_time)

@@ -441,7 +441,7 @@ cbs.paint(function()
             for i = valid_index, #grenade.path do
                 local w2s = se.world_to_screen(grenade.path[i][1])
                 if previous_w2s and w2s then
-                    renderer.line(previous_w2s, w2s, colors.magnolia)
+                    render.line(previous_w2s, w2s, colors.magnolia)
                 end
                 previous_w2s = w2s
             end

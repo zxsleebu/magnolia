@@ -1,4 +1,4 @@
-local render = require("libs.render")
+local irender = require("libs.render")
 local col = require("libs.colors")
 local v2 = require("libs.vectors")()
 local errors = require("libs.error_handler")
@@ -19,8 +19,8 @@ local container_t = {}
 ---@param background_alpha? number
 container_t.draw_background = errors.handler(function(from, to, alpha, background_alpha)
     local background_color = colors.container_bg:alpha(background_alpha or 200):salpha(alpha)
-    render.rounded_rect(from + v2(1, 1), to, background_color, 7.5, true)
-    render.rounded_rect(from, to, col.white:alpha(alpha):salpha(30), 7.5, false)
+    irender.rounded_rect(from + v2(1, 1), to, background_color, 7.5, true)
+    irender.rounded_rect(from, to, col.white:alpha(alpha):salpha(30), 7.5, false)
 end)
 
 ---@param pos vec2_t
@@ -37,9 +37,9 @@ container_t.draw = errors.handler(function (pos, alpha, input_allowed)
     for i = 1, #gui.elements do
         local tab = gui.elements[i]
         local tab_alpha = tab.anims.alpha()
-        render.text(tab.icon, fonts.title_icon, from + v2(23, menu_padding), colors.magnolia:alpha(tab_alpha):salpha(alpha), render.flags.X_ALIGN)
+        irender.text(tab.icon, fonts.title_icon, from + v2(23, menu_padding), colors.magnolia:alpha(tab_alpha):salpha(alpha), irender.flags.X_ALIGN)
         local text_pos = from + v2(40, 13)
-        render.text(tab.name, fonts.tab_title, text_pos, col.white:alpha(tab_alpha):salpha(alpha), render.flags.TEXT_SIZE)
+        irender.text(tab.name, fonts.tab_title, text_pos, col.white:alpha(tab_alpha):salpha(alpha), irender.flags.TEXT_SIZE)
         if tab_alpha > 0 then
             for s = 1, #tab.subtabs do
                 local subtab = tab.subtabs[s]
@@ -49,7 +49,7 @@ container_t.draw = errors.handler(function (pos, alpha, input_allowed)
                         container_width,
                         alpha * tab_alpha / 255 * subtab_alpha / 255,
                         gui.active_tab == subtab.tab and subtab.active and input_allowed)
-                    render.text(subtab.name:upper(), fonts.subtab_title, text_pos + v2(0, 13), col.white:alpha(subtab_alpha / 2):salpha(alpha):salpha(tab_alpha))
+                    irender.text(subtab.name:upper(), fonts.subtab_title, text_pos + v2(0, 13), col.white:alpha(subtab_alpha / 2):salpha(alpha):salpha(tab_alpha))
                 end
             end
         end

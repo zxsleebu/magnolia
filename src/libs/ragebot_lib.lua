@@ -14,6 +14,8 @@ local rage_weapon_groups = {
 }
 local rage_weapon_groups_set = set(rage_weapon_groups)
 
+local ragebot = {}
+
 ---@return string?
 ragebot.get_active_weapon_group = function()
     local lp = entitylist.get_local_player()

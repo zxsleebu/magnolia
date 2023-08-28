@@ -20,7 +20,7 @@ cbs.paint = function(fn, name)
     if name then t.name = name end
     table.insert(cbs.list.paint, t)
 end
----@param fn fun(cmd: usercmd_t)
+---@param fn fun(cmd: user_cmd_t)
 ---@param name? string
 cbs.create_move = function(fn, name)
     local t = { fn = fn }
@@ -75,7 +75,7 @@ end
 ---@param fn fun(event: game_event_t)
 ---@param name? string
 cbs.event = function(event_name, fn, name)
-    client.register_callback(event_name, errors.handler(fn, name or event_name))
+    register_callback(event_name, errors.handler(fn, name or event_name))
 end
 
 local shot_fired_callbacks = {}

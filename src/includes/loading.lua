@@ -1,4 +1,4 @@
-local render = require("libs.render")
+local irender = require("libs.render")
 local delay = require("libs.delay")
 local v2 = require("libs.vectors")()
 local col = require("libs.colors")
@@ -58,7 +58,7 @@ loading.draw = function()
     if anims.transparency() == 0 then
         if security.error then
             once(function ()
-                client.unload_script(client.get_script_name())
+                -- client.unload_script(client.get_script_name())
             end, "unload_script")
         end
         return
@@ -69,11 +69,11 @@ loading.draw = function()
         return
     end
 
-    local ss = engine.get_screen_size()
+    local ss = render.screen_size()
     local slider_sizes = v2(300, 25)
     local main_alpha = 1
     once(function()
-        ui.set_visible(false)
+        -- menu.set_visible(false)
     end, "close_menu")
     if loading.can_be_closed then
         once(function()
@@ -85,7 +85,7 @@ loading.draw = function()
         local alpha = anims.bg_alpha(255) * main_alpha
 
         local c1, c2 = col.black:alpha(50):salpha(alpha), col.black:alpha(200):salpha(alpha)
-        renderer.rect_filled_fade(v2(0, 0), v2(ss.x, ss.y), c1, c1, c2, c2)
+        render.rect_filled_fade(v2(0, 0), v2(ss.x, ss.y), c1, c1, c2, c2)
     end
     if anims.bg_alpha.done then
         local y = ss.y / 2 + anims.slider_y_offset(35)
@@ -99,8 +99,8 @@ loading.draw = function()
         slider_border_alpha = slider_border_alpha * main_alpha
         do
             local border_color = col.white:alpha(slider_border_alpha)
-            render.rounded_rect(from, to, border_color, 3.1)
-            render.rounded_rect(from - v2(1, 1), to + v2(1, 1), border_color:salpha(75), 4.1)
+            irender.rounded_rect(from, to, border_color, 3.1)
+            irender.rounded_rect(from - v2(1, 1), to + v2(1, 1), border_color:salpha(75), 4.1)
         end
 
         if anims.slider_y_offset.done then
@@ -126,7 +126,7 @@ loading.draw = function()
             end
             local width = math.max(10, slider_sizes.x * anims.progress.value / 100)
             if percentage > 0 then
-                render.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), colors.magnolia:salpha(alpha), 2.1, true)
+                irender.rounded_rect(from + v2(4, 4), v2(from.x + width, to.y) - v2(3, 3), colors.magnolia:salpha(alpha), 2.1, true)
             end
             local text_alpha = anims.text_alpha(255) * main_alpha
 
@@ -139,19 +139,19 @@ loading.draw = function()
 
             local logo_animation = easings.quart.out(loading.logo_font_size_addition) * 40
             fonts.large_logo_font.size = 260 + math.round(logo_animation)
-            render.text("A",fonts.large_logo_font, v2(ss.x / 2, ss.y / 2), colors.magnolia:alpha(anims.bg_alpha() * main_alpha / 15), render.flags.X_ALIGN + render.flags.Y_ALIGN)
-            render.text("magnolia", fonts.magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
-                render.flags.X_ALIGN + render.flags.Y_ALIGN + render.flags.BIG_SHADOW)
+            irender.text("A",fonts.large_logo_font, v2(ss.x / 2, ss.y / 2), colors.magnolia:alpha(anims.bg_alpha() * main_alpha / 15), irender.flags.X_ALIGN + irender.flags.Y_ALIGN)
+            irender.text("magnolia", fonts.magnolia_font, v2(ss.x / 2, ss.y / 2 - anims.text_y_offset()), col.white:alpha(text_alpha),
+                irender.flags.X_ALIGN + irender.flags.Y_ALIGN + irender.flags.BIG_SHADOW)
 
             do
                 local text = percentage .. "%"
-                local text_size = render.text_size(fonts.percentage_font, text)
+                local text_size = irender.text_size(fonts.percentage_font, text)
                 local x = math.clamp(math.round(from.x + width - (text_size.x + 5)), from.x + 10, to.x - text_size.x)
-                render.outline_text(text, fonts.percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), render.flags.Y_ALIGN)
+                irender.outline_text(text, fonts.percentage_font, v2(x, from.y + (to.y - from.y) / 2), col.white:alpha(text_alpha):salpha(alpha), irender.flags.Y_ALIGN)
             end
 
             if percentage == 100 then
-                loading.logo_font_size_addition = math.clamp(loading.logo_font_size_addition + globalvars.get_frame_time() * 1.5, 0, 1)
+                loading.logo_font_size_addition = math.clamp(loading.logo_font_size_addition + globals.frame_time * 1.5, 0, 1)
                 once(function()
                     loading.remove_slider = true
                 end, "remove_slider")
@@ -165,7 +165,7 @@ loading.draw = function()
                     once(function()
                         delay.add(function()
                             loading.can_be_closed = true
-                            ui.set_visible(true)
+                            -- ui.set_visible(true)
                             if not security.error then
                                 gui.can_be_visible = true
                             end

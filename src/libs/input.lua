@@ -1,6 +1,13 @@
 local cbs = require("libs.callbacks")
+local user32 = ffi.load("user32.dll")
+local v2 = require("libs.vectors")()
+require("libs.types")
 ffi.cdef([[
     short GetAsyncKeyState(int);
+    typedef struct {
+        long x;
+        long y;
+    } POINT;
     typedef struct {
         DWORD cbSize;
         DWORD flags;
@@ -9,6 +16,7 @@ ffi.cdef([[
     } CURSORINFO;
     bool GetCursorInfo(CURSORINFO*);
     void* GetForegroundWindow();
+    BOOL GetCursorPos(POINT*);
 ]])
 local click_state = {}
 local window_handle = ffi.C.GetForegroundWindow()
@@ -20,7 +28,7 @@ local is_cursor_visible = function()
 end
 local is_window_active = function()
     local focused = ffi.C.GetForegroundWindow() == window_handle
-    local inter = ui.is_visible() or not is_cursor_visible()
+    local inter = menu.is_visible() or not is_cursor_visible()
     return focused and inter
 end
 local input = {
@@ -56,10 +64,16 @@ input.get_key_pressed_time = function (code)
     if click_state[code].time == false then
         return 0
     end
-    return globalvars.get_real_time() - click_state[code].time
+    return globals.real_time - click_state[code].time
+end
+---@return vec2_t
+input.cursor_pos = function()
+    local pos = ffi.new("POINT")
+    user32.GetCursorPos(pos)
+    return v2(pos.x, pos.y)
 end
 cbs.paint(function()
-    local realtime = globalvars.get_real_time()
+    local realtime = globals.real_time
     for code, _ in pairs(click_state) do
         local state = input.is_key_pressed(code)
         click_state[code] = {

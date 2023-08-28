@@ -1,4 +1,4 @@
-local render = require("libs.render")
+local irender = require("libs.render")
 local col = require("libs.colors")
 local v2 = require("libs.vectors")()
 local fonts = require("includes.gui.fonts")
@@ -25,7 +25,7 @@ local tab_mt = {
         ---@param input_allowed boolean
         ---@return vec2_t
         draw = errors.handler(function (s, pos, alpha, input_allowed)
-            local text_size = render.text_size(fonts.header, s.name)
+            local text_size = irender.text_size(fonts.header, s.name)
             local real_size = v2(text_size.x + fonts.tab_icons.size + 8, fonts.tab_icons.size)
             local size = real_size + v2(12, 0)
             local line_width = s.anims.underline_width()
@@ -65,15 +65,15 @@ local tab_mt = {
             local color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 255)
             local icon_color = col.white:alpha(alpha):alpha_anim(hover_anim, 60, 150):fade(colors.magnolia:alpha(alpha), color_blend / 255)
 
-            render.text(s.icon, fonts.tab_icons, pos, icon_color, render.flags.Y_ALIGN)
+            irender.text(s.icon, fonts.tab_icons, pos, icon_color, irender.flags.Y_ALIGN)
             local text_pos = pos + v2(fonts.tab_icons.size + 8, 0)
-            render.text(s.name, fonts.header, text_pos, color, render.flags.Y_ALIGN)
+            irender.text(s.name, fonts.header, text_pos, color, irender.flags.Y_ALIGN)
 
             line_width = line_width * 2
             local line_pos = text_pos + v2(text_size.x / 2 - line_width / 2, size.y - 2)
             local line_color = colors.magnolia:alpha(alpha):alpha_anim(underline_alpha, 0, 255)
-            renderer.rect_filled(line_pos, line_pos + v2(line_width, 1), line_color:salpha(100))
-            renderer.rect_filled(line_pos + v2(0, 1), line_pos + v2(line_width, 2), line_color)
+            render.rect_filled(line_pos, line_pos + v2(line_width, 1), line_color:salpha(100))
+            render.rect_filled(line_pos + v2(0, 1), line_pos + v2(line_width, 2), line_color)
             return size
         end, "tab_t.draw")
     }

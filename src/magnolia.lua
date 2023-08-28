@@ -2,6 +2,8 @@
 -- jit.flush()
 -- collectgarbage("stop")
 
+menu.add_check_box("My Checkbox!", "Misc/Misc", false, "magnolia")
+
 math.randomseed(os.time())
 
 require("includes.preload")
@@ -12,7 +14,7 @@ errors.handler(function()
     require("includes.loading")
 
     for callback_name, callback_fns in pairs(cbs.list) do
-        client.register_callback(callback_name, function(...)
+        register_callback(callback_name, function(...)
             for i = 1, #callback_fns do
                 local callback = callback_fns[i]
                 errors.handler(callback.fn, callback.name)(...)
@@ -25,6 +27,6 @@ errors.handler(function()
         end)
     end
 end, "magnolia")()
-client.register_callback("unload", function()
-    clientstate.force_full_update()
-end)
+-- client.register_callback("unload", function()
+--     clientstate.force_full_update()
+-- end)

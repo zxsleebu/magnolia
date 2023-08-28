@@ -12,9 +12,9 @@ ffi.cdef[[
     } SteamAPIContext;
     typedef float Matrix4x4[4][4];
 ]]
-local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
-    PrintColor = {25, "void(__cdecl*)(void*, const color_t&, PCSTR, ...)"},
-})
+-- local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
+--     PrintColor = {25, "void(__cdecl*)(void*, const color_t&, PCSTR, ...)"},
+-- })
 local IEngineClient = interface.new("engine", "VEngineClient014", {
     GetNetChan = {78, "void*(__thiscall*)(void*)"},
     GetSteamContext = {185, "const SteamAPIContext*(__thiscall*)(void*)"},
@@ -39,9 +39,8 @@ lib_engine.get_steam_context = function ()
     return IEngineClient:GetSteamContext()
 end
 lib_engine.print_color = function (text, clr, ...)
-    local c = ffi.new("color_t")
-    c.r, c.g, c.b, c.a = clr.r, clr.g, clr.b, clr.a
-    IEngineCVar:PrintColor(c, text, ...)
+    print(string.format(text .. "\0", ...), clr)
+    -- IEngineCVar:PrintColor(c, text, ...)
 end
 lib_engine.print = function (text)
     for i = 1, #text do
@@ -70,7 +69,7 @@ lib_engine.log = function (text)
     lib_engine.print(t)
 end
 lib_engine.get_net_chan = function()
-    if not engine.is_connected() then return end
+    if not globals.is_connected then return end
     local netchan = IEngineClient:GetNetChan()
     if not netchan then return end
     netchan = NetChanClass(netchan)
@@ -78,7 +77,7 @@ lib_engine.get_net_chan = function()
 end
 ---@return {ip: string, name: string}?
 lib_engine.get_server_info = function ()
-    if not engine.is_connected() then return end
+    if not globals.is_connected then return end
     local netchan = IEngineClient:GetNetChan()
     if not netchan then return end
     netchan = NetChanClass(netchan)
@@ -241,9 +240,9 @@ do
     end
 end
 lib_engine.time_to_ticks = function(time)
-    return math.floor(time / globalvars.get_interval_per_tick() + 0.5)
+    return math.floor(time / globals.interval_per_tick + 0.5)
 end
 lib_engine.ticks_to_time = function(ticks)
-    return ticks * globalvars.get_interval_per_tick()
+    return ticks * globals.interval_per_tick
 end
 return lib_engine

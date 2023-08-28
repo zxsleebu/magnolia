@@ -1,4 +1,4 @@
-local render = require("libs.render")
+local irender = require("libs.render")
 local col = require("libs.colors")
 local v2 = require("libs.vectors")()
 local fonts = require("includes.gui.fonts")
@@ -101,10 +101,10 @@ subtab_t.draw = errors.handler(function (pos, global_alpha, input_allowed)
                 else
                     hover = subtab.anims.hover(0)
                 end
-                render.text(subtab.name,
+                irender.text(subtab.name,
                     fonts.header, p,
                     col.white:fade(colors.magnolia, underline_alpha / 255):alpha(alpha):alpha_anim(hover, 100, 255),
-                    render.flags.Y_ALIGN)
+                    irender.flags.Y_ALIGN)
                 -- if underline_alpha > 0 then
                 --     local active_line_color = colors.magnolia:alpha(alpha):salpha(underline_alpha)
                 --     -- renderer.rect_filled(active_line_pos, active_line_pos + v2(text_size.x, 1), active_line_color)
@@ -112,7 +112,7 @@ subtab_t.draw = errors.handler(function (pos, global_alpha, input_allowed)
                 -- end
                 if not is_last then
                     local line_pos = p + v2(0, padding / 2)
-                    renderer.rect_filled(line_pos, line_pos + v2(width, 1), col.white:alpha(alpha):salpha(30))
+                    render.rect_filled(line_pos, line_pos + v2(width, 1), col.white:alpha(alpha):salpha(30))
                 end
             end
         end, "subtab_t.draw.loop")()

@@ -1,17 +1,21 @@
 local v2 = require("libs.vectors")()
-local render = require("libs.render")
+local irender = require("libs.render")
 local col = require("libs.colors")
 require("libs.advanced math")
 local modules = require("libs.modules")
-ffi.load('user32')
+local user32 = ffi.load('user32')
 require("libs.types")
 ffi.cdef[[
     typedef void* HANDLE;
     HANDLE LoadCursorA(HANDLE, PCSTR);
-    typedef struct { long x; long y; } POINT;
+    HANDLE SetCursor(HANDLE);
+    HANDLE FindWindowA(PCSTR, PCSTR);
+    long SetWindowLongA(HANDLE, int, long);
+    long CallWindowProcW(long, HANDLE, UINT, UINT, long);
+    long GetWindowLongA(HANDLE, int);
 ]]
 local SetCursor = modules.get_function("HANDLE(__stdcall*)(HANDLE)", "user32", "SetCursor")
-local ss = engine.get_screen_size()
+local ss = render.screen_size()
 local input = require("libs.input")
 local cbs = require("libs.callbacks")
 local errors = require("libs.error_handler")
@@ -21,7 +25,7 @@ local drag = {
     __blocked = false,
     ---@param to_pos? vec2_t
     is_hovered = function(pos, size, to_pos)
-        local cursor = renderer.get_cursor_pos()
+        local cursor = input.cursor_pos()
         local from = pos
         local to = to_pos or pos + size
         local distance_from, distance_to = cursor - from, cursor - to
@@ -40,14 +44,14 @@ local drag = {
     ---@param alpha number
     highlight = function(pos, size, alpha)
         local from, to = pos, pos + size
-        render.rounded_rect(from:round() - v2(3, 3), to:round() + v2(2, 2), col(200, 200, 200, alpha / 3), 3)
+        irender.rounded_rect(from:round() - v2(3, 3), to:round() + v2(2, 2), col(200, 200, 200, alpha / 3), 3)
         local shine = col.white:alpha(alpha / 25)
         local trans = col.white:alpha(0)
 
-        renderer.rect_filled_fade(from, from + size / 2, trans, trans, shine, trans)
-        renderer.rect_filled_fade(from + size / 2, to, shine, trans, trans, trans)
-        renderer.rect_filled_fade(v2(from.x + size.x / 2, from.y), from + v2(size.x, size.y / 2), trans, trans, trans, shine)
-        renderer.rect_filled_fade(v2(from.x, from.y + size.y / 2), from + v2(size.x / 2, size.y), trans, shine, trans, trans)
+        render.rect_filled_fade(from, from + size / 2, trans, trans, shine, trans)
+        render.rect_filled_fade(from + size / 2, to, shine, trans, trans, trans)
+        render.rect_filled_fade(v2(from.x + size.x / 2, from.y), from + v2(size.x, size.y / 2), trans, trans, trans, shine)
+        render.rect_filled_fade(v2(from.x, from.y + size.y / 2), from + v2(size.x / 2, size.y), trans, shine, trans, trans)
     end,
     current_cursor = nil,
 }
@@ -59,38 +63,38 @@ drag.new = errors.handler(function(key, default_pos, pointer)
     if pointer == nil then pointer = true end
     drag.__elements[key] = {
         pos = {
-            x = ui.add_slider_float(key .. "__x", key .. "_dx", 0, 1, default_pos.x),
-            y = ui.add_slider_float(key .. "__y", key .. "_dy", 0, 1, default_pos.y),
+            x = menu.add_slider_float(key .. "__x", "magnolia_drag", 0, 1, default_pos.x),
+            y = menu.add_slider_float(key .. "__y", "magnolia_drag", 0, 1, default_pos.y),
         },
         hovered = false,
         key = key,
         highlight_alpha = 0,
-        old_cursor = renderer.get_cursor_pos() / engine.get_screen_size(),
+        old_cursor = input.cursor_pos() / render.screen_size(),
         dragging = false,
         move_cursor = false,
         pointer = pointer
     }
-    drag.__elements[key].pos.x:set_visible(false)
-    drag.__elements[key].pos.y:set_visible(false)
+    -- drag.__elements[key].pos.x:set_visible(false)
+    -- drag.__elements[key].pos.y:set_visible(false)
     return setmetatable(drag.__elements[key], drag.mt)
 end, "drag.new")
 
 drag.is_menu_hovered = function()
-    local rect = ui.get_menu_rect()
-    return drag.is_hovered(v2(rect.x, rect.y), v2(rect.z - rect.x, rect.w - rect.y))
+    local rect = menu.get_menu_rect()
+    return drag.is_hovered(v2(rect.x - 5, rect.y - 5), v2(rect.z - rect.x + 5, rect.w - rect.y + 5))
 end
 ---@param from vec2_t
 ---@param to vec2_t
 drag.hover_absolute = function(from, to)
     return drag.is_hovered(from, nil, to)
-        and not (drag.is_menu_hovered() and ui.is_visible())
+        and not (drag.is_menu_hovered() and menu.is_visible())
 end
 ---@param size vec2_t
 ---@param center_x? boolean
 drag.hover_fn = function(size, center_x, center_y)
     return function(pos)
         return drag.is_hovered(v2(center_x and pos.x - size.x / 2 or pos.x, center_y and pos.y - size.y / 2 or pos.y) or pos, size)
-            and not (drag.is_menu_hovered() and ui.is_visible())
+            and not (drag.is_menu_hovered() and menu.is_visible())
     end
 end
 drag.block = function()
@@ -110,15 +114,15 @@ drag.mt = {
         ---@param highlight? fun(pos: vec2_t, alpha: number)
         ---@return vec2_t, fun()
         run = errors.handler(function(s, hover_fn, highlight)
-            local draggable = ui.is_visible()
+            local draggable = menu.is_visible()
             for _, elem in pairs(drag.__elements) do
                 if draggable and elem.dragging and elem.key ~= s.key then
                     draggable = false
                 end
             end
-            local pos = v2(s.pos.x:get_value(), s.pos.y:get_value()):clamp(v2(0, 0), v2(1, 1))
+            local pos = v2(s.pos.x:get(), s.pos.y:get()):clamp(v2(0, 0), v2(1, 1))
             local pressed = input.is_key_pressed(1)
-            local cursor = renderer.get_cursor_pos() / ss
+            local cursor = input.cursor_pos() / ss
 
             local transformed_pos = pos * ss
             s.move_cursor = false
@@ -133,7 +137,7 @@ drag.mt = {
                 if pressed or s.dragging then
                     s.dragging = true
                     pos = (cursor - s.old_cursor + pos):clamp(v2(0, 0), v2(1, 1))
-                    s.pos.x:set_value(pos.x) s.pos.y:set_value(pos.y)
+                    s.pos.x:set(pos.x) s.pos.y:set(pos.y)
                 end
             end
             if pressed and (not s.hovered and not s.dragging) then
@@ -161,41 +165,45 @@ drag.mt = {
 }
 
 local set_cursor
-local original_set_cursor
 local hooks = require("libs.hooks")
 local hooked_setcursor = function (original, cursor)
-    drag.original_cursor = cursor
-    original_set_cursor = original
-    -- if drag.current_cursor then
-    --     local result = original(drag.current_cursor)
-    --     return result
-    -- end
-    if drag.original_cursor then
-        return nil
+    if drag.current_cursor and menu.is_visible() then
+        return original(drag.current_cursor)
     end
     return original(cursor)
 end
 drag.set_cursor = function(cursor)
     drag.current_cursor = cursor
 end
--- set_cursor = hooks.jmp2.new("HANDLE(__stdcall*)(HANDLE)", hooked_setcursor, SetCursor)
-cbs.paint(errors.handler(function ()
-    if not original_set_cursor then return end
-    for _, elem in pairs(drag.__elements) do
-        if elem.move_cursor and elem.pointer then
-            return original_set_cursor(drag.move_cursor)
-        end
-    end
-    if drag.current_cursor then
-        local result = original_set_cursor(drag.current_cursor)
-        drag.current_cursor = nil
-        return result
-    end
-    return original_set_cursor(drag.original_cursor)
-end, "drag.paint"))
+set_cursor = hooks.jmp2.new("HANDLE(__stdcall*)(HANDLE)", hooked_setcursor, SetCursor)
+cbs.paint(function ()
+    drag.current_cursor = nil
+end, "drag.paint")
+-- local game_window = user32.FindWindowA("Valve001", nil)
+-- local old_wndproc = user32.GetWindowLongA(game_window, -4)
+-- local original_wndproc
+-- local new_wndproc = function(hwnd, msg, param, lparam)
+--     if msg == 0x0200 and menu.is_visible() then
+--         for _, elem in pairs(drag.__elements) do
+--             if elem.move_cursor and elem.pointer then
+--                 user32.SetCursor(drag.move_cursor)
+--             end
+--         end
+--         if drag.current_cursor then
+--             user32.SetCursor(drag.current_cursor)
+--             -- drag.current_cursor = nil
+--         end
+--     end
+--     return user32.CallWindowProcW(original_wndproc, hwnd, msg, param, lparam)
+-- end
+
+-- original_wndproc = user32.SetWindowLongA(game_window, -4, ffi.cast("long", ffi.cast("long(__stdcall*)(HANDLE, UINT, UINT, long)", new_wndproc)))
+-- print(("Original: 0x%X"):format(tonumber(original_wndproc)))
+-- print(("Old: 0x%X"):format(tonumber(old_wndproc)))
 cbs.add("unload", function ()
     if not set_cursor then return end
     set_cursor:unhook()
+    -- user32.SetWindowLongA(game_window, -4, old_wndproc)
 end)
 
 return drag

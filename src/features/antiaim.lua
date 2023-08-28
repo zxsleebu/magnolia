@@ -4,7 +4,7 @@ local nixware = require("libs.nixware")
 local ffi = require("libs.protected_ffi")
 local v2, v3 = require("libs.vectors")()
 -- local hooks = require("libs.hooks")
--- local create_move_fn = client.find_pattern("client.dll", "55 8B EC 83 E4 F8 81 EC ? ? ? ? 8B 45 08 89 0C 24")
+-- local create_move_fn = find_pattern("client.dll", "55 8B EC 83 E4 F8 81 EC ? ? ? ? 8B 45 08 89 0C 24")
 -- ffi.cdef[[
 --     struct UserCmd {
 --         void*       vmt;
@@ -206,7 +206,7 @@ if right_yaw_offset_address == 0 then
 end
 local patch_bytes =     { 0xB8, 0x00, 0x00, 0xB4, 0xC2, 0x66, 0x0F, 0x6E, 0xC0 }
 local original_bytes =  { 0xF3, 0x0F, 0x10, 0x47, 0x10, 0xF3, 0x0F, 0x5C, 0xC1 }
-local anti_aim_base_yaw = ui.get_combo_box("antihit_antiaim_yaw")
+-- local anti_aim_base_yaw = menu.("antihit_antiaim_yaw")
 nixware.write_memory_bytes(right_yaw_offset_address, patch_bytes)
 cbs.unload(function()
     nixware.write_memory_bytes(right_yaw_offset_address, original_bytes)

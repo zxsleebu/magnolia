@@ -33,7 +33,7 @@ local logger_t = {
                     t.text[i][2] = col.white
                 end
             end
-            t.time = globalvars.get_real_time() + (time or 4000) / 1000
+            t.time = globals.real_time + (time or 4000) / 1000
             if s.flags.infinite and not time then
                 t.time = -1
             end
@@ -65,7 +65,7 @@ local logger_t = {
             local y = pos.y
             for i = #s.list, 1, -1 do
                 local log = s.list[i]
-                local active = globalvars.get_real_time() < log.time
+                local active = globals.real_time < log.time
                 if log.time == -1 then active = true end
                 local alpha = log.anims.alpha(active and 255 or 0)
                 local y_offset = log.anims.y_offset((active or alpha > 0) and 15 or 0)

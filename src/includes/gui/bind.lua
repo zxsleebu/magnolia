@@ -1,6 +1,6 @@
 local v2 = require("libs.vectors")()
 local col = require("libs.colors")
-local render = require("libs.render")
+local irender = require("libs.render")
 local fonts = require("includes.gui.fonts")
 local anims = require("libs.anims")
 local drag = require("libs.drag")
@@ -84,7 +84,7 @@ bind_mt.inline_draw = errors.handler(function(self, pos, alpha, input_allowed)
         })
     end
     self.key_anims[active_key].alpha(255)
-    local text_width = math.max(render.text_size(fonts.menu, bind_names[active_key]).x + 8, 20)
+    local text_width = math.max(irender.text_size(fonts.menu, bind_names[active_key]).x + 8, 20)
     if self.size.x == 0 then
         self.anims.width.value = text_width
         self.size.x = text_width
@@ -95,10 +95,10 @@ bind_mt.inline_draw = errors.handler(function(self, pos, alpha, input_allowed)
     local hovered = input_allowed and drag.hover_absolute(pos, pos + size)
     local hover_anim = self.anims.hover((hovered or self.changing or self.open) and 255 or 0)
     self.anims.alpha(self.open and 255 or 0)
-    renderer.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:alpha(alpha))
-    render.smoothed_rect(pos, pos + size, colors.magnolia_tinted:fade(colors.magnolia, hover_anim / 255):alpha(alpha), false)
+    render.rect_filled(pos + v2(1, 1), pos + size - v2(1, 1), col.gray:alpha(alpha))
+    render.rect(pos, pos + size, colors.magnolia_tinted:fade(colors.magnolia, hover_anim / 255):alpha(alpha), 1)
     for key, anim in pairs(self.key_anims) do
-        render.text(bind_names[key], fonts.menu, pos + v2(size.x / 2, 0), col.white:alpha(alpha):salpha(anim.alpha()), render.flags.X_ALIGN)
+        irender.text(bind_names[key], fonts.menu, pos + v2(size.x / 2, 0), col.white:alpha(alpha):salpha(anim.alpha()), irender.flags.X_ALIGN)
     end
     if hovered then
         drag.set_cursor(drag.hand_cursor)
@@ -109,7 +109,7 @@ bind_mt.inline_draw = errors.handler(function(self, pos, alpha, input_allowed)
         if input.is_key_clicked(2) then
             click_effect.add()
             if not self.open then
-                self.pos = renderer.get_cursor_pos()
+                self.pos = input.cursor_pos()
             end
             self.open = true
         end
@@ -152,7 +152,7 @@ bind_mt.draw = errors.handler(function(self, alpha)
 
         local text_color = col.white:alpha(open_alpha)
         local active_text_color = col(colors.magnolia.r + 10, colors.magnolia.g + 10, colors.magnolia.b + 10, open_alpha)
-        local active_type = self.el:get_type()
+        -- local active_type = self.el:get_type()
         for i = 1, #bind_types do
             local type = bind_types[i]
             local active = self.el:get_type() == (i - 1)
@@ -162,7 +162,7 @@ bind_mt.draw = errors.handler(function(self, alpha)
             local type_alpha = self.type_anims[i].alpha((type_hovered or active) and 255 or 0)
             local text_pos = type_pos + v2(7, 4)
             local cur_text_color = text_color:fade(active_text_color, type_active_alpha / 255)
-            render.text(type, fonts.menu, text_pos, cur_text_color:alpha_anim(type_alpha, 127, 255), render.flags.SHADOW)
+            irender.text(type, fonts.menu, text_pos, cur_text_color:alpha_anim(type_alpha, 127, 255), irender.flags.SHADOW)
             if type_hovered and input.is_key_clicked(1) then
                 click_effect.add()
                 self.el:set_type(i - 1)
@@ -190,8 +190,8 @@ end
 ---@return gui_bind_t
 bind_t.new = errors.handler(function (element, default_key, default_mode)
     local path = gui.get_path(element.name .. "_bind")
-    local bind = ui.add_key_bind(path, path, default_key or 0, default_mode or 1)
-    bind:set_visible(false)
+    local bind = menu.add_key_bind(path, "magnolia", true, default_key or 0, default_mode or 1)
+    -- bind:set_visible(false)
     local t = setmetatable({
         parent = element,
         anims = anims.new({
