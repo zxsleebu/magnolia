@@ -118,10 +118,11 @@ slider_mt.draw = errors.handler(function (self, pos, alpha, width, input_allowed
         if input.is_key_pressed(18) and self.float then
             change_value = 0.1
         end
-        if input.is_key_clicked(37) then
-            self.el:set(math.max(self.min, value - change_value))
-        end
-        if input.is_key_clicked(39) then
+        local can_fast_scroll = globals.frame_count % 7 == 0
+        local left_arrow = input.is_key_clicked(37) or (input.get_key_pressed_time(37) > 0.3 and can_fast_scroll)
+        local right_arrow = not left_arrow and (input.is_key_clicked(39) or (input.get_key_pressed_time(39) > 0.3 and can_fast_scroll))
+        if left_arrow or right_arrow then
+            if left_arrow then change_value = -change_value end
             self.el:set(math.min(self.max, value + change_value))
         end
     end
