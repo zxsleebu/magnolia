@@ -17,7 +17,7 @@ local cbs = {
 local frame_stage_notify_callbacks = {}
 local IBaseClient = hooks.vmt.new(utils.create_interface("client", "VClient018"))
 local origin_fsn
-origin_fsn = IBaseClient:hookMethod("void(__stdcall*)(int stage)", function(stage)
+origin_fsn = IBaseClient:hookMethod("void(__stdcall*)(int)", function(stage)
     origin_fsn(stage)
     errors.handle(function()
         for i = 1, #frame_stage_notify_callbacks do

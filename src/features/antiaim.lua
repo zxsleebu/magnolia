@@ -154,7 +154,7 @@ local get_target_best_angle = function(at_targets_enabled)
     anti_aim.last_target_index = best_player and best_player:get_index() or -1
     anti_aim.target_player_index = anti_aim.last_target_index
     if not best_player or not best_player_pos then
-        anti_aim.target_player_index = nil
+        anti_aim.target_player_index = -1
         -- best_angle = viewangles.yaw
     end
     anti_aim.last_best_angle = best_angle
@@ -168,7 +168,7 @@ local get_freestand_angle = function()
     if anti_aim.target_player_index == -1 then
         get_target_best_angle(true)
     end
-    if not anti_aim.target_player_index or anti_aim.target_player_index == -1 then
+    if anti_aim.target_player_index == -1 then
         return
     end
     local targeted_player = entitylist.get(anti_aim.target_player_index)

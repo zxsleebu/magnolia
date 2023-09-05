@@ -549,19 +549,11 @@ do
     end
     cbs.create_move(function()
         entitylist.get_entities("CCSPlayer", true, function(entity)
-            if entity then
-                local info = entity:get_info()
-                if info then
-                    local id = info.user_id
-                    if not ticks[id] then
-                        ticks[id] = 0
-                    end
-                    if entity:is_dormant() then
-                        ticks[id] = ticks[id] + 1
-                    else
-                        ticks[id] = 0
-                    end
-                end
+            local id = entity:get_index()
+            if entity:is_dormant() then
+                ticks[id] = ticks[id] + 1
+            else
+                ticks[id] = 0
             end
         end)
     end)

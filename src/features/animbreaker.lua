@@ -125,6 +125,9 @@ local setup_bones_hk = function(original, ccsplayer, edx, bone_to_world_out, max
     local is_lp = false
     errors.handle(function ()
         if not lp or not lp:is_alive() then return end
+        if type(lp[0]) == "string" then
+            print(tostring(lp[0]))
+        end
         is_lp = ccsplayer == ffi.cast("void*", lp[0])
         if not is_lp then return end
         animbreaker()

@@ -201,7 +201,7 @@ cbs.frame_stage(function(stage)
     if stage ~= 4 then return end
     if not custom_model:value() then return end
     local lp = entitylist.get_local_player()
-    if not lp then return end
+    if not lp or not lp:is_alive()  then return end
     local ct_model = ct_agent:val_index()
     local t_model = t_agent:val_index()
     if ct_model < 0 and t_model < 0 then return end
