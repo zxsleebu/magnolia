@@ -1,6 +1,7 @@
 local ffi = require("libs.protected_ffi")
 require("libs.types")
 local errors = require("libs.error_handler")
+local utils  = require("libs.utils")
 ffi.cdef[[
     typedef struct {
         void*   BaseAddress;
@@ -19,7 +20,7 @@ ffi.cdef[[
     BOOL VirtualProtectEx(void*, void*, SIZE_T, DWORD, DWORD*);
 ]]
 
-local setup_bones = tonumber(ffi.cast("uintptr_t", find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B")))
+local setup_bones = utils.find_pattern("client", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B")
 if setup_bones == 0 then return end
 local hook_func = ffi.cast("uintptr_t*", setup_bones + 1)
 if not hook_func then return end

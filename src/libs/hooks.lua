@@ -1,4 +1,5 @@
 local win32 = require("libs.win32")
+local utils = require("libs.utils")
 local vmt_hook = {
     __index = {
         ---@generic T
@@ -148,8 +149,8 @@ local jmp_hook_2 = {
         return ffi.cast("uintptr_t", jmp_addr + 0x5 + jmp_disp)
     end
 }
-local hook = ffi.cast("int(__cdecl*)(void*, void*, void*, int)", find_pattern("gameoverlayrenderer.dll", "55 8B EC 51 8B 45 10 C7"))
-local unhook = ffi.cast("void(__cdecl*)(void*, bool)", jmp_hook_2.rel_jmp(find_pattern("gameoverlayrenderer.dll", "E8 ? ? ? ? 83 C4 08 FF 15 ? ? ? ?")))
+local hook = ffi.cast("int(__cdecl*)(void*, void*, void*, int)", utils.find_pattern("gameoverlayrenderer", "55 8B EC 51 8B 45 10 C7"))
+local unhook = ffi.cast("void(__cdecl*)(void*, bool)", jmp_hook_2.rel_jmp(utils.find_pattern("gameoverlayrenderer", "E8 ? ? ? ? 83 C4 08 FF 15 ? ? ? ?")))
 ---@param cast string
 ---@param callback fun(orig: function, ...): function
 ---@param address any

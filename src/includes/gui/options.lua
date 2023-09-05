@@ -111,7 +111,7 @@ options_mt.draw = errors.handler(function(self, alpha)
         end
     end
 end, "options_mt.draw")
----@param fn fun(cmd: usercmd_t, el: gui_options_t)
+---@param fn fun(cmd: user_cmd_t, el: gui_options_t)
 ---@return gui_options_t
 options_mt.create_move = function (self, fn)
     cbs.create_move(function(cmd)

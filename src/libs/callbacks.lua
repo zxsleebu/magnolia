@@ -1,11 +1,12 @@
 local errors = require("libs.error_handler")
-local v2, v3 = require("libs.vectors")()
+-- local v2, v3 = require("libs.vectors")()
+local hooks = require("libs.hooks")
+local utils = require("libs.utils")
 local cbs = {
     list = {
         unload = {},
         paint = {},
         create_move = {},
-        frame_stage_notify = {},
         shot_fired = {},
         override_view = {}
     },
@@ -13,6 +14,21 @@ local cbs = {
         unload = {},
     }
 }
+local frame_stage_notify_callbacks = {}
+local IBaseClient = hooks.vmt.new(utils.create_interface("client", "VClient018"))
+local origin_fsn
+origin_fsn = IBaseClient:hookMethod("void(__stdcall*)(int stage)", function(stage)
+    origin_fsn(stage)
+    errors.handle(function()
+        for i = 1, #frame_stage_notify_callbacks do
+            local callback = frame_stage_notify_callbacks[i]
+            errors.handle(callback.fn, callback.name, stage)
+        end
+    end, "frame_stage_notify.loop")
+end, 37)
+register_callback("unload", function()
+    IBaseClient:unHookAll()
+end)
 ---@param fn fun()
 ---@param name? string
 cbs.paint = function(fn, name)
@@ -32,7 +48,7 @@ end
 cbs.frame_stage = function(fn, name)
     local t = { fn = fn }
     if name then t.name = name end
-    table.insert(cbs.list.frame_stage_notify, t)
+    table.insert(frame_stage_notify_callbacks, t)
 end
 ---@param fn fun()
 ---@param name? string

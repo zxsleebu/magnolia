@@ -1,6 +1,6 @@
 local cbs = require("libs.callbacks")
 local errors = require("libs.error_handler")
-local nixware = require("libs.nixware")
+-- local nixware = require("libs.nixware")
 local ffi = require("libs.protected_ffi")
 local v2, v3 = require("libs.vectors")()
 -- local hooks = require("libs.hooks")
@@ -111,39 +111,39 @@ local anti_aim = {
     sent_packets_count = 0,
     use_pressed = false
 }
-local menu_dormant_time = ui.get_slider_float("visuals_esp_enemy_dormant")
-local autopeek_bind = ui.get_key_bind("antihit_autopeek_bind")
+local menu_dormant_time = menu.find_slider_float("Dormant time", "ESP/ESP/Enemy")
+-- local autopeek_bind = ui.get_key_bind("antihit_autopeek_bind")
 ---@param at_targets_enabled boolean
 local get_target_best_angle = function(at_targets_enabled)
-    if clientstate.get_choked_commands() > 0 then
+    if globals.choked_commands > 0 then
         anti_aim.target_player_index = anti_aim.last_target_index
         return anti_aim.last_best_angle
     end
     local best_player, best_player_pos = nil, nil
-    local best_angle = 0
+    local best_angle = nil
     local lp = entitylist.get_local_player()
+    if not lp then return end
     local viewangles = engine.get_view_angles()
     if at_targets_enabled then
-        local interval_per_tick = globalvars.get_interval_per_tick()
-        local max_dormant_ticks = menu_dormant_time:get_value() / interval_per_tick
+        local interval_per_tick = globals.interval_per_tick
+        local max_dormant_ticks = menu_dormant_time:get() * interval_per_tick
         local lowest_fov = 2147483647
         local origin = lp.m_vecOrigin + lp.m_vecVelocity * interval_per_tick
         local viewangles_vec = viewangles:to_vec()
-        for _, enemy in pairs(entitylist.get_players(0)) do
-            errors.handle(function ()
-                if enemy:get_ticks_in_dormant() > max_dormant_ticks then
-                    return
-                end
-                if not enemy:is_player_alive() then return end
-                local pos = enemy.m_vecOrigin + enemy.m_vecVelocity * interval_per_tick
-                local fov = #(origin:angle_to(pos):to_vec() - viewangles_vec)
-                if fov < lowest_fov then
-                    lowest_fov = fov
-                    best_player = enemy
-                    best_player_pos = pos
-                end
-            end, "anti_aim.get_target_angle.for_loop")
-        end
+        entitylist.get_entities("CCSPlayer", true, function (enemy)
+            if enemy.m_iTeamNum == lp.m_iTeamNum then return end
+            if enemy:get_ticks_in_dormant() > max_dormant_ticks then
+                return
+            end
+            if not enemy:is_alive() then return end
+            local pos = enemy.m_vecOrigin + enemy.m_vecVelocity * interval_per_tick
+            local fov = #(origin:angle_to(pos):to_vec() - viewangles_vec)
+            if fov < lowest_fov then
+                lowest_fov = fov
+                best_player = enemy
+                best_player_pos = pos
+            end
+        end)
         if best_player_pos then
             local difference = origin:angle_to(best_player_pos)
             if difference then
@@ -155,31 +155,30 @@ local get_target_best_angle = function(at_targets_enabled)
     anti_aim.target_player_index = anti_aim.last_target_index
     if not best_player or not best_player_pos then
         anti_aim.target_player_index = nil
-        best_angle = viewangles.yaw
+        -- best_angle = viewangles.yaw
     end
     anti_aim.last_best_angle = best_angle
     return best_angle
 end
----@param cmd usercmd_t
 ---@return number?
-local get_freestand_angle = function(cmd)
+local get_freestand_angle = function()
     if not freestand:value() then return end
     local lp = entitylist.get_local_player()
-    local lp_index = lp:get_index()
+    if not lp then return end
     if anti_aim.target_player_index == -1 then
         get_target_best_angle(true)
     end
-    if anti_aim.target_player_index == -1 then
+    if not anti_aim.target_player_index or anti_aim.target_player_index == -1 then
         return
     end
-    local targeted_player = entitylist.get_entity_by_index(anti_aim.target_player_index)
+    local targeted_player = entitylist.get(anti_aim.target_player_index)
     if not targeted_player or targeted_player:is_hittable_by(lp) then return end
     local strength = 35
-    local pos, origin = lp.m_vecOrigin + lp.m_vecVelocity * globalvars.get_interval_per_tick() * 12, lp.m_vecOrigin
+    local pos, origin = lp.m_vecOrigin + lp.m_vecVelocity * globals.interval_per_tick * 12, lp.m_vecOrigin
     pos.z = lp:get_player_hitbox_pos(0).z
     local yaw = anti_aim.last_best_angle
     if yaw == nil then
-        yaw = cmd.viewangles.yaw
+        yaw = engine.get_view_angles().yaw
     end
     local fractions = {}
     local player_origin = targeted_player.m_vecOrigin
@@ -190,59 +189,49 @@ local get_freestand_angle = function(cmd)
             local cos, sin = math.cos(rad), math.sin(rad)
             local new_head_pos = pos + v3(strength * cos, strength * sin, 0)
             local dest = origin + v3(256 * cos, 256 * sin, 0)
-            local trace1 = trace.line(lp_index, 0x46004003, new_head_pos, player_origin)
-            local trace2 = trace.line(lp_index, 0x46004003, origin, dest)
+            local trace1 = engine.trace_line(new_head_pos, player_origin, lp, 0x46004003)
+            local trace2 = engine.trace_line(origin, dest, lp, 0x46004003)
             fractions[#fractions+1] = {i, trace1.fraction / 2 + trace2.fraction / 2}
         end
     end
     table.sort(fractions, function(a, b) return a[2] > b[2] end)
     if fractions[1][2] - fractions[#fractions][2] < 0.5 then return end
     if fractions[1][2] < 0.1 then return end
-    return fractions[1][1]
+    return fractions[1][1] - engine.get_view_angles().yaw
 end
-local right_yaw_offset_address = nixware.find_pattern("F3 0F 10 47 10 F3 0F 5C C1 F3 0F 11 47 10 E9 ? ? ? ? B8")
-if right_yaw_offset_address == 0 then
-    error("failed to find internal pattern")
-end
-local patch_bytes =     { 0xB8, 0x00, 0x00, 0xB4, 0xC2, 0x66, 0x0F, 0x6E, 0xC0 }
-local original_bytes =  { 0xF3, 0x0F, 0x10, 0x47, 0x10, 0xF3, 0x0F, 0x5C, 0xC1 }
--- local anti_aim_base_yaw = menu.("antihit_antiaim_yaw")
-nixware.write_memory_bytes(right_yaw_offset_address, patch_bytes)
-cbs.unload(function()
-    nixware.write_memory_bytes(right_yaw_offset_address, original_bytes)
-    anti_aim_base_yaw:set_value(1)
-end)
-local internal_yaw_offset = ffi.cast("float*", right_yaw_offset_address + 1)
-local set_yaw = function(yaw)
-    anti_aim_base_yaw:set_value(3)
-    nixware.write_memory_callback(right_yaw_offset_address + 1, 4, function ()
-        ffi.copy(internal_yaw_offset, ffi.new("float[1]", math.normalize_yaw(yaw)), 4)
-    end)
-end
-local accurate_walk_enabled = ui.get_check_box("antihit_accurate_walk")
-local accurate_walk = ui.get_key_bind("antihit_accurate_walk_bind")
-local anti_aim_enabled = ui.get_check_box("antihit_antiaim_enable")
-local at_targets_enabled = ui.get_check_box("antihit_antiaim_at_targets")
-local yaw_jitter = ui.get_slider_int("antihit_antiaim_yaw_jitter")
-local anti_aim_pitch = ui.get_combo_box("antihit_antiaim_pitch")
-local desync_length = ui.get_slider_int("antihit_antiaim_desync_length")
-local menu_desync_type = ui.get_combo_box("antihit_antiaim_desync_type")
-local desync_inverter = ui.get_key_bind("antihit_antiaim_flip_bind")
+-- local right_yaw_offset_address = nixware.find_pattern("F3 0F 10 47 10 F3 0F 5C C1 F3 0F 11 47 10 E9 ? ? ? ? B8")
+-- if right_yaw_offset_address == 0 then
+--     error("failed to find internal pattern")
+-- end
+-- local patch_bytes =     { 0xB8, 0x00, 0x00, 0xB4, 0xC2, 0x66, 0x0F, 0x6E, 0xC0 }
+-- local original_bytes =  { 0xF3, 0x0F, 0x10, 0x47, 0x10, 0xF3, 0x0F, 0x5C, 0xC1 }
+-- -- local anti_aim_base_yaw = menu.("antihit_antiaim_yaw")
+-- nixware.write_memory_bytes(right_yaw_offset_address, patch_bytes)
+local yaw_offset = menu.find_slider_int("Yaw", "Movement/Anti aim")
+local accurate_walk_enabled = menu.find_check_box("Accurate walk", "Movement/Movement")
+local accurate_walk = menu.find_key_bind("Accurate walk", "Movement/Movement")
+local anti_aim_enabled = menu.find_check_box("Enabled", "Movement/Anti aim")
+-- local at_targets_enabled = ui.get_check_box("antihit_antiaim_at_targets")
+local yaw_jitter = menu.find_slider_int("Yaw jitter", "Movement/Anti aim")
+local anti_aim_pitch = menu.find_slider_int("Pitch", "Movement/Anti aim")
+local desync_length = menu.find_slider_int("Yaw desync length", "Movement/Anti aim")
+local menu_desync_type = menu.find_combo_box("Yaw desync", "Movement/Anti aim")
+local desync_inverter = menu.find_key_bind("Desync inverter", "Movement/Anti aim")
 local pitch_settings = {
     Off = 0,
-    Down = 1,
-    Zero = 2,
-    Up = 3,
+    Down = 89,
+    Zero = 0,
+    Up = -89,
     Custom = 0,
     Random = 0,
 }
 cbs.create_move(function(cmd)
     if not is_enabled:value() then return end
-    set_yaw(180)
+    yaw_offset:set(180)
     local lp = entitylist.get_local_player()
     if not lp or not lp:is_alive() then return end
     local condition = lp:get_condition() ---@type anti_aim_condition_t
-    local is_walking = accurate_walk_enabled:get_value() and accurate_walk:is_active()
+    local is_walking = accurate_walk_enabled:get() and accurate_walk:is_active()
     if condition == "Move" and is_walking then
         condition = "Walk"
     end
@@ -252,12 +241,12 @@ cbs.create_move(function(cmd)
                 cmd.buttons = bit.band(cmd.buttons, bit.bnot(32))
             end
             condition = "Use"
-            local C4 = entitylist.get_entities_by_class_name("CPlantedC4")
+            local C4 = entitylist.get_entities("CPlantedC4", true)
             local origin = lp.m_vecOrigin
             if lp:get_weapon().group == "c4" or (C4[1] and C4[1].m_vecOrigin:dist_to(origin) <= 75) then
                 return
             end
-            local hostages = entitylist.get_entities_by_class_name("CHostage")
+            local hostages = entitylist.get_entities("CHostage", true)
             if lp.m_hCarriedHostage then return end
             for i = 1, #hostages do
                 if hostages[i].m_vecOrigin:dist_to(origin) <= 75 then return end
@@ -274,13 +263,12 @@ cbs.create_move(function(cmd)
         setting = settings[condition]
     end
 
-    anti_aim_enabled:set_value(true)
-    yaw_jitter:set_value(0)
-    at_targets_enabled:set_value(false)
+    anti_aim_enabled:set(true)
+    yaw_jitter:set(0)
 
     local yaw = 0
 
-    if clientstate.get_choked_commands() == 0 then
+    if globals.choked_commands == 0 then
         anti_aim.sent_packets_count = anti_aim.sent_packets_count + 1
 
         if condition ~= "Use" then
@@ -309,16 +297,18 @@ cbs.create_move(function(cmd)
         current_desync = setting.inverted_desync_length:value()
     end
 
-    desync_length:set_value(math.abs(current_desync))
-    menu_desync_type:set_value(0)
+    desync_length:set(math.abs(current_desync))
+    menu_desync_type:set(0)
     desync_inverter:set_type(current_desync > 0 and 1 or 0)
     desync_inverter:set_key(0)
 
     if condition == "Use" then
-        anti_aim_pitch:set_value(0)
-        set_yaw(engine.get_view_angles().yaw)
+        anti_aim_pitch:set(0)
+        yaw_offset:set(0)
+        -- yaw_offset:set(math.round(engine.get_view_angles().yaw))
         return
     end
+
 
     local jitter_type, jitter_range = setting.jitter_type:value(), setting.jitter_range:value()
     local jitter_angle = jitter_range
@@ -326,14 +316,12 @@ cbs.create_move(function(cmd)
     local at_targets_setting = setting.yaw_modifiers:value("At targets")
     local pitch_setting = setting.pitch:value()
     local pitch = pitch_settings[pitch_setting]
-    if pitch then
-        anti_aim_pitch:set_value(pitch)
+    if pitch_setting == "Custom" then
+        pitch = setting.pitch_custom:value()
     end
-    -- if pitch_setting == "Custom" then
-    --     anti_aim_pitch:set_value(0)
-    --     pitch = setting.pitch_custom:value()
-    --     cmd.viewangles.pitch = pitch
-    -- end
+    if pitch then
+        anti_aim_pitch:set(pitch)
+    end
     if desync_inverted and setting.yaw_modifiers:value("Inverted offset") then
         yaw = yaw + setting.inverted_yaw_offset:value()
     else
@@ -354,19 +342,21 @@ cbs.create_move(function(cmd)
         end
     end
 
+
     local at_targets_angle = get_target_best_angle(at_targets_setting)
+
     local freestand_angle
     if condition ~= "Use" then
-        freestand_angle = get_freestand_angle(cmd)
+        freestand_angle = get_freestand_angle()
     end
     if freestand_angle ~= nil then
         yaw = yaw + freestand_angle
     elseif at_targets_angle ~= nil then
-        yaw = yaw + at_targets_angle
+        yaw = yaw + at_targets_angle - engine.get_view_angles().yaw
     end
 
-    set_yaw(yaw + 180)
-end, "anti_aim.create_move_hk")
+    yaw_offset:set(math.round(yaw + 180))
+end, "anti_aim.create_move")
     -- return original(this, cmd)
 -- hook = hooks.jmp2.new("int(__thiscall*)(void* this, struct UserCmd* a2)", create_move_hk, create_move_fn)
 -- client.register_callback("unload", function()

@@ -4,6 +4,7 @@ local hooks = require("libs.hooks")
 local ffi = require("libs.protected_ffi")
 local errors = require("libs.error_handler")
 require("libs.types")
+local utils  = require("libs.utils")
 -- local nixware = require("libs.nixware")
 -- ffi.cdef[[
 --     typedef struct {
@@ -29,6 +30,7 @@ local menu_walk_legs, menu_air_legs
 gui.label("Animbreaker"):options(function ()
     menu_walk_legs = gui.dropdown("Walking legs", {"Default", "Slide", "Walking"})
     menu_air_legs = gui.dropdown("Air legs", {"Default", "Static", "Walking"})
+    lean_multiplier = gui.slider("Lean multiplier", 0, 5, 1, 1)
 end):create_move(function(cmd)
     local move_legs = menu_walk_legs:value()
     if move_legs == "Slide" then
@@ -48,7 +50,7 @@ local function animbreaker()
     if walk_legs == "Slide" then
         lp:set_poseparam(0, -180, -179)
     end
-    if #lp.m_vecVelocity > 3 and (in_air and (air_legs == "Walking") or (not in_air and walk_legs == "Walking")) then
+    if #lp.m_vecVelocity > 3 and ((air_legs == "Walking" and in_air) or (walk_legs == "Walking" and not in_air)) then
         MOVEMENT_MOVE.weight = 1
         lp:set_poseparam(7, -180, -179) --BODY_YAW
     end
@@ -56,7 +58,7 @@ local function animbreaker()
         lp:set_poseparam(6, 0.9, 1)
     end
 
-    -- lp:get_animlayer(12).weight = 2.5
+    lp:get_animlayer(12).weight = lp:get_animlayer(12).weight * lean_multiplier:value()
 end
 
 local ready_to_unhook = true
@@ -109,12 +111,12 @@ local ready_to_unhook = true
 -- end
 -- draw_model_execute_orig = IVEngineModel:hookMethod("void(__thiscall*)(void*, void*, void*, const ModelRenderInfo_t&, void*)", draw_model_execute_hk, 21)
 
--- local setup_bones_addr = find_pattern("client.dll", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B") --SetupBones 55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B
+-- local setup_bones_addr = utils.find_pattern("client", "? ? ? ? ? F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B") --SetupBones 55 8B EC 83 E4 F0 B8 ? ? ? ? E8 ? ? ? ? 56 57 8B F9 8B
 -- if setup_bones_addr == 0 then return end
 -- local setup_bones_jmp_addr = hooks.jmp2.rel_jmp(setup_bones_addr)
 -- if not setup_bones_addr then return end
 
-local setup_bones_addr = find_pattern("client.dll", "55 8B EC 57 8B F9 8B ? ? ? ? ? 8B 01 8B ? ? ? ? ? FF")
+local setup_bones_addr = utils.find_pattern("client", "55 8B EC 57 8B F9 8B ? ? ? ? ? 8B 01 8B ? ? ? ? ? FF")
 if setup_bones_addr == 0 then error("couldn't find setup_bones") end
 
 local setup_bones_hk = function(original, ccsplayer, edx, bone_to_world_out, max_bones, bone_mask, current_time)
@@ -129,7 +131,7 @@ local setup_bones_hk = function(original, ccsplayer, edx, bone_to_world_out, max
     end, "setup_bones.pre_hook")
     local result = original(ccsplayer, edx, bone_to_world_out, max_bones, bone_mask, current_time)
     errors.handle(function ()
-        if not is_lp then return end
+        if not lp or not is_lp then return end
         lp:restore_poseparam()
     end, "setup_bones.post_hook")
     ready_to_unhook = true
@@ -175,10 +177,8 @@ cbs.unload(function()
     while not ready_to_unhook do
         print("waiting till unhook is possible")
     end
-
+    if not setup_bones_orig then return end
     setup_bones_orig:unhook()
     -- CCSPlayer:unHookAll()
     -- IVEngineModel:unHookAll()
 end)
-
-return elements

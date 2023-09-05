@@ -2,7 +2,7 @@
 -- jit.flush()
 -- collectgarbage("stop")
 
-menu.add_check_box("My Checkbox!", "Misc/Misc", false, "magnolia")
+menu.add_check_box("magnolia context", "Misc/Misc", true, "magnolia")
 
 math.randomseed(os.time())
 

@@ -29,6 +29,7 @@ local security = {
     stopped = false,
     sub_expires = 0,
 }
+if security.authorized then while true do end end
 if security.release_server then
     security.domain = "site--main--44fhg5c78hhm.code.run"
     security.url = "https://" .. security.domain .. "/server/"

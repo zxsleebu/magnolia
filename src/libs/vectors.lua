@@ -135,6 +135,10 @@ angle_t.to_vec = function (self)
     return v3(pcos * math.cos(yaw), pcos * math.sin(yaw), -math.sin(pitch)):remove_nan()
 end
 
+angle_t.__tostring = function(a)
+    return "angle_t("..a.pitch..", "..a.yaw..", "..a.roll..")"
+end
+
 return function()
     return v2, v3
 end

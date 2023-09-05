@@ -79,6 +79,7 @@ errors.handler = function(fn, name)
             --get traceback
             local traceback = debug.traceback()
             errors.report(err .. "\n" .. traceback, name)
+            return error(err, 0)
         end
         return err, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9
     end
@@ -87,8 +88,8 @@ end
 ---@generic T
 ---@param fn T
 ---@param name? string
-errors.handle = function(fn, name)
-    return errors.handler(fn, name)()
+errors.handle = function(fn, name, ...)
+    return errors.handler(fn, name)(...)
 end
 
 return errors

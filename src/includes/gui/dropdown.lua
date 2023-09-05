@@ -247,7 +247,7 @@ dropdown_mt.draw_popout = errors.handler(function (self, alpha)
                 click_effect.add()
                 if self.multi then
                     ---@cast el multi_combo_box_t
-                    el:set(i - 1, false)
+                    el:set(i - 1, not el:get(i - 1))
                 else
                     ---@cast el combo_box_t
                     el:set(i - 1)

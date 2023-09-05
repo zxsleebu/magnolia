@@ -4,7 +4,8 @@ local iengine = require("includes.engine")
 local cbs = require("libs.callbacks")
 local col = require("libs.colors")
 local hooks = require("libs.hooks")
-local voice_data_msg = find_pattern("engine.dll", "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC 84 01 00")
+local utils = require("libs.utils")
+local voice_data_msg = utils.find_pattern("engine", "55 8B EC 83 E4 F8 A1 ? ? ? ? 81 EC 84 01 00")
 ffi.cdef[[
     struct voice_data_t {
 		char		pad_0000[8]; //0
@@ -435,7 +436,7 @@ local voice_data_process = errors.handler(function(packet)
     if not packet then return end
     local msg = ffi.cast("struct voice_data_t*", packet)
     if not msg then return end
-    local entity = entitylist.get_entity_by_index(msg.client + 1)
+    local entity = entitylist.get(msg.client + 1)
     if not entity then return end
     local info = entity:get_info()
     if not info then return end

@@ -5,13 +5,13 @@ local cbs = require("libs.callbacks")
 local v2, v3 = require("libs.vectors")()
 local errors = require("libs.error_handler")
 local fonts = require("includes.gui.fonts")
-local render = require("libs.render")
+local irender = require("libs.render")
 local col = require("libs.colors")
 local colors = require("includes.colors")
 
-local molotov_throw_detonate_time = se.get_convar("molotov_throw_detonate_time")
-local sv_gravity = se.get_convar("sv_gravity")
-local weapon_molotov_maxdetonateslope = se.get_convar("weapon_molotov_maxdetonateslope")
+local molotov_throw_detonate_time = cvars.molotov_throw_detonate_time
+local sv_gravity = cvars.sv_gravity
+local weapon_molotov_maxdetonateslope = cvars.weapon_molotov_maxdetonateslope
 local samples_per_second = 30
 
 ---@class grenade_prediction_t
@@ -83,7 +83,7 @@ grenade_prediction_mt.physics_run_think = function (self)
 end
 ---@return vec3_t
 grenade_prediction_mt.physics_add_gravity_move = function (self)
-    local interval_per_tick = globalvars.get_interval_per_tick()
+    local interval_per_tick = globals.interval_per_tick
     local gravity = sv_gravity:get_float() * 0.4
     local move = self.velocity * interval_per_tick
 
@@ -103,19 +103,11 @@ end
 ---@param mask number
 ---@return trace_t
 local trace_hull = function(self, start, dest, mins, maxs, mask)
-    local ignore_index = entitylist.get_entity_by_index(self.owner_index) and self.owner_index or -1
-    return trace.hull(mask, start, dest, mins, maxs, self.collision_group, function (entity_index, contents_mask)
-        if entity_index == ignore_index then
-            return false
-        end
-        if entity_index then
-            local entity = entitylist.get_entity_by_index(entity_index)
-            if entity and entity:is_grenade() then
-                return false
-            end
-        end
+    return engine.trace_hull(start, dest, mins, maxs, function (entity, contents_mask)
+        if entity:is_grenade() then return false end
+        if entity:get_index() == self.owner_index then return false end
         return true
-    end)
+    end, mask)
 end
 ---@param start vec3_t
 ---@param dest vec3_t
@@ -141,13 +133,13 @@ end
 grenade_prediction_mt.physics_trace_entity = function(self, start, dest, mask)
     local trace_info = self:trace_entity(start, dest, mask)
 
-    if trace_info.startsolid and bit.band(trace_info.contents, 0x80000) then --CONTENTS_CURRENT_90
+    if trace_info.start_solid and bit.band(trace_info.contents, 0x80000) then --CONTENTS_CURRENT_90
         trace_info = self:trace_entity(start, dest, bit.band(mask, bit.bnot(0x80000))) --~CONTENTS_CURRENT_90
     end
 
-    if trace_info.fraction < 1 or trace_info.allsolid or trace_info.startsolid then
-        if trace_info.hit_entity_index ~= 0 then
-            local hit_entity = entitylist.get_entity_by_index(trace_info.hit_entity_index)
+    if trace_info.fraction < 1 or trace_info.all_solid or trace_info.start_solid then
+        if trace_info.entity then
+            local hit_entity = trace_info.entity
             if hit_entity and hit_entity:is_player() then
                 trace_info = self:trace_line(start, dest, mask)
             end
@@ -192,20 +184,20 @@ end
 grenade_prediction_mt.physics_push_entity = function(self, push)
     local trace_info = self:physics_check_sweep(self.origin, push)
 
-    if trace_info.startsolid then
+    if trace_info.start_solid then
         self.collision_group = 3 --COLLISION_GROUP_INTERACTIVE_DEBRIS
         trace_info = self:trace_line(self.origin - push, self.origin + push, 540683) --(MASK_SOLID | CONTENTS_CURRENT_90) & ~CONTENTS_MONSTER
     end
 
     if trace_info.fraction ~= 0 then
-        self.origin = trace_info.endpos
+        self.origin = trace_info.end_pos
     end
     if trace_info.fraction ~= 1 then
-        -- local hit_entity = entitylist.get_entity_by_index(trace_info.hit_entity_index)
+        -- local hit_entity = entitylist.get(trace_info.hit_entity_index)
         -- if hit_entity then
             -- self:physics_impact(hit_entity, trace_info.normal.z)
         -- end
-        self:physics_impact(trace_info.normal.z)
+        self:physics_impact(trace_info.plane.normal.z)
     end
 
     return trace_info
@@ -230,8 +222,8 @@ end
 ---@param trace_info trace_t
 grenade_prediction_mt.perform_fly_collision_resolution = function(self, trace_info)
     local surface_elacticity = 1
-    if trace_info.hit_entity_index ~= 0 then
-        local hit_entity = entitylist.get_entity_by_index(trace_info.hit_entity_index)
+    if trace_info.entity then
+        local hit_entity = trace_info.entity
         if hit_entity then
             if hit_entity:is_breakable() and not self:is_broken(hit_entity) then
                 self.velocity = self.velocity * 0.4
@@ -252,13 +244,13 @@ grenade_prediction_mt.perform_fly_collision_resolution = function(self, trace_in
         end
     end
     local total_elasticity = math.clamp(0.45 * surface_elacticity, 0, 0.9)
-    local velocity = clip_velocity(self.velocity, trace_info.normal, 2) * total_elasticity
+    local velocity = clip_velocity(self.velocity, trace_info.plane.normal, 2) * total_elasticity
 
-    local interval_per_tick = globalvars.get_interval_per_tick()
-    if trace_info.normal.z > 0.7 then
+    local interval_per_tick = globals.interval_per_tick
+    if trace_info.plane.normal.z > 0.7 then
         local speed_sqr = velocity:length_sqr()
         if speed_sqr > 96000 then
-            local l = velocity:normalize():dot(trace_info.normal)
+            local l = velocity:normalize():dot(trace_info.plane.normal)
             if l > 0.5 then
                 velocity = velocity * (1 - l + 0.5)
             end
@@ -374,7 +366,7 @@ cbs.paint(function()
     local highest_index = entitylist.get_highest_entity_index()
     for i = 1, highest_index do
         errors.handler(function()
-            local entity = entitylist.get_entity_by_index(i)
+            local entity = entitylist.get(i)
             if entity == nil or entity:is_dormant() then
                 return
             end
@@ -396,7 +388,7 @@ cbs.paint(function()
                 return
             end
             local throw_time = entity.m_nGrenadeSpawnTime
-            local offset = iengine.time_to_ticks(entity.m_flSimulationTime - globalvars.get_current_time())
+            local offset = iengine.time_to_ticks(entity.m_flSimulationTime - globals.cur_time)
             if not list[handle] then
                 list[handle] = grenade_prediction_t.new(
                     entity,
@@ -416,8 +408,8 @@ cbs.paint(function()
 
     for _, grenade in pairs(list) do
         errors.handler(function()
-            local current_time = globalvars.get_current_time()
-            local tick_count = globalvars.get_tick_count()
+            local current_time = globals.cur_time
+            local tick_count = globals.tick_count
             if grenade.expire_time <= current_time then
                 list[_] = nil
                 return
@@ -433,19 +425,19 @@ cbs.paint(function()
                 end
                 valid_index = i
             end
-            local entity = entitylist.get_entity_by_index(grenade.entity_index)
+            local entity = entitylist.get(grenade.entity_index)
             if not entity then return end
-            local origin = entity:get_abs_origin()
+            local origin = entity:get_origin()
             if not origin then return end
-            local previous_w2s = se.world_to_screen(origin)
+            local previous_w2s = render.world_to_screen(origin)
             for i = valid_index, #grenade.path do
-                local w2s = se.world_to_screen(grenade.path[i][1])
+                local w2s = render.world_to_screen(grenade.path[i][1])
                 if previous_w2s and w2s then
                     render.line(previous_w2s, w2s, colors.magnolia)
                 end
                 previous_w2s = w2s
             end
-            local dist_w2s = se.world_to_screen(grenade.path[#grenade.path][1])
+            local dist_w2s = render.world_to_screen(grenade.path[#grenade.path][1])
             if not dist_w2s then return end
             dist_w2s = dist_w2s:round()
             local size = v2(28, 24)
@@ -458,10 +450,10 @@ cbs.paint(function()
             ---value from 0 to 1 that represents the time left until the grenade explodes
             local time_modifier = 1 - (grenade.expire_time - current_time) / grenade.detonate_time
             if dist_w2s then
-                render.box_shadow(from, to, colors.magnolia:alpha(time_modifier * 255), 1.5, 100, 6, 1.3)
-                render.rounded_rect(from, to - v2(1, 1), colors.magnolia:alpha(200), 3, false)
-                render.rounded_rect(from + v2(1, 1), to - v2(1, 1), colors.container_bg:alpha(240), 3, true)
-                render.text(icon_name, fonts.nade_warning, dist_w2s + v2(1, 0), col.white:fade(colors.magnolia, time_modifier), render.flags.CENTER)
+                irender.box_shadow(from, to, colors.magnolia:alpha(time_modifier * 255), 1.5, 100, 6, 1.3)
+                irender.rounded_rect(from, to, colors.magnolia:alpha(200), 3, false)
+                irender.rounded_rect(from + v2(1, 1), to - v2(1, 1), colors.container_bg:alpha(240), 3, true)
+                irender.text(icon_name, fonts.nade_warning, dist_w2s + v2(1, 0), col.white:fade(colors.magnolia, time_modifier), irender.flags.CENTER)
                 -- render.text("!", fonts.menu, dist_w2s, col.white, render.flags.CENTER)
             end
         end, "grenade_prediction_t.draw")()

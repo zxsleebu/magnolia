@@ -31,6 +31,10 @@ utils.create_interface = function(module, interface_name)
     return 0x0
 end
 
+utils.find_pattern = function(module, pattern, offset)
+    return tonumber(ffi.cast("uintptr_t", find_pattern(module .. ".dll", pattern, offset)))
+end
+
 utils.get_username = function()
     return "lia"
 end

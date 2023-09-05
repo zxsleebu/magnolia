@@ -5,6 +5,8 @@ local interface, class = require("libs.interfaces")()
 -- local hooks = require("libs.hooks")
 local ffi = require("libs.protected_ffi")
 local iengine = require("includes.engine")
+local set     = require("libs.set")
+local utils   = require("libs.utils")
 
 ---@class entity_t
 ---@field m_bEligibleForScreenHighlight boolean
@@ -175,6 +177,7 @@ local iengine = require("includes.engine")
 ---@field m_iProgressBarDuration number
 ---@field m_flFlashMaxAlpha number
 ---@field m_flFlashDuration number
+---@field m_nHitboxSet number
 ---@field m_nHeavyAssaultSuitCooldownRemaining number
 ---@field m_bHasHeavyArmor boolean
 ---@field m_bHasHelmet boolean
@@ -272,8 +275,104 @@ local iengine = require("includes.engine")
 ---@field m_iAssists number[]
 ---@field m_bConnected boolean[]
 
+if not pcall(ffi.typeof, "struct RecvTable") then
+    ffi.cdef[[
+        struct RecvTable {
+            void* props;
+            int prop_count;
+            void* decoder;
+            const char* name;
+        };
+    ]]
+end
+if not pcall(ffi.typeof, "struct ClientClass") then
+    ffi.cdef [[
+        struct ClientClass {
+            void*               create_fn;
+            void*               create_event_fn;
+            const char*         network_name;
+            struct RecvTable*   recv_table;
+            struct ClientClass* next;
+            int                 class_id;
+        };
+    ]]
+end
+if not pcall(ffi.typeof, "struct StudioHitboxSet") then
+    ffi.cdef[[
+        struct StudioHitboxSet {
+            int nameIndex;
+            int numHitboxes;
+            int hitboxIndex;
+        };
+    ]]
+end
+if not pcall(ffi.typeof, "struct StudioHdr") then
+    ffi.cdef[[
+        struct StudioHdr {
+            int id;
+            int version;
+            int checksum;
+            char name[64];
+            int length;
+            vector_t eyePosition;
+            vector_t illumPosition;
+            vector_t hullMin;
+            vector_t hullMax;
+            vector_t bbMin;
+            vector_t bbMax;
+            int flags;
+            int numBones;
+            int boneIndex;
+            int numBoneControllers;
+            int boneControllerIndex;
+            int numHitboxSets;
+            int hitboxSetIndex;
+        };
+    ]]
+end
+if not pcall(ffi.typeof, "struct StudioBbox") then
+    ffi.cdef[[
+        struct StudioBbox {
+            int bone;
+            int group;
+            vector_t bbMin;
+            vector_t bbMax;
+            int hitboxNameIndex;
+            vector_t offsetOrientation;
+            float capsuleRadius;
+            int unused[4];
+        };
+    ]]
+end
+if not pcall(ffi.typeof, "model_t") then
+    ffi.cdef [[
+        typedef struct{
+            void*       handle;
+            char        name[260];
+            int         load_flags;
+            int         server_count;
+            int         type;
+            int         flags;
+            vector_t    mins;
+            vector_t    maxs;
+            float       radius;
+            char        pad[28];
+        } model_t;
+    ]]
+end
+local IModelInfoClient = interface.new("engine", "VModelInfoClient004", {
+    GetModel = { 1, "model_t*(__thiscall*)(void*, int)"},
+    GetModelIndex = { 2, "int(__thiscall*)(void*, PCSTR)" },
+    GetStudioModel = { 32, "struct StudioHdr*(__thiscall*)(void*, void*)" },
+    FindOrLoadModel = { 39, "const model_t(__thiscall*)(void*, PCSTR)" }
+})
+local IBaseClient = interface.new("client", "VClient018", {
+    GetAllClasses = { 8, "struct ClientClass*(__thiscall*)(void*)" },
+})
 local IClientEntityList = interface.new("client", "VClientEntityList003", {
     GetClientEntity = { 3, "uintptr_t(__thiscall*)(void*, int)" },
+    GetClientEntityFromHandle = { 4, "uintptr_t(__thiscall*)(void*, uintptr_t)" },
+    GetHighestEntityIndex = { 6, "int(__thiscall*)(void*)" },
 })
 local CBaseEntity = class.new({
     GetCollideable = { 3, "uintptr_t(__thiscall*)(void*)" },
@@ -286,23 +385,10 @@ local CBaseEntity = class.new({
     IsPlayer = { 158, "bool(__thiscall*)(void*)" },
     IsWeapon = { 166, "bool(__thiscall*)(void*)" },
 })
---check if clientclass struct exists
-if not pcall(ffi.typeof, "struct ClientClass") then
-    ffi.cdef [[
-        struct ClientClass {
-            void*   m_pCreateFn;
-            void*   m_pCreateEventFn;
-            char*   network_name;
-            void*   m_pRecvTable;
-            void*   m_pNext;
-            int     class_id;
-        };
-    ]]
-end
-local CClientNetworkable = class.new({
-    -- GetClientUnknown = {0, "uintptr_t(__thiscall*)(void*)"},
-    -- GetClientClass = {2, "struct ClientClass*(__thiscall*)(void*)"},
-})
+-- local CClientNetworkable = class.new({
+--     GetClientUnknown = {0, "uintptr_t(__thiscall*)(void*)"},
+--     GetClientClass = {2, "struct ClientClass*(__thiscall*)(void*)"},
+-- })
 
 ---@param index number
 ---@return ffi.ctype*
@@ -310,28 +396,25 @@ entitylist.get_client_entity = function(index)
     ---@diagnostic disable-next-line: undefined-field
     return IClientEntityList:GetClientEntity(index)
 end
-local entitylist_get_players_o = entitylist.get_players
-entitylist.get_players = function(type)
-    local players = entitylist_get_players_o(type)
-    local new = {}
-    for i = 1, #players do
-        new[i] = players[i]
-    end
-    return new
-end
 ---@param steam_id string
 ---@return entity_t?
 entitylist.get_entity_by_steam_id = function(steam_id)
-    for _, player in pairs(entitylist.get_players(2)) do
+    local entities = entitylist.get_entities("CCSPlayer", true)
+    for _, player in pairs(entities) do
         if player:get_info().steam_id64 == steam_id then
             return player
         end
     end
 end
+---@return number
+entitylist.get_highest_entity_index = function()
+    return IClientEntityList:GetHighestEntityIndex()
+end
 ---@param userid number
 ---@return entity_t?
 entitylist.get_entity_by_userid = function(userid)
-    for _, player in pairs(entitylist.get_players(2)) do
+    local entities = entitylist.get_entities("CCSPlayer", true)
+    for _, player in pairs(entities) do
         local info = player:get_info()
         if info and info.user_id == userid then
             return player
@@ -348,11 +431,20 @@ entitylist.get_local_player_or_observed_player = function()
         return lp.m_hObserverTarget
     end
 end
+
+---@param handle number
+---@return entity_t?
+entitylist.get_entity_from_handle = function(handle)
+    local entity = IClientEntityList:GetClientEntityFromHandle(handle)
+    if entity == 0 or not entity then return end
+    return entitylist.get(ffi.cast("int*", entity + 0x64)[0])
+end
+
 ---@return entity_t?
 entitylist.get_player_resource = function()
-    return entitylist.get_entities_by_class_name("CCSPlayerResource")[1]
+    return entitylist.get_entities("CCSPlayerResource", true)[1]
     -- for i = 0, entitylist.get_highest_entity_index() do
-    --     local entity = entitylist.get_entity_by_index(i)
+    --     local entity = entitylist.get(i)
     --     if entity then
     --         local client_class = entity:get_client_class()
     --         if client_class then
@@ -373,6 +465,32 @@ entity_t.get_flag = function(self, flag)
     return bit.band(self.m_fFlags, flag) ~= 0
 end
 
+entity_t.get_bone_matrix = function(self, bone)
+    return ffi.cast("float*", ffi.cast("uintptr_t*", self[0x26A8])[0] + 0x30 * bone)
+end
+
+do
+    local vector_transform = function(vec, matrix)
+        return vec3_t.new(
+			vec.x * matrix[0] + vec.y * matrix[1] + vec.z * matrix[2] + matrix[3],
+			vec.x * matrix[4] + vec.y * matrix[5] + vec.z * matrix[6] + matrix[7],
+			vec.x * matrix[8] + vec.y * matrix[9] + vec.z * matrix[10] + matrix[11]
+		)
+    end
+    entity_t.get_player_hitbox_pos = function(self, hitbox)
+		local pModel = IModelInfoClient:GetModel(self.m_nModelIndex)
+        if not pModel then return end
+		local pStudioHdr = IModelInfoClient:GetStudioModel(pModel)
+		if not pStudioHdr then return end
+        local pHitboxSet = ffi.cast("struct StudioHitboxSet*", ffi.cast("uintptr_t", pStudioHdr) + pStudioHdr.hitboxSetIndex) + self.m_nHitboxSet
+        local bbox = ffi.cast("struct StudioBbox*", ffi.cast("uintptr_t", pHitboxSet) + pHitboxSet.hitboxIndex) + hitbox % pHitboxSet.numHitboxes
+        local boneMatrix = self:get_bone_matrix(bbox.bone)
+        if not boneMatrix then return end
+        local min, max = vector_transform(bbox.bbMin, boneMatrix), vector_transform(bbox.bbMax, boneMatrix)
+        return (min + max) / 2
+    end
+end
+
 ---@return boolean
 entity_t.is_on_ground = function(self)
     return self:get_flag(1)
@@ -388,20 +506,16 @@ end
 --     return self.m_vecOrigin
 -- end
 
-entity_t.update = function(self)
-    return entitylist.get_entity_by_index(self:get_index())
-end
-
 entity_t.get_info = function(self)
-    return engine.get_player_info(self:get_index())
+    -- return engine.get_player_info(self:get_index())
 end
 
 do
     ---@return "flashbang"|"he"|"smoke"|"decoy"|"molotov"|nil
     entity_t.get_grenade_type = function(self)
-        local client_class = self:get_client_class()
-        if not client_class then return end
-        local index = client_class.class_id
+        -- local client_class = self:get_class_name()
+        -- if not client_class then return end
+        local index = self:get_class_id()
         local name
         if index == 9 then
             local model = self:get_model()
@@ -427,16 +541,14 @@ do
     local ticks = {}
     ---@return number
     entity_t.get_ticks_in_dormant = function(self)
-        local info = self:get_info()
-        if not info then return 0 end
-        local id = info.user_id
+        local id = self:get_index()
         if not ticks[id] then
             ticks[id] = 0
         end
         return ticks[id]
     end
     cbs.create_move(function()
-        for _, entity in pairs(entitylist.get_players(2)) do
+        entitylist.get_entities("CCSPlayer", true, function(entity)
             if entity then
                 local info = entity:get_info()
                 if info then
@@ -451,7 +563,7 @@ do
                     end
                 end
             end
-        end
+        end)
     end)
     cbs.event("round_prestart", function()
         for k, _ in pairs(ticks) do
@@ -465,11 +577,11 @@ entity_t.get_class = function(self)
 end
 
 entity_t.get_networkable = function(self)
-    return ffi.cast("uintptr_t*", self[0] + 8)[0]
+    return ffi.cast("uintptr_t*", self[8])[0]
 end
 
 entity_t.get_studio_hdr = function(self)
-    local studio_hdr = ffi.cast("void**", self[0] + 0x2950) or error("failed to get studio_hdr")
+    local studio_hdr = ffi.cast("void**", self[0x2950]) or error("failed to get studio_hdr")
     studio_hdr = studio_hdr[0] or error("failed to get studio_hdr")
     return studio_hdr
 end
@@ -485,7 +597,7 @@ if not pcall(ffi.typeof, "m_flposeparameter_t") then
     ]]
 end
 do
-    local get_poseparam_sig = find_pattern('client.dll', '55 8B EC 8B 45 08 57 8B F9 8B 4F 04 85 C9 75 15')
+    local get_poseparam_sig = utils.find_pattern('client', '55 8B EC 8B 45 08 57 8B F9 8B 4F 04 85 C9 75 15')
     local native_get_poseparam = ffi.cast('m_flposeparameter_t*(__thiscall*)(void*, int)', get_poseparam_sig)
     if not get_poseparam_sig or not native_get_poseparam then error('failed to find get_poseparam_sig') end
     ---@param index number
@@ -554,7 +666,7 @@ entity_t.get_client_class = function(self)
 end
 
 local is_breakable_fn = ffi.cast("bool(__thiscall*)(void*)",
-    find_pattern("client.dll", "55 8B EC 51 56 8B F1 85 F6 74 68")) or error("can't find is_breakable")
+    utils.find_pattern("client", "55 8B EC 51 56 8B F1 85 F6 74 68")) or error("can't find is_breakable")
 entity_t.is_breakable = function(self)
     local ptr = ffi.cast("void*", self[0])
     if is_breakable_fn(ptr) then
@@ -603,7 +715,7 @@ entity_t.can_shoot = function(self)
 end
 
 do
-    local ccsplayer = ffi.cast("int*", find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C", 0x47) or error("wrong ccsplayer sig"))
+    local ccsplayer = ffi.cast("int*", utils.find_pattern("client", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C", 0x47) or error("wrong ccsplayer sig"))
     local raw_get_abs_origin = ffi.cast("float*(__thiscall*)(void*)", ffi.cast("int*", ccsplayer[0] + 0x28)[0])
     ---@return vec3_t?
     entity_t.get_abs_origin = function(self)
@@ -618,26 +730,6 @@ entity_t.get_eye_pos = function(self)
     return self:get_abs_origin() + self.m_vecViewOffset
 end
 
-if not pcall(ffi.typeof, "model_t") then
-    ffi.cdef [[
-        typedef struct{
-            void*       handle;
-            char        name[260];
-            int         load_flags;
-            int         server_count;
-            int         type;
-            int         flags;
-            vector_t    mins;
-            vector_t    maxs;
-            float       radius;
-            char        pad[28];
-        } model_t;
-    ]]
-end
-local IModelInfoClient = interface.new("engine", "VModelInfoClient004", {
-    GetModelIndex = { 2, "int(__thiscall*)(void*, PCSTR)" },
-    FindOrLoadModel = { 39, "const model_t(__thiscall*)(void*, PCSTR)" }
-})
 local IEngineServerStringTable = interface.new("engine", "VEngineClientStringTable001", {
     FindTable = { 3, "void*(__thiscall*)(void*, PCSTR)" }
 })
@@ -694,7 +786,7 @@ end, "entity_t.set_model")
 
 ---@return { handle: any, name: any, load_flags: number, server_count: number, type: number, flags: number, mins: vec3_t, maxs: vec3_t, radius: number }
 entity_t.get_model = function(self)
-    return ffi.cast("model_t**", self[0] + 0x6C)[0]
+    return ffi.cast("model_t**", self[0x6C])[0]
 end
 
 
@@ -717,9 +809,7 @@ end
 ---@param index number
 ---@return { order: number, sequence: number, previous_cycle: number, weight: number, weight_delta_rate: number, playback_rate: number, cycle: number }?
 entity_t.get_animlayer = function(self, index)
-    local address = self[0]
-    if address == 0 then return end
-    return ffi.cast("animlayer_t**", address + 0x2990)[0][index]
+    return ffi.cast("animlayer_t**", self[0x2990])[0][index]
 end
 
 ---@param attacker entity_t
@@ -734,8 +824,8 @@ entity_t.is_hittable_by = function(self, attacker, extrapolate_ticks)
     local from = attacker:get_eye_pos() + attacker.m_vecVelocity * interval + v3(0, 0, 10)
     local to = self:get_player_hitbox_pos(0)
     if not to then return end
-    local trace_result = trace.line(attacker:get_index(), 0x46004003, from, to)
-    if trace_result.hit_entity_index == self:get_index() then
+    local trace_result = engine.trace_line(from, to, attacker, 0x46004003)
+    if trace_result.entity:get_index() == self:get_index() then
         return true
     end
     return false
@@ -768,7 +858,8 @@ register_callback("paint", function()
         cached_ranks = {}
         return
     end
-    for _, player in pairs(entitylist.get_players(2)) do
+    local entities = entitylist.get_entities("CCSPlayer", true)
+    for _, player in pairs(entities) do
         local info = player:get_info()
         if info then
             local userid = info.user_id
@@ -791,7 +882,7 @@ register_callback("unload", function()
     end
 end)
 
----@param cmd? usercmd_t
+---@param cmd? user_cmd_t
 entity_t.is_shooting = function(self, cmd)
     local is_shooting = (self.m_iShotsFired >= 1) and not self:can_shoot()
     return is_shooting
@@ -831,7 +922,7 @@ if not pcall(ffi.typeof, "struct WeaponInfo_t") then
 end
 do
     local raw_get_weapon_data = ffi.cast("struct WeaponInfo_t*(__thiscall*)(void*)",
-            find_pattern("client.dll", "55 8B EC 81 EC ? ? ? ? 53 8B D9 56 57 8D 8B ? ? ? ? 85 C9 75 04")) or
+            utils.find_pattern("client", "55 8B EC 81 EC ? ? ? ? 53 8B D9 56 57 8D 8B ? ? ? ? 85 C9 75 04")) or
         error("failed to find get_weapon_data")
     local weapon_groups = {
         "knife",
@@ -929,7 +1020,7 @@ do
         local hitbox_pos = self:get_player_hitbox_pos(iengine.hitgroup_to_hitbox(hitgroup))
         if not hitbox_pos then return end
         local end_pos = start_pos + start_pos:angle_to(hitbox_pos):to_vec() * weapon.range
-        local trace_info = trace.line(attacker:get_index(), 0x46004003, start_pos, end_pos)
+        local trace_info = engine.trace_line(start_pos, end_pos, attacker, 0x46004003)
         local is_taser = weapon.group == "taser"
         local range = math.pow(weapon.range_modifier, trace_info.fraction * weapon.range / 500)
         local multiplier = (not is_taser) and get_damage_multiplier(hitgroup) or 1
@@ -950,138 +1041,18 @@ do
 end
 
 local netvar_table_list = {
-    "AI_BaseNPC",
-    "WeaponAK47",
-    "BaseAnimating", "BaseAnimatingOverlay", "BaseAttributableItem", "BaseButton", "BaseCombatCharacter",
-    "BaseCombatWeapon", "BaseCSGrenade", "BaseCSGrenadeProjectile", "BaseDoor", "BaseEntity",
-    "BaseFlex", "BaseGrenade", "BaseParticleEntity", "BasePlayer", "BasePropDoor",
-    "BaseTeamObjectiveResource", "BaseTempEntity", "BaseToggle", "BaseTrigger", "BaseViewModel",
-    "BaseVPhysicsTrigger", "BaseWeaponWorldModel",
-    "Beam",
-    "BeamSpotlight",
-    "BoneFollower",
-    "BRC4Target",
-    "WeaponBreachCharge",
-    "BreachChargeProjectile",
-    "BreakableProp", "BreakableSurface",
-    "WeaponBumpMine",
-    "BumpMineProjectile",
-    "WeaponC4",
-    "CascadeLight",
-    "CChicken",
-    "ColorCorrection", "ColorCorrectionVolume",
-    "CSGameRulesProxy", "CSPlayer", "CSPlayerResource", "CSRagdoll", "CSTeam",
-    "DangerZone", "DangerZoneController",
-    "WeaponDEagle",
-    "DecoyGrenade", "DecoyProjectile",
-    "Drone", "Dronegun",
-    "DynamicLight", "DynamicProp",
-    "EconEntity",
-    "WearableItem",
-    "Embers",
-    "EntityDissolve", "EntityFlame", "EntityFreezing", "EntityParticleTrail",
-    "EnvAmbientLight",
-    "DetailController",
-    "EnvDOFController", "EnvGasCanister", "EnvParticleScript", "EnvProjectedTexture",
-    "QuadraticBeam",
-    "EnvScreenEffect", "EnvScreenOverlay", "EnvTonemapController",
-    "EnvWind",
-    "FEPlayerDecal",
-    "FireCrackerBlast", "FireSmoke", "FireTrail",
-    "CFish",
-    "WeaponFists",
-    "Flashbang",
-    "FogController",
-    "FootstepControl",
-    "Func_Dust", "Func_LOD", "FuncAreaPortalWindow", "FuncBrush", "FuncConveyor",
-    "FuncLadder", "FuncMonitor", "FuncMoveLinear", "FuncOccluder", "FuncReflectiveGlass",
-    "FuncRotating", "FuncSmokeVolume", "FuncTrackTrain",
-    "GameRulesProxy",
-    "GrassBurn",
-    "HandleTest",
-    "HEGrenade",
-    "CHostage",
-    "HostageCarriableProp",
-    "IncendiaryGrenade",
-    "Inferno",
-    "InfoLadderDismount", "InfoMapRegion", "InfoOverlayAccessor",
-    "Item_Healthshot", "ItemCash", "ItemDogtags",
-    "WeaponKnife", "WeaponKnifeGG",
-    "LightGlow",
-    "MapVetoPickController",
-    "MaterialModifyControl",
-    "WeaponMelee",
-    "MolotovGrenade", "MolotovProjectile",
-    "MovieDisplay",
-    "ParadropChopper",
-    "ParticleFire",
-    "ParticlePerformanceMonitor",
-    "ParticleSystem",
-    "PhysBox", "PhysBoxMultiplayer", "PhysicsProp", "PhysicsPropMultiplayer", "PhysMagnet",
-    "PhysPropAmmoBox", "PhysPropLootCrate", "PhysPropRadarJammer", "PhysPropWeaponUpgrade",
-    "PlantedC4",
-    "Plasma",
-    "PlayerPing", "PlayerResource",
-    "PointCamera", "PointCommentaryNode", "PointWorldText",
-    "PoseController",
-    "PostProcessController",
-    "Precipitation",
-    "PrecipitationBlocker",
-    "PredictedViewModel",
-    "Prop_Hallucination", "PropCounter", "PropDoorRotating", "PropJeep", "PropVehicleDriveable",
-    "RagdollManager", "Ragdoll", "Ragdoll_Attached",
-    "RopeKeyframe",
-    "WeaponSCAR17",
-    "SceneEntity",
-    "SensorGrenade", "SensorGrenadeProjectile",
-    "ShadowControl",
-    "SlideshowDisplay",
-    "SmokeGrenade", "SmokeGrenadeProjectile", "SmokeStack",
-    "Snowball",
-    "SnowballPile", "SnowballProjectile",
-    "SpatialEntity",
-    "SpotlightEnd",
-    "Sprite", "SpriteOriented", "SpriteTrail",
-    "StatueProp",
-    "SteamJet",
-    "Sun",
-    "SunlightShadowControl",
-    "SurvivalSpawnChopper",
-    "WeaponTablet",
-    "Team",
-    "TeamplayRoundBasedRulesProxy",
-    "TEArmorRicochet",
-    "ProxyToggle",
-    "TestTraceline",
-    "TEWorldDecal",
-    "TriggerPlayerMovement", "TriggerSoundOperator",
-    "VGuiScreen",
-    "VoteController",
-    "WaterBullet",
-    "WaterLODControl",
-    "WeaponAug", "WeaponAWP", "WeaponBaseItem", "WeaponBizon", "WeaponCSBase",
-    "WeaponCSBaseGun", "WeaponCycler", "WeaponElite", "WeaponFamas", "WeaponFiveSeven",
-    "WeaponG3SG1", "WeaponGalil", "WeaponGalilAR", "WeaponGlock", "WeaponHKP2000",
-    "WeaponM249", "WeaponM3", "WeaponM4A1", "WeaponMAC10", "WeaponMag7",
-    "WeaponMP5Navy", "WeaponMP7", "WeaponMP9", "WeaponNegev", "WeaponNOVA",
-    "WeaponP228", "WeaponP250", "WeaponP90", "WeaponSawedoff", "WeaponSCAR20",
-    "WeaponScout", "WeaponSG550", "WeaponSG552", "WeaponSG556", "WeaponShield",
-    "WeaponSSG08", "WeaponTaser", "WeaponTec9", "WeaponTMP", "WeaponUMP45",
-    "WeaponUSP", "WeaponXM1014", "WeaponZoneRepulsor",
-    "WORLD",
-    "WorldVguiText",
-    "DustTrail",
-    "MovieExplosion",
-    "ParticleSmokeGrenade",
-    "RocketTrail",
-    "SmokeTrail",
-    "SporeExplosion",
-    "SporeTrail",
-    "AnimTimeMustBeFirst",
-    "CollisionProperty"
+    "DT_BaseEntity", "DT_BasePlayer", "DT_BaseAnimating", "DT_CSRagdoll"
 }
-for i = 1, #netvar_table_list do
-    netvar_table_list[i] = "DT_" .. netvar_table_list[i]
+do
+    local current_client_class = IBaseClient:GetAllClasses()
+    while current_client_class ~= nil do
+        local recv_table = current_client_class.recv_table
+        if recv_table and recv_table.name then
+            local name = ffi.string(recv_table.name)
+            netvar_table_list[#netvar_table_list + 1] = name
+        end
+        current_client_class = current_client_class.next
+    end
 end
 
 ---@alias __netvar_t { type: string, offset: number, table_type?: string }
@@ -1139,6 +1110,10 @@ local netvar_cache = {
     m_nGrenadeSpawnTime = {
         type = "float",
         offset = engine.get_netvar_offset("DT_BaseCSGrenadeProjectile", "m_vecExplodeEffectOrigin") + 12
+    },
+    m_vecVelocity = {
+        type = "vector",
+        offset = engine.get_netvar_offset("DT_BasePlayer", "m_vecVelocity[0]") + 0
     }
 }
 local netvar_types = {
@@ -1154,8 +1129,8 @@ local netvar_offsets = {
     bool = 1,
     int = 4,
     float = 4,
-    vector = 12,
-    angle = 12
+    vector = 4 * 3,
+    angle = 4 * 3
 }
 
 ---@param netvar string
@@ -1193,87 +1168,121 @@ local initialize_netvar = function(netvar)
     end
 end
 
-local netvar_table_mt = {
-    ---@param self { netvar: __netvar_t, entity: entity_t }
-    __index = errors.handler(function(self, key)
-        if type(key) ~= "number" then
-            error("netvar table index must be a number")
+do
+    local get_typed_pointer = function(netvar_type, pointer)
+        if netvar_type == "int" or netvar_type == "float" or netvar_type == "bool" then
+            return ffi.cast(netvar_type .. "*", pointer)
         end
-        local offset = self.netvar.offset + key * netvar_offsets[self.netvar.table_type]
-        if self.netvar.table_type == "entity" then
-            return entitylist.get_entity_from_handle(self.entity:get_prop_int(offset))
+        if netvar_type == "entity" then
+            return {[0] = entitylist.get_entity_from_handle(ffi.cast("int*", pointer)[0])}
         end
-        return self.entity["get_prop_" .. self.netvar.table_type](self.entity, offset)
-    end, "netvar_table_t.__index"),
-    __newindex = function(self, key, value)
-        if type(key) ~= "number" then
-            error("netvar table index must be a number")
+        if netvar_type == "vector" or netvar_type == "angle" then
+            local vec = ffi.cast("vector_t*", pointer)
+            if not vec then return error("couldn't get " .. netvar_type .. " netvar: " .. pointer) end
+            if netvar_type == "angle" then
+                return {[0] = angle_t.new(vec.x, vec.y, vec.z)}
+            end
+            return {[0] = v3(vec.x, vec.y, vec.z)}
         end
-        local offset = self.netvar.offset + key * netvar_offsets[self.netvar.table_type]
-        return self.entity["set_prop_" .. self.netvar.table_type](self.entity, offset, value)
+        return error("unknown netvar type: " .. netvar_type)
     end
-}
-local netvar_table_t = {
-    new = function(entity, netvar)
-        return setmetatable({
-            netvar = netvar,
-            entity = entity,
-        }, netvar_table_mt)
+    local set_netvar_value = function(netvar_type, pointer, value)
+        if not value then return end
+        if netvar_type == "int" or netvar_type == "float" or netvar_type == "bool" then
+            get_typed_pointer(netvar_type, pointer)[0] = value
+            return value
+        end
+        if netvar_type == "vector" or netvar_type == "angle" then
+            if value.x == nil or value.y == nil or value.z == nil then
+                return error("vector or angle expected")
+            end
+            local vec = ffi.cast("vector_t*", pointer)
+            if not vec then return error("couldn't get " .. netvar_type .. " netvar: " .. pointer) end
+            vec.x, vec.y, vec.z = value.x, value.y, value.z
+            return value
+        end
+        return error("unknown netvar type: " .. netvar_type)
     end
-}
+    local netvar_table_mt = {
+        ---@param self { netvar: __netvar_t, entity: entity_t }
+        __index = errors.handler(function(self, key)
+            if type(key) ~= "number" then
+                error("netvar table index must be a number")
+            end
+            local offset = self.netvar.offset + key * netvar_offsets[self.netvar.table_type]
+            return get_typed_pointer(self.netvar.table_type, self.entity[offset])[0]
+        end, "netvar_table_t.__index"),
+        __newindex = function(self, key, value)
+            if type(key) ~= "number" then
+                error("netvar table index must be a number")
+            end
+            local offset = self.netvar.offset + key * netvar_offsets[self.netvar.table_type]
+            return set_netvar_value(self.netvar.table_type, self.entity[offset], value)
+        end
+    }
+    local netvar_table_t = {
+        new = function(entity, netvar)
+            return setmetatable({
+                netvar = netvar,
+                entity = entity,
+            }, netvar_table_mt)
+        end
+    }
 
----@param prop string
-entity_t.__get_prop = errors.handler(function(self, prop)
-    local netvar = initialize_netvar(prop)
-    if not netvar then
-        error("failed to init " .. prop .. " netvar")
+    ---@param prop string
+    entity_t.__get_prop = errors.handler(function(self, prop)
+        local netvar = initialize_netvar(prop)
+        if not netvar then
+            error("failed to init " .. prop .. " netvar")
+        end
+        if netvar.type == "table" then
+            return netvar_table_t.new(self, netvar)
+        end
+        return get_typed_pointer(netvar.type, self[netvar.offset])[0]
+    end, "entity_t.__get_prop")
+    ---@param prop string
+    ---@param value any
+    entity_t.__set_prop = errors.handler(function(self, prop, value)
+        local netvar = initialize_netvar(prop)
+        if not netvar then
+            error("failed to init " .. prop .. " netvar")
+        end
+        if netvar.type == "table" then
+            error("cannot set netvar table")
+        end
+        return set_netvar_value(netvar.type, self[netvar.offset], value)
+    end, "entity_t.__set_prop")
+    local entity_mt
+    local initialize_entity_mt = function()
+        local lp = entitylist.get_local_player()
+        if not lp then return end
+        entity_mt = getmetatable(lp)
+        local old_index = entity_mt.__index
+        ---@param self entity_t
+        entity_mt.__index = function(self, key)
+            if type(key) == "number" then return old_index(self, key) end
+            local result = entity_t[key]
+            if result then return result end
+            return entity_t.__get_prop(self, key)
+        end
+        ---@param self entity_t
+        entity_mt.__newindex = function(self, key, value)
+            if type(key) == "number" then error("cannot set entity index") end
+            -- local result = entity_t[key]
+            -- if result then error("cannot set entity property") end
+            return entity_t.__set_prop(self, key, value)
+        end
     end
-    if netvar.type == "table" then
-        return netvar_table_t.new(self, netvar)
-    end
-    if netvar.type == "entity" then
-        return entitylist.get_entity_from_handle(self:get_prop_int(netvar.offset))
-    end
-    return self["get_prop_" .. netvar.type](self, netvar.offset)
-end, "entity_t.__get_prop")
----@param prop string
----@param value any
-entity_t.__set_prop = errors.handler(function(self, prop, value)
-    local netvar = initialize_netvar(prop)
-    if not netvar then
-        error("failed to init " .. prop .. " netvar")
-    end
-    if netvar.type == "table" then
-        error("cannot set netvar table")
-    end
-    return self["set_prop_" .. netvar.type](self, netvar.offset, value)
-end, "entity_t.__set_prop")
-local entity_mt
-local initialize_entity_mt = function()
-    local lp = entitylist.get_local_player()
-    if not lp then return end
-    entity_mt = getmetatable(lp)
-    ---@param self entity_t
-    entity_mt.__index = function(self, key)
-        if key == 0 then return entitylist.get_client_entity(self:get_index()) end
-        local result = entity_t[key]
-        if result then return result end
-        return entity_t.__get_prop(self, key)
-    end
-    ---@param self entity_t
-    entity_mt.__newindex = function(self, key, value)
-        if key == 0 then error("cannot set entity index") end
-        local result = entity_t[key]
-        if result then error("cannot set entity property") end
-        return entity_t.__set_prop(self, key, value)
-    end
-end
 
-if not entity_mt then
-    initialize_entity_mt()
     if not entity_mt then
-        cbs.frame_stage(function(stage)
-            if not entity_mt then initialize_entity_mt() end
-        end)
+        initialize_entity_mt()
+        if not entity_mt then
+            cbs.paint(function()
+                if not entity_mt then initialize_entity_mt() end
+            end)
+            cbs.create_move(function()
+                if not entity_mt then initialize_entity_mt() end
+            end)
+        end
     end
 end
