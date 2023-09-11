@@ -184,7 +184,7 @@ bind_mt.key = function (self)
     return self.el:get_key()
 end
 
----@param element gui_checkbox_t|gui_label_t 
+---@param element gui_checkbox_t|gui_label_t|gui_options_t
 ---@param default_key? number
 ---@param default_mode? number
 ---@return gui_bind_t

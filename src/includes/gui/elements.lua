@@ -134,17 +134,27 @@ gui.tab("Visuals", "D")
 gui.subtab("Players")
 gui.subtab("World")
 do
-    local bullet_tracers = require("features.bullet_tracers")
-    local tracers = gui.checkbox("Bullet tracers"):options(function()
-        gui.slider("Time", 1, 10, 1, 4)
-    end):update(function(el)
-        -- ui.get_check_box("visuals_esp_local_enable"):set_value(el:value())
-        -- ui.get_check_box("visuals_esp_local_tracers"):set_value(el:value())
-    end)
-    local impacts = gui.checkbox("Bullet impacts"):options(function()
-        gui.slider("Time", 1, 10, 1, 4)
-    end)
-    gui.column()
+    -- local beams = require("features.beams")
+    -- local tracers = gui.checkbox("Bullet tracers"):options(function()
+    --     gui.slider("Time", 1, 10, 1, 4)
+    -- end):update(function(el)
+    --     -- ui.get_check_box("visuals_esp_local_enable"):set_value(el:value())
+    --     -- ui.get_check_box("visuals_esp_local_tracers"):set_value(el:value())
+    -- end)
+    -- local impacts = gui.checkbox("Bullet impacts"):options(function()
+    --     gui.slider("Time", 1, 10, 1, 4)
+    -- end)
+    -- gui.column()
+    -- beams.add_callback(function(info)
+    --     if info.life == 2.5 then
+    --         local from = v3(info.start_pos.x, info.start_pos.y, info.start_pos.z + 3)
+    --         local to = v3(info.end_pos.x, info.end_pos.y, info.end_pos.z)
+    --         if tracers:value() then
+    --             iengine.add_line_overlay(from, to, tracers:get_slider("Time"):value(), col.white:alpha(255))
+    --             info.renderable = false
+    --         end
+    --     end
+    -- end)
     -- cbs.event("bullet_impact", function(event)
         -- if not impacts:value() then return end
         -- local lp = entitylist.get_local_player()
@@ -158,13 +168,7 @@ do
     --     if not impacts:value() then return end
     --     iengine.add_box_overlay(shot_info.aim_point, impacts:get_slider("Time"):value(), col.red:alpha(127))
     -- end)
-    bullet_tracers.callback = function(from, to)
-        if tracers:value() then
-            iengine.add_line_overlay(from, to, tracers:get_slider("Time"):value(), col.white:alpha(255))
-            return true
-        end
-        return false
-    end
+    
     -- ---@type { from: vec3_t, to: vec3_t, time: number, anims: __anims_mt }[]
     -- local tracers_list = {}
     -- cbs.on_shot_fired(function(shot)

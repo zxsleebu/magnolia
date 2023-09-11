@@ -96,31 +96,25 @@ end
 ---@param pos vec3_t
 ---@return vec2_t?
 lib_engine.world_to_screen = function(pos)
-    local world_pos = ffi.new("vector_t[1]")
-    world_pos[0].x, world_pos[0].y, world_pos[0].z = pos.x, pos.y, pos.z
+    local world_pos = ffi.new("vector_t[1]", pos:C())
     local screen_pos = ffi.new("vector_t[1]")
     IDebugOverlay:WorldToScreen(world_pos, screen_pos)
-    return v2(screen_pos[0].x, screen_pos[0].y)
+    return v2(screen_pos[0])
 end
 
+---@param pos vec3_t
+---@param time number
+---@param color color_t
 lib_engine.add_box_overlay = function(pos, time, color)
-    local p = ffi.new("vector_t")
-    p.x, p.y, p.z = pos.x, pos.y, pos.z
-    local n = ffi.new("vector_t")
-    n.x, n.y, n.z = -2, -2, -2
-    local x = ffi.new("vector_t")
-    x.x, x.y, x.z = 2, 2, 2
-    local a = ffi.new("vector_t")
-    a.x, a.y, a.z = 0, 0, 0
-    IDebugOverlay:AddBoxOverlay(p, n, x, a, color.r, color.g, color.b, color.a, time)
+    IDebugOverlay:AddBoxOverlay(pos:C(), v3(-2, -2, -2):C(), v3(2, 2, 2):C(), v3(0, 0, 0):C(), color.r, color.g, color.b, color.a, time)
 end
 
+---@param from vec3_t
+---@param to vec3_t
+---@param time number
+---@param color color_t
 lib_engine.add_line_overlay = function (from, to, time, color)
-    local p = ffi.new("vector_t")
-    p.x, p.y, p.z = from.x, from.y, from.z
-    local d = ffi.new("vector_t")
-    d.x, d.y, d.z = to.x, to.y, to.z
-    IDebugOverlay:AddLineOverlay(p, d, color.r, color.g, color.b, true, time)
+    IDebugOverlay:AddLineOverlay(from:C(), to:C(), color.r, color.g, color.b, true, time)
 end
 lib_engine.hitgroups = {
     generic = 0,

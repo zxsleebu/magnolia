@@ -1,3 +1,5 @@
+require("libs.types")
+local ffi = require("libs.protected_ffi")
 require("libs.advanced math")
 
 ---@class vec2_t
@@ -9,6 +11,7 @@ require("libs.advanced math")
 ---@operator len(): number
 ---@field clamp fun(self: vec2_t, min: vec2_t, max: vec2_t): vec2_t
 ---@field round fun(self: vec2_t): vec2_t
+---@field C fun(self: vec3_t): ffi.cdata*
 
 ---@class vec3_t
 ---@operator add(vec3_t): vec3_t
@@ -25,12 +28,26 @@ require("libs.advanced math")
 ---@field normalize fun(self: vec3_t): vec3_t
 ---@field pairs fun(self: vec3_t): { x: number, y: number, z: number }
 ---@field angle_to fun(self: vec3_t, to: vec3_t): angle_t
+---@field C fun(self: vec3_t): ffi.cdata*
 
-
----@type fun(x: number, y: number): vec2_t
-local v2 = vec2_t.new
----@type fun(x: number, y: number, z: number): vec3_t
-local v3 = vec3_t.new
+---@type fun(x: ffi.cdata*): vec2_t
+---@overload fun(x: number, y: number): vec2_t
+local v2 = function(x, y)
+    if type(x) == "number" then
+        return vec2_t.new(x, y)
+    else
+        return vec2_t.new(x.x, x.y)
+    end
+end
+---@type fun(x: ffi.cdata*): vec3_t
+---@overload fun(x: number, y: number, z: number): vec3_t
+local v3 = function(x, y, z)
+    if type(x) == "number" then
+        return vec3_t.new(x, y, z)
+    else
+        return vec3_t.new(x.x, x.y, x.z)
+    end
+end
 
 vec2_t.__add = function(a, b)
     return v2(a.x + b.x, a.y + b.y)
@@ -63,6 +80,12 @@ end
 vec2_t.round = function(s)
     return v2(math.round(s.x), math.round(s.y))
 end
+vec2_t.C = function(self)
+    return ffi.new("vector_t", { self.x, self.y })
+end
+
+
+
 vec3_t.__add = function(a, b)
     return v3(a.x + b.x, a.y + b.y, a.z + b.z)
 end
@@ -123,6 +146,9 @@ vec3_t.normalize = function(self)
     local len = #self
     if len == 0 then return self end
     return self / len
+end
+vec3_t.C = function(self)
+    return ffi.new("vector_t", { self.x, self.y, self.z })
 end
 
 ---@class angle_t

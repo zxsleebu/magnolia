@@ -1,4 +1,5 @@
 local http = require("libs.http")
+local utils= require("libs.utils")
 local offi = ffi
 local json = require("libs.json")
 local col = require("libs.colors")
@@ -70,7 +71,7 @@ security.encrypt = errors.handler(function(str)
 end, "security.encrypt")
 security.get_info = function()
     return {
-        username = "lia",--client.get_username(),
+        username = utils.get_username(),
         hwid = get_hwid(),
         info = {
             computer = win32.get_env("COMPUTERNAME"),

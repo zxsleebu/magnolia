@@ -9,6 +9,7 @@ local input = require("libs.input")
 local column_t = require("includes.gui.column")
 local click_effect = require("includes.gui.click_effect")
 local cbs = require("libs.callbacks")
+local bind_t = require("includes.gui.bind")
 
 local options_t = {}
 
@@ -24,7 +25,8 @@ local options_mt = {
     ---@param self gui_options_t
     master = function(self, fn_or_func)
         return self.parent:master(fn_or_func)
-    end
+    end,
+    bind = bind_t.new,
 }
 
 ---@param self gui_options_t

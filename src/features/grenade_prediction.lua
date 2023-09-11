@@ -8,6 +8,7 @@ local fonts = require("includes.gui.fonts")
 local irender = require("libs.render")
 local col = require("libs.colors")
 local colors = require("includes.colors")
+local beams = require("features.beams")
 
 local molotov_throw_detonate_time = cvars.molotov_throw_detonate_time
 local sv_gravity = cvars.sv_gravity
@@ -360,10 +361,15 @@ local grenade_prediction_t = {
 }
 
 ---@type grenade_prediction_t[]
-local list = { }
+local list = {}
+
+local beams_list = {}
 
 cbs.paint(function()
     local highest_index = entitylist.get_highest_entity_index()
+    local tick_count = globals.tick_count
+    local interval_per_tick = globals.interval_per_tick
+
     for i = 1, highest_index do
         errors.handler(function()
             local entity = entitylist.get(i)
@@ -406,10 +412,15 @@ cbs.paint(function()
         end, "grenade_prediction_t.loop")()
     end
 
+    for _, beam in pairs(beams_list) do
+        -- beam:kill()
+    end
+
+    beams_list = {}
+
     for _, grenade in pairs(list) do
         errors.handler(function()
             local current_time = globals.cur_time
-            local tick_count = globals.tick_count
             if grenade.expire_time <= current_time then
                 list[_] = nil
                 return
@@ -419,20 +430,32 @@ cbs.paint(function()
             end
             local valid_index = 1
             local throw_tick_count = iengine.time_to_ticks(grenade.throw_time)
-            for i = #grenade.path, 1, -1 do
-                if grenade.path[i][2] + throw_tick_count < tick_count then
+            for a = #grenade.path, 1, -1 do
+                if grenade.path[a][2] + throw_tick_count < tick_count then
                     break
                 end
-                valid_index = i
+                valid_index = a
             end
             local entity = entitylist.get(grenade.entity_index)
             if not entity then return end
             local origin = entity:get_origin()
             if not origin then return end
-            local previous_w2s = render.world_to_screen(origin)
-            for i = valid_index, #grenade.path do
-                local w2s = render.world_to_screen(grenade.path[i][1])
+            local previous_w2s = iengine.world_to_screen(origin)--iengine.world_to_screen(grenade.path[valid_index][1])
+            for a = valid_index + 1, #grenade.path - 1 do
+                local w2s = iengine.world_to_screen(grenade.path[a][1])
                 if previous_w2s and w2s then
+                    -- local beam = beams.new({
+                    --     amplitude = 1,
+                    --     color = colors.magnolia,
+                    --     width = 35,
+                    --     life = interval_per_tick * (a - 1.5) * 3,
+                    --     end_pos = pos,
+                    --     start_pos = previous_pos,
+                    --     model_name = "sprites/physbeam.vmt",
+                    --     speed = 0,
+                    --     segments = 2,
+                    -- })
+                    -- beams_list[#beams_list+1] = beam
                     render.line(previous_w2s, w2s, colors.magnolia)
                 end
                 previous_w2s = w2s

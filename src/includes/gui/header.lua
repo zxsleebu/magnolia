@@ -53,17 +53,17 @@ header.user = errors.handler(function (pos, input_allowed)
 
     local start_angle = globals.real_time * 300 % 360
     local spinner_pos = circle_pos - v2(0.5, 0.5)
-    if header.avatar_texture then
-        avatar_alpha = header.anims.avatar_alpha(255)
-        irender.texture(header.avatar_texture, avatar_pos, avatar_pos + avatar_size, color:salpha(avatar_alpha):salpha(hover_anim))
-    end
+    -- if header.avatar_texture then
+    --     avatar_alpha = header.anims.avatar_alpha(255)
+    --     irender.texture(header.avatar_texture, avatar_pos, avatar_pos + avatar_size, color:salpha(avatar_alpha):salpha(hover_anim))
+    -- end
     if avatar_alpha ~= 255 then
         local spinner_radius = 11
         render.circle_filled(circle_pos, avatar_size.x / 2, 15, circle_color:salpha(20))
         irender.text("?", fonts.avatar_question, circle_pos, circle_color, irender.flags.X_ALIGN + irender.flags.Y_ALIGN)
-        irender.circle(spinner_pos, spinner_radius + 0.5, circle_color:salpha(50), start_angle, start_angle + 270, false)
-        irender.circle(spinner_pos, spinner_radius - 0.5, circle_color:salpha(50), start_angle, start_angle + 270, false)
-        irender.circle(spinner_pos, spinner_radius, circle_color:salpha(100), start_angle, start_angle + 270, false)
+        -- irender.circle(spinner_pos, spinner_radius + 0.5, circle_color:salpha(50), start_angle, start_angle + 270, false)
+        -- irender.circle(spinner_pos, spinner_radius - 0.5, circle_color:salpha(50), start_angle, start_angle + 270, false)
+        -- irender.circle(spinner_pos, spinner_radius, circle_color:salpha(100), start_angle, start_angle + 270, false)
     end
     local text_pos = pos - v2(avatar_size.x + 3, 0)
     local normalized_text_pos, text_size =
@@ -133,7 +133,7 @@ end, "header.get_avatar")
 ---@param alpha number
 ---@param input_allowed boolean
 header.draw = errors.handler(function (pos, alpha, input_allowed)
-    header.get_avatar()
+    -- header.get_avatar()
     local icon_padding = 14
     local icon_pos = pos + v2(icon_padding, icon_padding - 3)
     irender.text("A", fonts.logo_shadow, icon_pos - v2(2, 2), colors.magnolia:alpha(alpha):salpha(50))

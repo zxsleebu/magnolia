@@ -36,7 +36,7 @@ utils.find_pattern = function(module, pattern, offset)
 end
 
 utils.get_username = function()
-    return "lia"
+    return get_user_name()
 end
 
 return utils

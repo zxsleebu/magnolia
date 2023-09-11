@@ -35,9 +35,13 @@ local is_enabled = gui.checkbox("Enable")
 ---@alias anti_aim_condition_t "Shared"|"Stand"|"Move"|"Air"|"Air duck"|"Duck"|"Walk"|"Use"
 local conditions = {"Shared", "Stand", "Move", "Air", "Air duck", "Duck", "Walk", "Use"}
 local current_condition = gui.dropdown("Condition", conditions):master(is_enabled)
-local freestand = gui.checkbox("Freestand"):master(is_enabled):bind()
+local disable_modifiers_on_freestand, freestand_desync ---@type gui_checkbox_t, gui_checkbox_t
+local freestand = gui.checkbox("Freestand"):options(function ()
+    disable_modifiers_on_freestand = gui.checkbox("Disable modifiers")
+    freestand_desync = gui.checkbox("Freestand desync")
+end):master(is_enabled):bind()
 gui.column()
----@type table<anti_aim_condition_t, { enabled?: gui_checkbox_t, yaw_modifiers: gui_dropdown_t, yaw_offset: gui_slider_t, inverted_yaw_offset: gui_slider_t, jitter_type: gui_dropdown_t, jitter_range: gui_slider_t, jitter_delay: gui_slider_t, spin_speed: gui_slider_t, spin_range: gui_slider_t, pitch: gui_dropdown_t, pitch_custom: gui_slider_t, desync_delay: gui_slider_t, desync_type: gui_dropdown_t, desync_length: gui_slider_t, inverted_desync_length: gui_slider_t}>
+---@type table<anti_aim_condition_t, { enabled?: gui_checkbox_t, yaw_modifiers: gui_dropdown_t, yaw_offset: gui_slider_t, inverted_yaw_offset: gui_slider_t, desync_modifiers: gui_dropdown_t, disable_choke: gui_checkbox_t, jitter_type: gui_dropdown_t, jitter_range: gui_slider_t, jitter_delay: gui_slider_t, spin_speed: gui_slider_t, spin_range: gui_slider_t, pitch: gui_dropdown_t, pitch_custom: gui_slider_t, desync_delay: gui_slider_t, desync_type: gui_dropdown_t, desync_length: gui_slider_t, inverted_desync_length: gui_slider_t}>
 local settings = {}
 for i = 1, #conditions do
     ---@type anti_aim_condition_t
@@ -76,16 +80,26 @@ for i = 1, #conditions do
         end)
     end
     master_elements.desync = gui.label(get_name("Desync")):options(function ()
-        setting.desync_type = gui.dropdown("Desync type", {"Static", "Jitter", "Random"})
-        setting.desync_length = gui.slider("Desync length", -60, 60, false, 60)
-        setting.inverted_desync_length = gui.slider("Inverted desync length", -60, 60)
+        setting.desync_type = gui.dropdown("Desync type", {"None", "Static", "Jitter", "Random"})
+        setting.desync_modifiers = gui.dropdown("Desync modifiers", {"Disable desync when zero delta"}, {}):master(function()
+            return not setting.desync_type:value("None")
+        end)
+        setting.disable_choke = gui.checkbox("Disable fakelag when zero delta"):master(function()
+            return setting.desync_modifiers:value("Disable desync when zero delta")
+        end)
+        setting.desync_length = gui.slider("Desync length", -60, 60, false, 60):master(function()
+            return not setting.desync_type:value("None")
+        end)
+        setting.inverted_desync_length = gui.slider("Inverted desync length", -60, 60):master(function()
+            return not setting.desync_type:value("None")
+        end)
         setting.desync_delay = gui.slider("Desync switch delay", 0, 10):master(function()
             return setting.desync_type:value("Jitter")
         end)
     end)
     if condition ~= "Use" then
         master_elements.pitch = gui.label(get_name("Pitch")):options(function ()
-            setting.pitch = gui.dropdown("Pitch", {"Off", "Down", "Up", "Zero"}, "Down") --, "Random", "Custom"
+            setting.pitch = gui.dropdown("Pitch", {"Off", "Down"}, "Down") --, "Random", "Custom"
             setting.pitch_custom = gui.slider("Custom pitch", -89, 89, false, 0):master(function()
                 return setting.pitch:value("Custom")
             end)
@@ -197,7 +211,8 @@ local get_freestand_angle = function()
     table.sort(fractions, function(a, b) return a[2] > b[2] end)
     if fractions[1][2] - fractions[#fractions][2] < 0.5 then return end
     if fractions[1][2] < 0.1 then return end
-    return fractions[1][1] - engine.get_view_angles().yaw
+    local is_left_side = fractions[1][1] < yaw
+    return fractions[1][1] - engine.get_view_angles().yaw, is_left_side
 end
 -- local right_yaw_offset_address = nixware.find_pattern("F3 0F 10 47 10 F3 0F 5C C1 F3 0F 11 47 10 E9 ? ? ? ? B8")
 -- if right_yaw_offset_address == 0 then
@@ -207,23 +222,22 @@ end
 -- local original_bytes =  { 0xF3, 0x0F, 0x10, 0x47, 0x10, 0xF3, 0x0F, 0x5C, 0xC1 }
 -- -- local anti_aim_base_yaw = menu.("antihit_antiaim_yaw")
 -- nixware.write_memory_bytes(right_yaw_offset_address, patch_bytes)
-local yaw_offset = menu.find_slider_int("Yaw", "Movement/Anti aim")
+local yaw_offset = menu.find_slider_int("Yaw offset", "Movement/Anti aim")
 local accurate_walk_enabled = menu.find_check_box("Accurate walk", "Movement/Movement")
 local accurate_walk = menu.find_key_bind("Accurate walk", "Movement/Movement")
 local anti_aim_enabled = menu.find_check_box("Enabled", "Movement/Anti aim")
 -- local at_targets_enabled = ui.get_check_box("antihit_antiaim_at_targets")
-local yaw_jitter = menu.find_slider_int("Yaw jitter", "Movement/Anti aim")
-local anti_aim_pitch = menu.find_slider_int("Pitch", "Movement/Anti aim")
+local yaw_jitter = menu.find_slider_int("Yaw modifier offset", "Movement/Anti aim")
+local anti_aim_pitch = menu.find_combo_box("Pitch", "Movement/Anti aim")
 local desync_length = menu.find_slider_int("Yaw desync length", "Movement/Anti aim")
 local menu_desync_type = menu.find_combo_box("Yaw desync", "Movement/Anti aim")
 local desync_inverter = menu.find_key_bind("Desync inverter", "Movement/Anti aim")
+local fakelag_limit = menu.find_slider_int("Limit", "Movement/Fakelag")
+local old_fakelag_limit = fakelag_limit:get()
+local restored_fakelag_limit = false
 local pitch_settings = {
     Off = 0,
-    Down = 89,
-    Zero = 0,
-    Up = -89,
-    Custom = 0,
-    Random = 0,
+    Down = 1,
 }
 cbs.create_move(function(cmd)
     if not is_enabled:value() then return end
@@ -297,8 +311,23 @@ cbs.create_move(function(cmd)
         current_desync = setting.inverted_desync_length:value()
     end
 
+    local disable_desync_on_zero_delta = setting.desync_modifiers:value("Disable desync when zero delta")
+    local disable_choke = disable_desync_on_zero_delta and setting.disable_choke:value()
+
+    menu_desync_type:set(not (desync_type == "None" or (disable_desync_on_zero_delta and current_desync == 0)) and 1 or 0)
+
+    if disable_choke and current_desync == 0 then
+        fakelag_limit:set(0)
+        restored_fakelag_limit = false
+    else
+        if not restored_fakelag_limit then
+            fakelag_limit:set(old_fakelag_limit)
+            restored_fakelag_limit = true
+        end
+        old_fakelag_limit = fakelag_limit:get()
+    end
+
     desync_length:set(math.abs(current_desync))
-    menu_desync_type:set(0)
     desync_inverter:set_type(current_desync > 0 and 1 or 0)
     desync_inverter:set_key(0)
 
@@ -316,9 +345,6 @@ cbs.create_move(function(cmd)
     local at_targets_setting = setting.yaw_modifiers:value("At targets")
     local pitch_setting = setting.pitch:value()
     local pitch = pitch_settings[pitch_setting]
-    if pitch_setting == "Custom" then
-        pitch = setting.pitch_custom:value()
-    end
     if pitch then
         anti_aim_pitch:set(pitch)
     end
@@ -345,12 +371,21 @@ cbs.create_move(function(cmd)
 
     local at_targets_angle = get_target_best_angle(at_targets_setting)
 
-    local freestand_angle
+    local freestand_angle, left_side_freestand
     if condition ~= "Use" then
-        freestand_angle = get_freestand_angle()
+        freestand_angle, left_side_freestand = get_freestand_angle()
     end
     if freestand_angle ~= nil then
-        yaw = yaw + freestand_angle
+        if disable_modifiers_on_freestand:value() then
+            yaw = freestand_angle
+        else
+            yaw = yaw + freestand_angle
+        end
+        if freestand_desync:value() then
+            menu_desync_type:set(1)
+            desync_length:set(60)
+            desync_inverter:set_type(left_side_freestand and 1 or 0)
+        end
     elseif at_targets_angle ~= nil then
         yaw = yaw + at_targets_angle - engine.get_view_angles().yaw
     end
