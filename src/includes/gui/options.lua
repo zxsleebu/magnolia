@@ -147,10 +147,11 @@ options_mt.update = function (self, fn)
 end
 
 ---@param self gui_options_t
----@param value? boolean
+---@param new_value? boolean
 ---@return boolean
-options_mt.value = function (self, value)
-    return self.parent:value(value)
+options_mt.value = function (self, new_value)
+    if not self.parent.el then return true end
+    return self.parent:value(new_value)
 end
 
 ---@param self gui_options_t

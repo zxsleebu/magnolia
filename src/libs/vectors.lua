@@ -12,6 +12,7 @@ require("libs.advanced math")
 ---@field clamp fun(self: vec2_t, min: vec2_t, max: vec2_t): vec2_t
 ---@field round fun(self: vec2_t): vec2_t
 ---@field C fun(self: vec3_t): ffi.cdata*
+---@field clone fun(self: vec2_t): vec2_t
 
 ---@class vec3_t
 ---@operator add(vec3_t): vec3_t
@@ -29,6 +30,7 @@ require("libs.advanced math")
 ---@field pairs fun(self: vec3_t): { x: number, y: number, z: number }
 ---@field angle_to fun(self: vec3_t, to: vec3_t): angle_t
 ---@field C fun(self: vec3_t): ffi.cdata*
+---@field clone fun(self: vec3_t): vec3_t
 
 ---@type fun(x: ffi.cdata*): vec2_t
 ---@overload fun(x: number, y: number): vec2_t
@@ -82,6 +84,9 @@ vec2_t.round = function(s)
 end
 vec2_t.C = function(self)
     return ffi.new("vector_t", { self.x, self.y })
+end
+vec2_t.clone = function(self)
+    return v2(self.x, self.y)
 end
 
 
@@ -150,15 +155,23 @@ end
 vec3_t.C = function(self)
     return ffi.new("vector_t", { self.x, self.y, self.z })
 end
+vec3_t.clone = function(self)
+    return v3(self.x, self.y, self.z)
+end
 
 ---@class angle_t
 ---@field to_vec fun(self: angle_t): vec3_t
+---@field clone fun(self: angle_t): angle_t
 
 ---@param self angle_t
 angle_t.to_vec = function (self)
     local pitch, yaw = math.rad(self.pitch), math.rad(self.yaw)
     local pcos = math.cos(pitch)
     return v3(pcos * math.cos(yaw), pcos * math.sin(yaw), -math.sin(pitch)):remove_nan()
+end
+
+angle_t.clone = function (self)
+    return angle_t.new(self.pitch, self.yaw, self.roll)
 end
 
 angle_t.__tostring = function(a)

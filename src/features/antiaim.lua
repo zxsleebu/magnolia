@@ -165,7 +165,10 @@ local get_target_best_angle = function(at_targets_enabled)
             end
         end
     end
-    anti_aim.last_target_index = best_player and best_player:get_index() or -1
+    anti_aim.last_target_index = -1
+    if best_player then
+        anti_aim.last_target_index = best_player:get_index()
+    end
     anti_aim.target_player_index = anti_aim.last_target_index
     if not best_player or not best_player_pos then
         anti_aim.target_player_index = -1
@@ -174,11 +177,11 @@ local get_target_best_angle = function(at_targets_enabled)
     anti_aim.last_best_angle = best_angle
     return best_angle
 end
----@return number?
+---@return number?, boolean?
 local get_freestand_angle = function()
     if not freestand:value() then return end
     local lp = entitylist.get_local_player()
-    if not lp then return end
+    if not lp or not lp:is_alive() then return end
     if anti_aim.target_player_index == -1 then
         get_target_best_angle(true)
     end
@@ -186,17 +189,17 @@ local get_freestand_angle = function()
         return
     end
     local targeted_player = entitylist.get(anti_aim.target_player_index)
-    if not targeted_player or targeted_player:is_hittable_by(lp) then return end
+    if not targeted_player or not targeted_player:is_alive() or targeted_player:is_hittable_by(lp) then return end
     local strength = 35
     local pos, origin = lp.m_vecOrigin + lp.m_vecVelocity * globals.interval_per_tick * 12, lp.m_vecOrigin
-    pos.z = lp:get_player_hitbox_pos(0).z
+    -- pos.z = lp:get_player_hitbox_pos(0).z
     local yaw = anti_aim.last_best_angle
     if yaw == nil then
         yaw = engine.get_view_angles().yaw
     end
     local fractions = {}
     local player_origin = targeted_player.m_vecOrigin
-    player_origin.z = targeted_player:get_player_hitbox_pos(0).z
+    -- player_origin.z = targeted_player:get_player_hitbox_pos(0).z
     for i = yaw - 90, yaw + 90, 45 do
         if i ~= yaw then
             local rad = math.rad(i)
@@ -212,7 +215,7 @@ local get_freestand_angle = function()
     if fractions[1][2] - fractions[#fractions][2] < 0.5 then return end
     if fractions[1][2] < 0.1 then return end
     local is_left_side = fractions[1][1] < yaw
-    return fractions[1][1] - engine.get_view_angles().yaw, is_left_side
+    return fractions[1][1] - yaw, is_left_side
 end
 -- local right_yaw_offset_address = nixware.find_pattern("F3 0F 10 47 10 F3 0F 5C C1 F3 0F 11 47 10 E9 ? ? ? ? B8")
 -- if right_yaw_offset_address == 0 then

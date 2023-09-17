@@ -6,6 +6,7 @@
 ---@field anims __anims_mt
 ---@field size vec2_t
 ---@field master_object? { el?: check_box_t, fn: fun(): boolean }
+---@field options_element? gui_options_t
 local element_t = {}
 
 ---@generic T

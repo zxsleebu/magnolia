@@ -63,6 +63,9 @@ local utils   = require("libs.utils")
 ---@field m_flDuckAmount number
 ---@field m_bShouldDrawPlayerWhileUsingViewEntity boolean
 ---@field m_hViewEntity entity_t
+---@field m_fThrowTime number
+---@field m_bPinPulled boolean
+---@field m_flThrowStrength number
 ---@field m_vphysicsCollisionState number
 ---@field m_hColorCorrectionCtrl entity_t
 ---@field m_hPostProcessCtrl entity_t
@@ -517,7 +520,9 @@ do
         -- if not client_class then return end
         local index = self:get_class_id()
         local name
-        if index == 9 then
+        if index == 77 then
+            return "flashbang"
+        elseif index == 9 or index == 96 then
             local model = self:get_model()
             if not model then return end
             local model_name = ffi.string(model.name)
@@ -526,11 +531,11 @@ do
             else
                 name = "he"
             end
-        elseif index == 157 then
+        elseif index == 157 or index == 156 then
             name = "smoke"
-        elseif index == 48 then
+        elseif index == 48 or index == 47 then
             name = "decoy"
-        elseif index == 114 then -- class name CIncendiaryGrenade
+        elseif index == 114 or index == 99 then -- class name CIncendiaryGrenade
             name = "molotov"
         end
         return name
@@ -719,7 +724,7 @@ do
 end
 
 entity_t.get_eye_pos = function(self)
-    return self:get_abs_origin() + self.m_vecViewOffset
+    return self:get_origin() + self.m_vecViewOffset
 end
 
 local IEngineServerStringTable = interface.new("engine", "VEngineClientStringTable001", {
@@ -909,6 +914,7 @@ if not pcall(ffi.typeof, "struct WeaponInfo_t") then
 	        char pad10[8];
             float range;
             float range_modifier;
+            float throw_velocity;
         };
     ]]
 end
@@ -938,7 +944,7 @@ do
         taser = "taser",
         c4 = "c4"
     }
-    ---@alias weapon_t { entity: entity_t, class: number, name: string, type: number, group: "knife"|"pistols"|"smg"|"rifle"|"shotguns"|"sniper"|"awp"|"auto"|"deagle"|"taser"|"scout"|"rifle"|"c4"|"placeholder"|"grenade"|"revolver"|"unknown", damage: number, bullets: number, price: number, armor_ratio: number, range: number, range_modifier: number }
+    ---@alias weapon_t { entity: entity_t, class: number, name: string, type: number, group: "knife"|"pistols"|"smg"|"rifle"|"shotguns"|"sniper"|"awp"|"auto"|"deagle"|"taser"|"scout"|"rifle"|"c4"|"placeholder"|"grenade"|"revolver"|"unknown", damage: number, bullets: number, price: number, armor_ratio: number, range: number, range_modifier: number, throw_velocity: number }
     ---@param index? number
     ---@return weapon_t?
     entity_t.get_weapon = function(self, index)
@@ -970,6 +976,7 @@ do
             armor_ratio = data.armor_ratio,
             range = data.range,
             range_modifier = data.range_modifier,
+            throw_velocity = data.throw_velocity
         }
     end
 end

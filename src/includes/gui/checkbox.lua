@@ -119,13 +119,21 @@ checkbox_mt.draw_checkmark = errors.handler(function (self, pos, alpha)
         render.line(start_pos, start_pos + difference * math.clamp(anim * 2 - 255, 0, 255) / 255, color)
     end
 end, "checkbox_t.draw_checkmark")
----@param value? boolean
+---@param new_value? boolean
 ---@return boolean
-checkbox_mt.value = function (self, value)
-    if value ~= nil then
-        self.el:set(value)
+checkbox_mt.value = function (self, new_value)
+    if new_value ~= nil then
+        self.el:set(new_value)
     end
-    return self.el:get()
+    local value = self.el:get()
+    if not value then return false end
+    if self.master_object and self.master_object.el then
+        return self.master_object.el:get()
+    end
+    if self.options_element then
+        return self.options_element:value()
+    end
+    return value
 end
 checkbox_t.new = errors.handler(function (name, value)
     local path = gui.get_path(name)

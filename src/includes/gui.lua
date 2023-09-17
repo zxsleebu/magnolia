@@ -48,6 +48,7 @@ end, "gui.get_path")
 
 gui.add_element = errors.handler(function (element)
     if gui.current_options then
+        element.options_element = gui.current_options
         table.insert(gui.current_options.columns[#gui.current_options.columns].elements, element)
         return element
     end

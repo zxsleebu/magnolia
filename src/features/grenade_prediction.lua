@@ -31,6 +31,7 @@ local samples_per_second = 30
 ---@field origin vec3_t
 ---@field velocity vec3_t
 ---@field entity_index number
+---@field local_player boolean
 ---@field owner_index number
 ---@field broken boolean[]
 ---@field path { [1]: vec3_t, [2]: number }[]
@@ -331,8 +332,9 @@ local grenade_prediction_t = {
     ---@param grenade_type "flashbang"|"he"|"smoke"|"decoy"|"molotov"|nil
     ---@param throw_time number
     ---@param offset number
+    ---@param local_player? boolean
     ---@return grenade_prediction_t
-    new = function (entity, origin, velocity, owner, grenade_type, throw_time, offset)
+    new = function (entity, origin, velocity, owner, grenade_type, throw_time, offset, local_player)
         local detonate_time = 1.5
         if grenade_type == "molotov" then
             detonate_time = molotov_throw_detonate_time:get_float()
@@ -353,6 +355,7 @@ local grenade_prediction_t = {
             owner_index = owner:get_index(),
             entity_index = entity:get_index(),
             throw_time = throw_time,
+            local_player = local_player,
             broken = {},
         }, { __index = grenade_prediction_mt })
         s:predict()
@@ -368,7 +371,7 @@ local beams_list = {}
 cbs.paint(function()
     local highest_index = entitylist.get_highest_entity_index()
     local tick_count = globals.tick_count
-    local interval_per_tick = globals.interval_per_tick
+    -- local interval_per_tick = globals.interval_per_tick
 
     for i = 1, highest_index do
         errors.handler(function()
@@ -437,9 +440,11 @@ cbs.paint(function()
                 valid_index = a
             end
             local entity = entitylist.get(grenade.entity_index)
-            if not entity then return end
-            local origin = entity:get_origin()
-            if not origin then return end
+            local origin = grenade.path[1][1]
+            if entity and not grenade.local_player then
+                origin = entity:get_origin()
+            end
+            if not origin and not grenade.local_player then return end
             local previous_w2s = iengine.world_to_screen(origin)--iengine.world_to_screen(grenade.path[valid_index][1])
             for a = valid_index + 1, #grenade.path - 1 do
                 local w2s = iengine.world_to_screen(grenade.path[a][1])
@@ -460,6 +465,7 @@ cbs.paint(function()
                 end
                 previous_w2s = w2s
             end
+            if grenade.local_player then return end
             local dist_w2s = render.world_to_screen(grenade.path[#grenade.path][1])
             if not dist_w2s then return end
             dist_w2s = dist_w2s:round()
@@ -481,4 +487,52 @@ cbs.paint(function()
             end
         end, "grenade_prediction_t.draw")()
     end
+end)
+
+
+local current_local_prediction_handle = nil
+
+cbs.create_move(function(cmd)
+    if current_local_prediction_handle then
+        list[current_local_prediction_handle] = nil
+        current_local_prediction_handle = nil
+    end
+    local lp = entitylist.get_local_player()
+    if not lp or not lp:is_alive() then return end
+    local weapon = lp:get_weapon()
+    if not weapon then return end
+    local entity = weapon.entity
+    if not entity then return end
+    if not entity:is_grenade() then return end
+    if not entity.m_bPinPulled and entity.m_fThrowTime == 0 then return end
+
+    local viewangles = cmd.viewangles:clone()
+    if viewangles.pitch < -90 then
+        viewangles.pitch = viewangles.pitch + 360
+    elseif viewangles.pitch > 90 then
+        viewangles.pitch = viewangles.pitch - 360
+    end
+    viewangles.pitch = viewangles.pitch - (90 - math.abs(viewangles.pitch)) * 10 / 90
+
+    local throw_strength = math.clamp(entity.m_flThrowStrength, 0, 1)
+    local src = lp:get_eye_pos()
+    src.z = src.z + throw_strength * 12 - 12
+
+    local velocity = math.clamp(weapon.throw_velocity * 0.9, 15, 750) * (throw_strength * 0.7 + 0.3)
+
+    local direction = viewangles:to_vec()
+
+    local trace_info = engine.trace_hull(src, src + direction * 22, v3(-2, -2, -2), v3(2, 2, 2), lp, 34095115)
+
+    list[entity[0]] = grenade_prediction_t.new(
+        entity,
+        trace_info.end_pos - direction * 6,
+        direction * velocity + lp.m_vecVelocity * 1.25,
+        lp,
+        entity:get_grenade_type(),
+        globals.cur_time,
+        0,
+        true
+    )
+    current_local_prediction_handle = entity[0]
 end)
