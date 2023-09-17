@@ -11,6 +11,7 @@ local cbs = require("libs.callbacks")
 local utf8 = require("libs.utf8")
 local iengine = require("includes.engine")
 local ws = require("libs.websocket")
+if not ws then error("websockets failed") end
 local sockets = require("libs.sockets")
 local win32 = require("libs.win32")
 local set = require("libs.set")
@@ -24,11 +25,11 @@ local security = {
     progress = 0,
     logger = false, ---@type logger_t
     loaded = false,
-    websocket = false, ---@type __websocket_t
     domain = "localhost",
     authorized = false,
     stopped = false,
     sub_expires = 0,
+    has_to_connect = false,
 }
 if security.authorized then while true do end end
 if security.release_server then
@@ -69,6 +70,42 @@ security.encrypt = errors.handler(function(str)
         return string.format("%X", bit.bxor(utf8.byte(char) or 0, key:byte(c % #key + 1))) .. "G"
     end):sub(1, -2)
 end, "security.encrypt")
+
+security.websocket = ws.connect(security.socket_url, {
+    open = function(self)
+        security.websocket = self
+        security.connected = true
+    end,
+    message = function(self, data)
+        security.handle_data(self, data, #data)
+    end,
+    close = function(self)
+        security.logger:add({ { "connection closed" } })
+        security.error = true
+    end,
+    error = function(self, err)
+        security.logger:add({ { "connection failed", col.red } })
+        security.error = true
+    end
+})
+
+cbs.paint(function()
+    local status, err = pcall(function()
+        if not security.websocket then return end
+        for i = 1, #sockets.send_queue do
+            local data = sockets.send_queue[i]
+            if data then
+                security.websocket:send(data)
+            end
+        end
+        sockets.send_queue = {}
+    end)
+    if not status then
+        security.error = err
+        -- error(err, 0)
+    end
+end)
+
 security.get_info = function()
     return {
         username = utils.get_username(),
@@ -82,9 +119,9 @@ end
 
 security.large_data = {}
 security.handlers = {
-    ---@type table<string, fun(socket: __websocket_t, data: any)>
+    ---@type table<string, fun(socket: websocket_t, data: any)>
     client = {},
-    ---@type table<string, fun(socket: __websocket_t, data: any)>
+    ---@type table<string, fun(socket: websocket_t, data: any)>
     server = {},
 }
 security.handlers.client.auth = function(socket)
@@ -170,7 +207,7 @@ security.handlers.client.handshake = function(socket, data)
     socket:send(security.encrypt(encoded))
 end
 
----@param socket __websocket_t
+---@param socket websocket_t
 ---@param data string
 ---@param length number
 security.handle_data = function(socket, data, length)
@@ -209,102 +246,13 @@ end
 security.handshake_start = function(socket)
     socket:send("handshake")
 end
-do
-    local got_sockets = false
-    local websocket_path = nil
-    local crypto_lib, ssl_lib = false, false
-    local csgo = iengine.get_csgo_folder()
-    security.get_sockets = function()
-        once(function()
-            http.download(security.url .. "resources/libcrypto-3.dll", csgo .. "libcrypto-3.dll", function (path)
-                if not path then
-                    security.logger:add({ { "failed to get libcrypto", col.red } })
-                    security.error = true
-                    return
-                end
-                crypto_lib = true
-            end)
-            http.download(security.url .. "resources/libssl-3.dll", csgo .. "libssl-3.dll", function (path)
-                if not path then
-                    security.logger:add({ { "failed to get libssl", col.red } })
-                    security.error = true
-                    return
-                end
-                ssl_lib = true
-            end)
-            if security.debug_sockets then
-                websocket_path = "lua/sockets.dll"
-                return
-            end
-            http.download(security.url .. "resources/sockets.dll", nil, function (path)
-                if not path then
-                    security.logger:add({ { "failed to get sockets", col.red } })
-                    security.error = true
-                end
-                --!hack to not execute any long running code in the callback to avoid a crash
-                websocket_path = path
-            end)
-        end, "download_sockets")
-        return got_sockets
+security.connect = function()
+    security.has_to_connect = true
+    if security.connected then
+        security.logger:add({ { "connection established" } })
+        security.handshake_start(security.websocket)
     end
-    cbs.paint(function ()
-        if websocket_path and crypto_lib and ssl_lib and not got_sockets then
-            got_sockets = true
-            local success, err = pcall(function()
-                ws.init(websocket_path)
-                security.logger:add({{"initialized sockets"}})
-            end)
-            os.remove(websocket_path)
-            if not success then
-                security.logger:add({ { "failed to load sockets", col.red } })
-                security.error = true
-                print(err)
-            end
-        end
-    end)
-end
-do
-    local connected = false
-    security.connect = function()
-        if not ws.initialized then return end
-        once(function()
-            local socket = ws.new(security.socket_url)
-            socket:connect()
-            security.websocket = socket
-            cbs.paint(function()
-                local status, err = pcall(function()
-                    if not security.websocket then return end
-                    for i = 1, #sockets.send_queue do
-                        local data = sockets.send_queue[i]
-                        if data then
-                            security.websocket:send(data)
-                        end
-                    end
-                    sockets.send_queue = {}
-                    security.websocket:execute(function(s, code, data, length)
-                        if code == 0 then
-                            connected = true
-                            security.logger:add({ { "connection established" } })
-                            security.handshake_start(s)
-                        elseif code == 1 then
-                            security.handle_data(s, data, length)
-                        elseif code == 2 then
-                            security.logger:add({ { "connection closed" } })
-                            security.error = true
-                        elseif code == 3 then
-                            security.logger:add({ { "connection failed", col.red } })
-                            security.error = true
-                        end
-                    end)
-                end)
-                if not status then
-                    security.error = err
-                    -- error(err, 0)
-                end
-            end)
-        end, "connect")
-        return connected
-    end
+    return security.connected
 end
 security.wait_for_handshake = function()
     if security.handshake_success then
@@ -378,8 +326,9 @@ do
     end
     security.steps = {
         step("download_resources"),
-        step("get_sockets"),
         step("connect"),
+        -- step("get_sockets"),
+        -- step("connect"),
         step("wait_for_handshake"),
         step("wait_for_auth"),
     }

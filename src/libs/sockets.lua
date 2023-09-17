@@ -1,7 +1,7 @@
 local json = require("libs.json")
 
 ---@class __sockets_t
----@field websocket __websocket_t
+---@field websocket websocket_t
 ---@field encrypt fun(data: string): string
 local sockets = {}
 sockets.callbacks = {}
@@ -36,7 +36,7 @@ sockets.send = function(data, direct)
         error("failed to encrypt data")
     end
     if direct then
-        sockets.websocket:send(encrypted)
+        -- sockets.websocket:send(encrypted)
     else
         table.insert(sockets.send_queue, encrypted)
     end

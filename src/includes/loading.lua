@@ -32,6 +32,7 @@ local loading = {
     close_delay = 1000,
     logo_font_size_addition = 0
 }
+security.logger = logger
 loading.draw = function()
     once(function()
         delay.add(function ()
@@ -130,7 +131,7 @@ loading.draw = function()
             end
             local text_alpha = anims.text_alpha(255) * main_alpha
 
-            if alpha >= 100 then
+            if alpha >= 255 then
                 once(function()
                     loading.do_security = true
                     -- logger:clean()
