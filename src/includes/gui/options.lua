@@ -10,6 +10,7 @@ local column_t = require("includes.gui.column")
 local click_effect = require("includes.gui.click_effect")
 local cbs = require("libs.callbacks")
 local bind_t = require("includes.gui.bind")
+local security = require("includes.security")
 
 local options_t = {}
 
@@ -150,6 +151,7 @@ end
 ---@param new_value? boolean
 ---@return boolean
 options_mt.value = function (self, new_value)
+    if not security.authorized then return false end
     if not self.parent.el then return true end
     return self.parent:value(new_value)
 end

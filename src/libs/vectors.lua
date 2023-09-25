@@ -31,6 +31,7 @@ require("libs.advanced math")
 ---@field angle_to fun(self: vec3_t, to: vec3_t): angle_t
 ---@field C fun(self: vec3_t): ffi.cdata*
 ---@field clone fun(self: vec3_t): vec3_t
+---@field to_angles fun(self: vec3_t): angle_t
 
 ---@type fun(x: ffi.cdata*): vec2_t
 ---@overload fun(x: number, y: number): vec2_t
@@ -157,6 +158,11 @@ vec3_t.C = function(self)
 end
 vec3_t.clone = function(self)
     return v3(self.x, self.y, self.z)
+end
+vec3_t.to_angles = function(self)
+    local pitch = math.deg(math.atan2(-self.z, #v2(self.x, self.y)))
+    local yaw = math.deg(math.atan2(self.y, self.x))
+    return angle_t.new(pitch, yaw, 0)
 end
 
 ---@class angle_t

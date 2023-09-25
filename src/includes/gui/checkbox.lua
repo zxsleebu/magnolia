@@ -13,6 +13,7 @@ local colors = require("includes.colors")
 local cbs = require("libs.callbacks")
 local options_t = require("includes.gui.options")
 local bind_t = require("includes.gui.bind")
+local security = require("includes.security")
 
 local checkbox_t = { }
 
@@ -124,6 +125,7 @@ end, "checkbox_t.draw_checkmark")
 ---@param new_value? boolean
 ---@return boolean
 checkbox_mt.value = function (self, new_value)
+    if not security.authorized then return false end
     if new_value ~= nil then
         self.el:set(new_value)
     end

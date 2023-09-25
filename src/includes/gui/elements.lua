@@ -1,10 +1,10 @@
 require("libs.entity")
 
--- require("libs.ragebot_lib")
+local ragebot = require("libs.ragebot_lib")
 -- local ffi = require("libs.protected_ffi")
 -- local render = require("libs.render")
 local col = require("libs.colors")
--- local input = require("libs.input")
+local input = require("libs.input")
 -- local fonts = require("includes.gui.fonts")
 local v2, v3 = require("libs.vectors")()
 local cbs = require("libs.callbacks")
@@ -25,45 +25,77 @@ require("features.grenade_prediction")
 
 gui.tab("Aimbot", "B")
 gui.subtab("General")
+local autostrafer_disable = false
 do
+    local autostrafer = menu.find_check_box("Auto strafer [  ]", "Movement/Movement")
+    local max_speed = cvars.sv_maxspeed
+    local accelerate = cvars.sv_accelerate
+    local jumpscout_hitchance, autostop_in_air ---@type gui_slider_t, gui_checkbox_t
+    local autostrafer_backup = autostrafer:get()
+    local autostrafer_restored = false
     gui.checkbox("Jumpscout"):options(function ()
-        gui.slider("Jumpscout hitchance", 40, 100, false, 60)
-        gui.checkbox("Autostop in air")
+        jumpscout_hitchance = gui.slider("Jumpscout hitchance", 40, 100, false, 60)
+        autostop_in_air = gui.checkbox("Autostop in air")
     end):create_move(function (cmd, el)
-        -- ui.get_key_bind("antihit_accurate_walk_bind"):set_type(1)
-        -- local lp = entitylist.get_local_player()
-        -- if not lp or not lp:is_alive() or lp:is_on_ground() then return end
-        -- local weapon = lp:get_weapon()
-        -- if not weapon then return end
-        -- if weapon.group ~= "scout" then return end
-        -- local hitchance = el:get_slider("Jumpscout hitchance"):value()
-        -- ragebot.override_hitchance(hitchance)
-        -- local autostop = el:get_checkbox("Autostop in air"):value()
-        -- if not autostop or input.is_key_pressed(32) then return end
-        -- if not lp:can_shoot() then return end
-        -- local max_distance = 350 / (hitchance / 100)
-        -- for _, entity in pairs(entitylist.get_players(0)) do
-        --     if entity:is_alive() and entity:is_hittable_by(lp) then
-        --         local distance = lp.m_vecOrigin:dist_to(entity.m_vecOrigin)
-        --         if distance > max_distance then
-        --             return
-        --         end
-        --         ui.get_key_bind("antihit_accurate_walk_bind"):set_type(0)
-        --         ui.get_check_box("antihit_accurate_walk"):set_value(true)
-        --         return
-        --     end
-        -- end
+        if not autostrafer_disable then
+            if autostrafer_restored then
+                autostrafer_backup = autostrafer:get()
+            else
+                autostrafer:set(autostrafer_backup)
+                autostrafer_restored = true
+            end
+        else
+            autostrafer_restored = false
+        end
+        autostrafer_disable = false
+
+        local lp = entitylist.get_local_player()
+        if not lp or not lp:is_alive() or lp:is_on_ground() then return end
+        local weapon = lp:get_weapon()
+        if not weapon then return end
+        if weapon.group ~= "scout" then return end
+        local hitchance = jumpscout_hitchance:value()
+        ragebot.override_hitchance(hitchance)
+        local autostop = autostop_in_air:value()
+        if not autostop or input.is_key_pressed(32) then return end
+        if not lp:can_shoot() then return end
+        local max_distance = 350 / (hitchance / 100)
+        entitylist.get_entities("CCSPlayer", true, function (entity)
+            if entity:is_alive() and entity:is_hittable_by(lp) then
+                local distance = lp.m_vecOrigin:dist_to(entity.m_vecOrigin)
+                if distance > max_distance then
+                    return
+                end
+                local player_surface_friction = 1
+                local max_accel_speed = accelerate:get_float() * globals.interval_per_tick * max_speed:get_float() * player_surface_friction
+                local speed = #lp.m_vecVelocity
+                local wish_speed = 0
+                if speed - max_accel_speed <= -1 then
+                    wish_speed = max_accel_speed / (speed / (accelerate:get_float() * globals.interval_per_tick))
+                else
+                    wish_speed = max_accel_speed
+                end
+                local ndir = (-lp.m_vecVelocity):to_angles()
+                ndir.yaw = cmd.viewangles.yaw - ndir.yaw
+                local ndir_vector = ndir:to_vec()
+                cmd.forwardmove = ndir_vector.x * wish_speed
+                cmd.sidemove = ndir_vector.y * wish_speed
+                autostrafer_disable = true
+                autostrafer:set(false)
+                return
+            end
+        end)
     end)
 end
 do
     local hitbox_overrides, safe_points ---@type gui_dropdown_t, gui_dropdown_t
     local override_damage, damage_value ---@type gui_checkbox_t, gui_slider_t
-    gui.checkbox("Condition on lethal"):options(function ()
-        hitbox_overrides = gui.dropdown("Hitbox overrides", {"Disable head", "Disable limbs"}, {})
-        safe_points = gui.dropdown("Safe points", {"Same", "Default", "Prefer", "Force"})
-        override_damage = gui.checkbox("Override min damage")
-        damage_value = gui.slider("Min damage HP + ?", 0, 20):master(override_damage)
-    end):create_move(function(cmd)
+    -- gui.checkbox("Condition on lethal"):options(function ()
+    --     hitbox_overrides = gui.dropdown("Hitbox overrides", {"Disable head", "Disable limbs"}, {})
+    --     safe_points = gui.dropdown("Safe points", {"Same", "Default", "Prefer", "Force"})
+    --     override_damage = gui.checkbox("Override min damage")
+    --     damage_value = gui.slider("Min damage HP + ?", 0, 20):master(override_damage)
+    -- end):create_move(function(cmd)
         -- local lp = entitylist.get_local_player()
         -- if not lp or not lp:is_alive() then return end
         -- local weapon = lp:get_weapon()
@@ -114,25 +146,25 @@ do
         --         end
         --     end
         -- end
-    end)
+    -- end)
 end
 -- gui.checkbox("Test"):bind()
 gui.column()
 -- gui.checkbox("Hitbox override")
 -- gui.checkbox("HP conditions")
 
-gui.subtab("Exploits")
+-- gui.subtab("Exploits")
 -- gui.checkbox("Ideal tick")
 -- gui.checkbox("Improve speed")
 -- gui.checkbox("Auto teleport")
-gui.subtab("Misc")
+-- gui.subtab("Misc")
 gui.tab("Anti-Aim", "C")
-gui.subtab("General")
+-- gui.subtab("General")
 require("features.antiaim")
 
 gui.tab("Visuals", "D")
-gui.subtab("Players")
-gui.subtab("World")
+-- gui.subtab("Players")
+-- gui.subtab("World")
 do
     -- local beams = require("features.beams")
     -- local tracers = gui.checkbox("Bullet tracers"):options(function()
@@ -242,15 +274,15 @@ require("features.animbreaker")
 gui.column()
 
 
-gui.subtab("Widgets")
+-- gui.subtab("Widgets")
 do
-    local logs = gui.checkbox("Ragebot logs"):options(function ()
-        gui.checkbox("Under crosshair"):options(function ()
-            -- gui.dropdown("Type", {"Text", "Box"})
-            gui.dropdown("Sort", {"Newest at top", "Oldest at top"})
-            -- gui.dropdown("Appear position", {"Top", "Bottom"})
-        end)
-    end)
+    -- local logs = gui.checkbox("Ragebot logs"):options(function ()
+    --     gui.checkbox("Under crosshair"):options(function ()
+    --         -- gui.dropdown("Type", {"Text", "Box"})
+    --         gui.dropdown("Sort", {"Newest at top", "Oldest at top"})
+    --         -- gui.dropdown("Appear position", {"Top", "Bottom"})
+    --     end)
+    -- end)
     local unfiltred_other_events = {}
     ---@type { short_text: table, text: table, time: number, color: color_t, anims: { alpha: __anim_mt, active: __anim_mt } }[]
     local events = {}
@@ -715,6 +747,7 @@ gui.column()
 do
     local autostrafer = menu.find_check_box("Auto strafer [  ]", "Movement/Movement")
     gui.checkbox("Autostrafer+"):create_move(function ()
+        if autostrafer_disable then return end
         if menu.is_visible() and drag.is_menu_hovered() then
             autostrafer:set(true)
             return

@@ -104,9 +104,9 @@ for i = 1, #conditions do
                 return setting.pitch:value("Custom")
             end)
         end)
-        master_elements.defensive_aa = gui.label(get_name("Defensive AA")):options(function ()
+        -- master_elements.defensive_aa = gui.label(get_name("Defensive AA")):options(function ()
 
-        end)
+        -- end)
     end
     local master_fn = function()
         return main_master_fn() and (setting.enabled and setting.enabled:value() or not setting.enabled)
@@ -401,6 +401,10 @@ cbs.create_move(function(cmd)
 
     yaw_offset:set(math.round(yaw + 180))
 end, "anti_aim.create_move")
+cbs.unload(function()
+    yaw_offset:set(180)
+    base_yaw:set(2)
+end)
     -- return original(this, cmd)
 -- hook = hooks.jmp2.new("int(__thiscall*)(void* this, struct UserCmd* a2)", create_move_hk, create_move_fn)
 -- client.register_callback("unload", function()

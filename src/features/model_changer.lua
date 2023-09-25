@@ -201,6 +201,7 @@ end):update(function(el)
 end)
 
 cbs.frame_stage(function(stage)
+    if not globals.is_in_game then return end
     if stage ~= 4 then return end
     if not custom_model:value() then return end
     local lp = entitylist.get_local_player()
@@ -221,4 +222,4 @@ cbs.frame_stage(function(stage)
     end
     if not model_path then return end
     lp:set_model(model_path)
-end)
+end, "model_changer.frame_stage")

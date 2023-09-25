@@ -788,7 +788,7 @@ entity_t.set_model = errors.handler(function(self, path)
         error("couldn't precache model")
     end
     local ragdoll = self.m_hRagdoll
-    if ragdoll then
+    if ragdoll and ragdoll ~= nil then
         local cbaseentity = ragdoll:get_class()
         if cbaseentity then
             cbaseentity:SetModelIndex(index)

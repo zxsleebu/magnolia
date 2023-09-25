@@ -43,7 +43,7 @@ local NetChanClass = class.new({
 local lib_engine = {}
 lib_engine.get_csgo_folder = function()
     local source = debug.getinfo(1, "S").source:sub(2, -1)
-    return source:match("^(.-)nix/") or source:match("^(.-)lua\\")
+    return source:match("^(.-)nix\\") or source:match("^(.-)nix/") or source:match("^(.-)lua\\") or source:match("^(.-)lua/")
 end
 lib_engine.get_steam_context = function ()
     return IEngineClient:GetSteamContext()
