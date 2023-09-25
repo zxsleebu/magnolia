@@ -1297,6 +1297,9 @@ do
             cbs.paint(function()
                 if not entity_mt then initialize_entity_mt() end
             end)
+            cbs.frame_stage(function()
+                if not entity_mt then initialize_entity_mt() end
+            end)
             cbs.create_move(function()
                 if not entity_mt then initialize_entity_mt() end
             end)
