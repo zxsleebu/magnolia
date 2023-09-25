@@ -388,6 +388,10 @@ local CBaseEntity = class.new({
     IsPlayer = { 158, "bool(__thiscall*)(void*)" },
     IsWeapon = { 166, "bool(__thiscall*)(void*)" },
 })
+local CCollideable = class.new({
+    OBBMins = { 1, "vector_t*(__thiscall*)(void*)" },
+    OBBMaxs = { 2, "vector_t*(__thiscall*)(void*)" },
+})
 -- local CClientNetworkable = class.new({
 --     GetClientUnknown = {0, "uintptr_t(__thiscall*)(void*)"},
 --     GetClientClass = {2, "struct ClientClass*(__thiscall*)(void*)"},
@@ -684,6 +688,17 @@ end
 --     return self:get_class():IsWeapon()
 -- end
 
+---@return { mins: vec3_t, maxs: vec3_t }
+entity_t.get_collideable = function(self)
+    local collideable = CCollideable(self:get_class():GetCollideable())
+    local mins = collideable:OBBMins()
+    local maxs = collideable:OBBMaxs()
+    return {
+        mins = v3(mins),
+        maxs = v3(maxs),
+    }
+end
+
 entity_t.is_grenade = function(self)
     return self:get_grenade_type() ~= nil
 end
@@ -831,11 +846,9 @@ end
 local cached_ranks = {}
 entity_t.set_rank = function(self, rank)
     local index = self:get_index()
-    local playerresource = entitylist.get_entities_by_class_id(41)[1]
+    local playerresource = entitylist.get_player_resource()
     if not playerresource then return end
-    local info = self:get_info()
-    if not info then return end
-    local userid = info.user_id
+    local userid = self[0]
     if not cached_ranks[userid] then
         cached_ranks[userid] = {
             real = playerresource.m_nPersonaDataPublicLevel[index],

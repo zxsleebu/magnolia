@@ -96,8 +96,10 @@ checkbox_mt.update = function (self, fn)
         self.old_value = value
     end, self.name .. ".update")
     cbs.unload(function ()
-        self:value(false)
-        fn(self)
+        if self.old_value ~= false then
+            self:value(false)
+            fn(self)
+        end
     end, self.name .. ".update")
     return self
 end

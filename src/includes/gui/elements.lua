@@ -4,20 +4,20 @@ require("libs.entity")
 -- local ffi = require("libs.protected_ffi")
 -- local render = require("libs.render")
 local col = require("libs.colors")
-local input = require("libs.input")
-local fonts = require("includes.gui.fonts")
+-- local input = require("libs.input")
+-- local fonts = require("includes.gui.fonts")
 local v2, v3 = require("libs.vectors")()
 local cbs = require("libs.callbacks")
 -- local iengine = require("includes.engine")
 local anims = require("libs.anims")
-local hooks = require("libs.hooks")
-local set = require("libs.set")
+-- local hooks = require("libs.hooks")
+-- local set = require("libs.set")
 local colors = require("includes.colors")
-local errors = require("libs.error_handler")
+-- local errors = require("libs.error_handler")
 local drag = require("libs.drag")
-local delay = require("libs.delay")
+-- local delay = require("libs.delay")
 -- require("features.create_move_hk")
--- require("features.revealer")
+require("features.revealer")
 
 -- local shared = require("features.shared")
 
@@ -706,18 +706,22 @@ do
             cvars.sv_cheats:set_int(old_sv_cheats)
         end)
         gui.checkbox("Extra (can't disable)"):update(function()
-            cvars.mat_parallaxmap:set_bool(true)
-            cvars.mat_detail_tex:set_bool(true)
+            cvars.mat_parallaxmap:set_bool(false)
+            cvars.mat_detail_tex:set_bool(false)
         end)
     end)
 end
 gui.column()
-gui.checkbox("Autostrafer+"):create_move(function ()
-    -- local lp = entitylist.get_local_player()
-    -- if not lp or not lp:is_alive() then return end
-    -- if ui.is_visible() then
-    --     return ui.get_check_box("misc_autostrafer"):set_value(true)
-    -- end
-    -- local velocity = lp.m_vecVelocity
-    -- ui.get_check_box("misc_autostrafer"):set_value(#v2(velocity.x, velocity.y) > 10)
-end)
+do
+    local autostrafer = menu.find_check_box("Auto strafer [  ]", "Movement/Movement")
+    gui.checkbox("Autostrafer+"):create_move(function ()
+        if menu.is_visible() and drag.is_menu_hovered() then
+            autostrafer:set(true)
+            return
+        end
+        local lp = entitylist.get_local_player()
+        if not lp or not lp:is_alive() then return end
+        local velocity = lp.m_vecVelocity
+        autostrafer:set(#v2(velocity.x, velocity.y) > 10)
+    end)
+end

@@ -190,10 +190,13 @@ local custom_model = gui.checkbox("Custom model"):options(function (el)
     --         t_agent_textinput:set(el:value())
     --     end)
     -- end, 300)
-    
+
 end):update(function(el)
     if not el:value() then
+        local sv_cheats_old_value = cvars.sv_cheats:get_bool()
+        cvars.sv_cheats:set_bool(true)
         engine.execute_client_cmd("cl_fullupdate")
+        cvars.sv_cheats:set_bool(sv_cheats_old_value)
     end
 end)
 

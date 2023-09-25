@@ -142,7 +142,7 @@ local get_target_best_angle = function(at_targets_enabled)
         local interval_per_tick = globals.interval_per_tick
         local max_dormant_ticks = menu_dormant_time:get() * interval_per_tick
         local lowest_fov = 2147483647
-        local origin = lp.m_vecOrigin + lp.m_vecVelocity * interval_per_tick
+        local origin = lp:get_origin() + lp.m_vecVelocity * interval_per_tick
         local viewangles_vec = viewangles:to_vec()
         entitylist.get_entities("CCSPlayer", true, function (enemy)
             if enemy.m_iTeamNum == lp.m_iTeamNum then return end
@@ -150,7 +150,7 @@ local get_target_best_angle = function(at_targets_enabled)
                 return
             end
             if not enemy:is_alive() then return end
-            local pos = enemy.m_vecOrigin + enemy.m_vecVelocity * interval_per_tick
+            local pos = enemy:get_origin() + enemy.m_vecVelocity * interval_per_tick
             local fov = #(origin:angle_to(pos):to_vec() - viewangles_vec)
             if fov < lowest_fov then
                 lowest_fov = fov
@@ -200,7 +200,7 @@ local get_freestand_angle = function()
     local fractions = {}
     local player_origin = targeted_player.m_vecOrigin
     -- player_origin.z = targeted_player:get_player_hitbox_pos(0).z
-    for i = yaw - 90, yaw + 90, 45 do
+    for i = yaw - 90, yaw + 90, 30 do
         if i ~= yaw then
             local rad = math.rad(i)
             local cos, sin = math.cos(rad), math.sin(rad)
@@ -215,7 +215,7 @@ local get_freestand_angle = function()
     if fractions[1][2] - fractions[#fractions][2] < 0.5 then return end
     if fractions[1][2] < 0.1 then return end
     local is_left_side = fractions[1][1] < yaw
-    return fractions[1][1] - yaw, is_left_side
+    return fractions[1][1], is_left_side
 end
 -- local right_yaw_offset_address = nixware.find_pattern("F3 0F 10 47 10 F3 0F 5C C1 F3 0F 11 47 10 E9 ? ? ? ? B8")
 -- if right_yaw_offset_address == 0 then
@@ -226,6 +226,7 @@ end
 -- -- local anti_aim_base_yaw = menu.("antihit_antiaim_yaw")
 -- nixware.write_memory_bytes(right_yaw_offset_address, patch_bytes)
 local yaw_offset = menu.find_slider_int("Yaw offset", "Movement/Anti aim")
+local base_yaw = menu.find_combo_box("Base yaw", "Movement/Anti aim")
 local accurate_walk_enabled = menu.find_check_box("Accurate walk", "Movement/Movement")
 local accurate_walk = menu.find_key_bind("Accurate walk", "Movement/Movement")
 local anti_aim_enabled = menu.find_check_box("Enabled", "Movement/Anti aim")
@@ -245,6 +246,7 @@ local pitch_settings = {
 cbs.create_move(function(cmd)
     if not is_enabled:value() then return end
     yaw_offset:set(180)
+    base_yaw:set(1)
     local lp = entitylist.get_local_player()
     if not lp or not lp:is_alive() then return end
     local condition = lp:get_condition() ---@type anti_aim_condition_t
@@ -389,8 +391,12 @@ cbs.create_move(function(cmd)
             desync_length:set(60)
             desync_inverter:set_type(left_side_freestand and 1 or 0)
         end
-    elseif at_targets_angle ~= nil then
-        yaw = yaw + at_targets_angle - engine.get_view_angles().yaw
+    else
+        if at_targets_angle ~= nil then
+            yaw = yaw + at_targets_angle
+        else
+            yaw = yaw + engine.get_view_angles().yaw
+        end
     end
 
     yaw_offset:set(math.round(yaw + 180))

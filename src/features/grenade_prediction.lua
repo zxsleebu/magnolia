@@ -109,7 +109,7 @@ local trace_hull = function(self, start, dest, mins, maxs, mask)
         if entity:is_grenade() then return false end
         if entity:get_index() == self.owner_index then return false end
         return true
-    end, mask)
+    end, mask, self.collision_group)
 end
 ---@param start vec3_t
 ---@param dest vec3_t
@@ -195,10 +195,6 @@ grenade_prediction_mt.physics_push_entity = function(self, push)
         self.origin = trace_info.end_pos
     end
     if trace_info.fraction ~= 1 then
-        -- local hit_entity = entitylist.get(trace_info.hit_entity_index)
-        -- if hit_entity then
-            -- self:physics_impact(hit_entity, trace_info.normal.z)
-        -- end
         self:physics_impact(trace_info.plane.normal.z)
     end
 
@@ -236,13 +232,15 @@ grenade_prediction_mt.perform_fly_collision_resolution = function(self, trace_in
             end
 
             --if did not hit world
-            if self.collision_entity == hit_entity then
-                if hit_entity:is_player() then
-                    self.collision_group = 1 --COLLISION_GROUP_DEBRIS
-                    return
+            if not trace_info:did_hit_world() then
+                if self.collision_entity == hit_entity then
+                    if hit_entity:is_player() then
+                        self.collision_group = 1 --COLLISION_GROUP_DEBRIS
+                        return
+                    end
                 end
+                self.collision_entity = hit_entity
             end
-            self.collision_entity = hit_entity
         end
     end
     local total_elasticity = math.clamp(0.45 * surface_elacticity, 0, 0.9)
@@ -323,6 +321,35 @@ grenade_prediction_mt.predict = function(self)
     self.expire_time = self.throw_time + iengine.ticks_to_time(self.tickcount)
 end
 
+---@param entity entity_t
+---@param center vec3_t
+---@param hitbox vec3_t
+grenade_prediction_mt.get_damage = function(self, entity, center, hitbox)
+    local delta = #(center - self.path[#self.path][1])
+    if delta > 700 then
+        return 0
+    end
+    -- local trace_info = engine.trace_line(self.path[#self.path][1], hitbox, entitylist.get(self.entity_index), 0x46004003)
+    -- if not trace_info.entity or trace_info.entity:get_index() ~= entity:get_index() then
+    --     return 0
+    -- end
+    local d = ((delta - 25) / 140)
+    local damage = 105 * math.exp(-d * d)
+    local armor_ratio = 0.5
+    local armor_bonus = 0.5
+    local armor_value = entity.m_ArmorValue
+    if armor_value > 0 then
+        local new = damage * armor_ratio
+        local armor = (damage - new) * armor_bonus
+        if armor > armor_value then
+            armor = armor_value * (1 / armor_bonus)
+            new = damage - armor
+        end
+        damage = new
+    end
+    return math.max(math.ceil(damage), 0)
+end
+
 
 local grenade_prediction_t = {
     ---@param entity entity_t
@@ -369,6 +396,8 @@ local list = {}
 local beams_list = {}
 
 cbs.paint(function()
+    local lp = entitylist.get_local_player()
+    if not lp then return end
     local highest_index = entitylist.get_highest_entity_index()
     local tick_count = globals.tick_count
     -- local interval_per_tick = globals.interval_per_tick
@@ -421,6 +450,16 @@ cbs.paint(function()
 
     beams_list = {}
 
+    local lp_index = lp:get_index()
+    local lp_pelvis_pos = lp:get_player_hitbox_pos(2)
+    if not lp_pelvis_pos then return end
+    local lp_center
+    do
+        local origin = lp:get_origin()
+        local collideable = lp:get_collideable()
+        local mins, maxs = collideable.mins + origin, collideable.maxs + origin
+        lp_center = (mins + maxs) / 2
+    end
     for _, grenade in pairs(list) do
         errors.handler(function()
             local current_time = globals.cur_time
@@ -431,6 +470,13 @@ cbs.paint(function()
             if not grenade.path[1] then
                 return
             end
+            local lp_is_owner = grenade.owner_index == lp_index
+            local is_he = grenade.grenade_type == "he"
+            local damage = 0
+            if is_he then
+                damage = grenade:get_damage(lp, lp_center, lp_pelvis_pos)
+            end
+            if damage == 0 and not lp_is_owner then return end
             local valid_index = 1
             local throw_tick_count = iengine.time_to_ticks(grenade.throw_time)
             for a = #grenade.path, 1, -1 do
@@ -445,44 +491,55 @@ cbs.paint(function()
                 origin = entity:get_origin()
             end
             if not origin and not grenade.local_player then return end
-            local previous_w2s = iengine.world_to_screen(origin)--iengine.world_to_screen(grenade.path[valid_index][1])
-            for a = valid_index + 1, #grenade.path - 1 do
-                local w2s = iengine.world_to_screen(grenade.path[a][1])
-                if previous_w2s and w2s then
-                    -- local beam = beams.new({
-                    --     amplitude = 1,
-                    --     color = colors.magnolia,
-                    --     width = 35,
-                    --     life = interval_per_tick * (a - 1.5) * 3,
-                    --     end_pos = pos,
-                    --     start_pos = previous_pos,
-                    --     model_name = "sprites/physbeam.vmt",
-                    --     speed = 0,
-                    --     segments = 2,
-                    -- })
-                    -- beams_list[#beams_list+1] = beam
-                    render.line(previous_w2s, w2s, colors.magnolia)
+            if lp_is_owner then
+                local previous_w2s = iengine.world_to_screen(origin)--iengine.world_to_screen(grenade.path[valid_index][1])
+                for a = valid_index + 1, #grenade.path - 1 do
+                    local w2s = iengine.world_to_screen(grenade.path[a][1])
+                    if previous_w2s and w2s then
+                        -- local beam = beams.new({
+                        --     amplitude = 1,
+                        --     color = colors.magnolia,
+                        --     width = 35,
+                        --     life = interval_per_tick * (a - 1.5) * 3,
+                        --     end_pos = pos,
+                        --     start_pos = previous_pos,
+                        --     model_name = "sprites/physbeam.vmt",
+                        --     speed = 0,
+                        --     segments = 2,
+                        -- })
+                        -- beams_list[#beams_list+1] = beam
+                        render.line(previous_w2s, w2s, colors.magnolia)
+                    end
+                    previous_w2s = w2s
                 end
-                previous_w2s = w2s
             end
             if grenade.local_player then return end
             local dist_w2s = render.world_to_screen(grenade.path[#grenade.path][1])
             if not dist_w2s then return end
             dist_w2s = dist_w2s:round()
-            local size = v2(28, 24)
+            local size = v2(30, 30)
             local from = dist_w2s - (size / 2)
             local to = dist_w2s + (size / 2)
             local icon_name = "j"
             if grenade.grenade_type == "molotov" then
                 icon_name = "l"
             end
-            ---value from 0 to 1 that represents the time left until the grenade explodes
-            local time_modifier = 1 - (grenade.expire_time - current_time) / grenade.detonate_time
+            local danger_modifier
+            if is_he then
+                danger_modifier = math.min(damage / lp.m_iHealth, 1)
+            else
+                danger_modifier = 1 - (grenade.expire_time - current_time) / grenade.detonate_time
+            end
             if dist_w2s then
-                irender.box_shadow(from, to, colors.magnolia:alpha(time_modifier * 255), 1.5, 100, 6, 1.3)
+                irender.box_shadow(from, to, colors.magnolia:alpha(danger_modifier * 255), 1.5, 100, 6, 1.3)
                 irender.rounded_rect(from, to, colors.magnolia:alpha(200), 3, false)
                 irender.rounded_rect(from + v2(1, 1), to - v2(1, 1), colors.container_bg:alpha(240), 3, true)
-                irender.text(icon_name, fonts.nade_warning, dist_w2s + v2(1, 0), col.white:fade(colors.magnolia, time_modifier), irender.flags.CENTER)
+                if is_he and damage > 0 then
+                    irender.text(icon_name, fonts.nade_warning, dist_w2s + v2(1, -5), col.white:fade(colors.magnolia, danger_modifier), irender.flags.CENTER)
+                    irender.text(tostring(damage), fonts.gamesense, dist_w2s + v2(0, 8), col.white:fade(colors.magnolia, danger_modifier), irender.flags.CENTER)
+                else
+                    irender.text(icon_name, fonts.nade_warning, dist_w2s + v2(1, 0), col.white:fade(colors.magnolia, danger_modifier), irender.flags.CENTER)
+                end
                 -- render.text("!", fonts.menu, dist_w2s, col.white, render.flags.CENTER)
             end
         end, "grenade_prediction_t.draw")()
