@@ -11,6 +11,15 @@ ffi.cdef[[
         void* Utils;
     } SteamAPIContext;
     typedef float Matrix4x4[4][4];
+    struct PlayerInfo {
+        char __pad0[8];
+        int xuid_low;
+        int xuid_high;
+        char name[128];
+        int user_id;
+        char guid[33];
+        char __pad1[379];
+    };
 ]]
 -- local IEngineCVar = interface.new("vstdlib", "VEngineCvar007", {
 --     PrintColor = {25, "void(__cdecl*)(void*, const color_t&, PCSTR, ...)"},
@@ -18,7 +27,8 @@ ffi.cdef[[
 local IEngineClient = interface.new("engine", "VEngineClient014", {
     GetNetChan = {78, "void*(__thiscall*)(void*)"},
     GetSteamContext = {185, "const SteamAPIContext*(__thiscall*)(void*)"},
-    GetWorldToScreenMatrix = {37, "const Matrix4x4&(__thiscall*)(void*)"}
+    GetWorldToScreenMatrix = {37, "const Matrix4x4&(__thiscall*)(void*)"},
+    GetPlayerInfo = {8, "bool(__thiscall*)(void*, int, struct PlayerInfo*)"},
 })
 local IDebugOverlay = interface.new("engine", "VDebugOverlay004", {
     AddBoxOverlay = {1, "void(__thiscall*)(void*, const vector_t&, const vector_t&, const vector_t&, const vector_t&, int, int, int, int, float)"},
@@ -107,6 +117,14 @@ end
 ---@param color color_t
 lib_engine.add_box_overlay = function(pos, time, color)
     IDebugOverlay:AddBoxOverlay(pos:C(), v3(-2, -2, -2):C(), v3(2, 2, 2):C(), v3(0, 0, 0):C(), color.r, color.g, color.b, color.a, time)
+end
+
+---@param index number
+---@return { name: string, user_id: number }?
+lib_engine.get_player_info = function(index)
+    local player_info = ffi.new("struct PlayerInfo[1]")
+    if not IEngineClient:GetPlayerInfo(index, player_info) then return end
+    return { name = ffi.string(player_info[0].name), user_id = player_info[0].user_id }
 end
 
 ---@param from vec3_t

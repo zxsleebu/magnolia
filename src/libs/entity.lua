@@ -514,7 +514,7 @@ end
 -- end
 
 entity_t.get_info = function(self)
-    -- return engine.get_player_info(self:get_index())
+    return iengine.get_player_info(self:get_index())
 end
 
 do
@@ -550,7 +550,9 @@ do
     local ticks = {}
     ---@return number
     entity_t.get_ticks_in_dormant = function(self)
-        local id = self:get_index()
+        local info = self:get_info()
+        if not info then return 0 end
+        local id = info.user_id
         if not ticks[id] then
             ticks[id] = 0
         end
@@ -558,7 +560,9 @@ do
     end
     cbs.create_move(function()
         entitylist.get_entities("CCSPlayer", true, function(entity)
-            local id = entity:get_index()
+            local info = entity:get_info()
+            if not info then return end
+            local id = info.user_id
             if entity:is_dormant() then
                 ticks[id] = ticks[id] + 1
             else
@@ -848,28 +852,29 @@ entity_t.set_rank = function(self, rank)
     local index = self:get_index()
     local playerresource = entitylist.get_player_resource()
     if not playerresource then return end
-    local userid = self[0]
-    if not cached_ranks[userid] then
-        cached_ranks[userid] = {
+    local info = self:get_info()
+    if not info then return end
+    local id = info.user_id
+    if not cached_ranks[id] then
+        cached_ranks[id] = {
             real = playerresource.m_nPersonaDataPublicLevel[index],
         }
-        cached_ranks[userid].fake = rank
+        cached_ranks[id].fake = rank
     end
     if rank == nil then
-        rank = cached_ranks[userid].real
-        cached_ranks[userid] = nil
+        rank = cached_ranks[id].real
+        cached_ranks[id] = nil
     end
     if playerresource.m_nPersonaDataPublicLevel[index] ~= rank then
         playerresource.m_nPersonaDataPublicLevel[index] = rank
     end
 end
-register_callback("paint", function()
-    if not engine.is_connected() then
+cbs.paint(function()
+    if not globals.is_connected then
         cached_ranks = {}
         return
     end
-    local entities = entitylist.get_entities("CCSPlayer", true)
-    for _, player in pairs(entities) do
+    local entities = entitylist.get_entities("CCSPlayer", true, function(player)
         local info = player:get_info()
         if info then
             local userid = info.user_id
@@ -877,7 +882,7 @@ register_callback("paint", function()
                 player:set_rank(cached_ranks[userid].fake)
             end
         end
-    end
+    end)
 end)
 register_callback("unload", function()
     if not engine.is_connected() then

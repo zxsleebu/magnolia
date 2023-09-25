@@ -339,7 +339,7 @@ cbs.create_move(function(cmd)
     if condition == "Use" then
         anti_aim_pitch:set(0)
         yaw_offset:set(0)
-        -- yaw_offset:set(math.round(engine.get_view_angles().yaw))
+        yaw_offset:set(math.round(engine.get_view_angles().yaw))
         return
     end
 

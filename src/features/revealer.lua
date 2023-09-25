@@ -181,7 +181,7 @@ local icons = {
     we = 2256,
     pr = 2257,
 }
----@type table<string, fun(packet: { client: number, audible_mask: number, xuid_low: number, xuid_high: number, voice_data: ffi.cdata*, proximity: boolean, caster: boolean, format: number, sequence_bytes: number, section_number: number, uncompressed_sample_offset: number, has_bits: number }, target: ffi.cdata*): boolean?>
+---@type table<string, fun(packet: { client: number, audible_mask: number, xuid_low: number, xuid_high: number, voice_data: ffi.cdata*, proximity: boolean, caster: boolean, format: number, sequence_bytes: number, section_number: number, uncompressed_sample_offset: number, has_bits: number }, target: number): boolean?>
 local detector_table = {
     nl = function(packet, target)
         if packet.xuid_high == 0 then
@@ -438,6 +438,8 @@ local voice_data_process = errors.handler(function(packet)
     if not msg then return end
     local entity = entitylist.get(msg.client + 1)
     if not entity then return end
+    local info = entity:get_info()
+    if not info then return end
     -- print("client: " .. info.name)
 	-- print("xuid_low: " .. tostring(msg.xuid_low))z
 	-- print("xuid_high: " .. tostring(msg.xuid_high))
@@ -448,8 +450,9 @@ local voice_data_process = errors.handler(function(packet)
 	-- print("audible_mask: " .. tostring(msg.audible_mask))
 	-- print("proximity: " .. tostring(msg.proximity))
 	-- print("caster: " .. tostring(msg.caster))
+    -- print("")
 
-    local target = entity[0]
+    local target = info.user_id
     if not user_list[target] then
         user_list[target] = {}
     end
@@ -461,10 +464,10 @@ local voice_data_process = errors.handler(function(packet)
             user.cheat = cheat_identifier
 
             if cheat ~= cheat_identifier then
-                -- local name = entity:get_info().name
-                -- if name then
-                --     -- iengine.log({{"[cheat revealer] ", col.red}, {name .. " is using " .. cheat_identifier}})
-                -- end
+                local name = entity:get_info().name
+                if name then
+                    -- iengine.log({{"[cheat revealer] ", col.red}, {name .. " is using " .. cheat_identifier}})
+                end
                 if icons[cheat_identifier] then
                     entity:set_rank(icons[cheat_identifier])
                 end
