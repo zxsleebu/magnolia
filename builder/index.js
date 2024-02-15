@@ -16,7 +16,9 @@ var bundledLua = bundle('magnolia.lua', {
 try {
     fs.mkdirSync('../dist');
     fs.mkdirSync('../dist/temp');
-} catch (e) { }
+} catch (e) {
+    console.log(e)
+}
 writeFileSync('../dist/temp/magnolia_bundled.lua', bundledLua);
 console.log("Bundled!")
 process.chdir(__dirname + "/../")
