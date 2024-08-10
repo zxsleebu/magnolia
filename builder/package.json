@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "luabundle": "^1.6.0",
-    "luactor": "git+https://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:x-oauth-basic@github.com/zxsleebu/luactor.git"
+    "luabundle": "^1.6.0"
   }
 }
